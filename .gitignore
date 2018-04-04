@@ -19,3 +19,6 @@ test/cose-wg-examples/
 
 # go deps
 vendor/
+
+# OSX fs files
+.DS_Store
