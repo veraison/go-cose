@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
-	"log"
 	"math/big"
 )
 
@@ -53,9 +52,8 @@ func (s *Signer) Public() (publicKey crypto.PublicKey) {
 	case *ecdsa.PrivateKey:
 		return key.Public()
 	default:
-		log.Fatal("Could not return public key for Unrecognized private key type.")
+		panic("Could not return public key for Unrecognized private key type.")
 	}
-	return
 }
 
 // SignOpts are options for Signer.Sign()
