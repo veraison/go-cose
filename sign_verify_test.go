@@ -108,6 +108,10 @@ func TestSignErrors(t *testing.T) {
 	err = msg.Sign(randReader, []byte(""), opts)
 	assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
 
+	msg.Signatures[0].Headers.Protected[algTag] = 1
+	err = msg.Sign(randReader, []byte(""), opts)
+	assert.Equal(ErrInvalidAlg, err)
+
 	delete(msg.Signatures[0].Headers.Protected, algTag)
 	err = msg.Sign(randReader, []byte(""), opts)
 	assert.Equal(ErrAlgNotFound, err)
@@ -175,6 +179,9 @@ func TestVerifyErrors(t *testing.T) {
 	msg.Signatures[0].Headers.Protected[kidTag] = 1
 	msg.Signatures[0].SignatureBytes = []byte("already signed")
 	assert.Equal(ErrUnavailableHashFunc, msg.Verify(payload, &opts))
+
+	msg.Signatures[0].Headers.Protected[algTag] = 1
+	assert.Equal(ErrInvalidAlg, msg.Verify(payload, &opts))
 
 	msg.Signatures[0].Headers.Protected[algTag] = -7 // ECDSA w/ SHA-256 from [RFC8152]
 	assert.Equal(errors.New("Error finding a Verifier for signature 0"), msg.Verify(payload, &VerifyOpts{

@@ -18,8 +18,6 @@ import (
 // COSE_Mac0).  Negative numbers were used for second layer objects
 // (COSE_Signature and COSE_recipient).
 //
-// TODO: check alg ints conform to these rules sign and verify functions
-//
 // https://www.iana.org/assignments/cose/cose.xhtml#header-algorithm-parameters
 //
 // https://tools.ietf.org/html/rfc8152#section-16.4
