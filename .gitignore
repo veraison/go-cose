@@ -16,3 +16,6 @@
 # test deps
 test/cose-rust/
 test/cose-wg-examples/
+
+# go deps
+vendor/
