@@ -138,6 +138,10 @@ type VerifyOpts struct {
 
 // Verify verifies a signature returning nil for success or an error
 func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
+	if v.alg.Value > -1 { // Negative numbers are used for second layer objects (COSE_Signature and COSE_recipient)
+		return ErrInvalidAlg
+	}
+
 	switch key := v.publicKey.(type) {
 	case *rsa.PublicKey:
 		hashFunc := v.alg.HashFunc

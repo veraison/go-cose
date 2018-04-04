@@ -155,6 +155,9 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, opts SignOpts) (err 
 		if err != nil {
 			return err
 		}
+		if alg.Value > -1 { // Negative numbers are used for second layer objects (COSE_Signature and COSE_recipient)
+			return ErrInvalidAlg
+		}
 		opts.HashFunc = alg.HashFunc
 
 		digest, err := m.SignatureDigest(external, &signature)
@@ -203,6 +206,9 @@ func (m *SignMessage) Verify(external []byte, opts *VerifyOpts) (err error) {
 		alg, err := getAlg(signature.Headers)
 		if err != nil {
 			return err
+		}
+		if alg.Value > -1 { // Negative numbers are used for second layer objects (COSE_Signature and COSE_recipient)
+			return ErrInvalidAlg
 		}
 
 		digest, err := m.SignatureDigest(external, &signature)

@@ -5,6 +5,7 @@ import (
 )
 
 var (
+	ErrInvalidAlg             = errors.New("Invalid algorithm")
 	ErrAlgNotFound            = errors.New("Error fetching alg")
 	ErrECDSAVerification      = errors.New("verification failed ecdsa.Verify")
 	ErrRSAPSSVerification     = errors.New("verification failed rsa.VerifyPSS err crypto/rsa: verification error")
