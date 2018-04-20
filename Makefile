@@ -46,5 +46,5 @@ smoketest-examples:
 	go run example/sign.go
 	go run example/verify.go
 
-ci: godep golint goveralls install coverage smoketest-examples lint vet
+ci: godep golint goveralls install coverage lint vet
 	goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
