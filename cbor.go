@@ -139,6 +139,11 @@ func (x Ext) ConvertExt(v interface{}) interface{} {
 //
 // Note: the decoder will convert panics to errors
 func (x Ext) UpdateExt(dest interface{}, v interface{}) {
+	message, ok := dest.(*SignMessage)
+	if !ok {
+		panic(fmt.Sprintf("unsupported format expecting to decode into *SignMessage; got %T", dest))
+	}
+
 	var src, vok = v.([]interface{})
 	if !vok {
 		panic(fmt.Sprintf("unsupported format expecting to decode from []interface{}; got %T", v))
@@ -156,8 +161,6 @@ func (x Ext) UpdateExt(dest interface{}, v interface{}) {
 		panic(fmt.Sprintf("error decoding header bytes; got %s", err))
 	}
 
-	var m = NewSignMessage()
-	var message = &m
 	message.Headers = msgHeaders
 
 	switch payload := src[2].(type) {
@@ -178,10 +181,4 @@ func (x Ext) UpdateExt(dest interface{}, v interface{}) {
 		sigT.Decode(sig) // can panic
 		message.AddSignature(sigT)
 	}
-
-	destMessage, ok := dest.(*SignMessage)
-	if !ok {
-		panic(fmt.Sprintf("unsupported format expecting to decode into *SignMessage; got %T", dest))
-	}
-	*destMessage = *message
 }
