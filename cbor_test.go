@@ -146,6 +146,24 @@ func TestCBOREncoding(t *testing.T) {
 	}
 }
 
+func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
+	assert := assert.New(t)
+
+	msg := NewSignMessage([]byte(""))
+	msg.Payload = nil
+
+	// tag(98) + array(4) [ bytes(0), map(0), nil/null, array(0) ]
+	b := HexToBytesOrDie("D862" + "84" + "40" + "A0" + "F6" + "80" )
+
+	result, err := Unmarshal(b)
+	assert.Nil(err)
+	assert.Equal(result, msg)
+
+	bytes, err := Marshal(result)
+	assert.Nil(err)
+	assert.Equal(bytes, b)
+}
+
 func TestCBOREncodingErrsOnUnexpectedType(t *testing.T) {
 	assert := assert.New(t)
 
@@ -191,7 +209,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 		{
 			// tag(98) + array(4) [ bytes(0), map(0), 2 * text(0) ]
 			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "60" + "60"),
-			"cbor decode error [pos 7]: error decoding msg payload decode from interface{} to []byte; got string",
+			"cbor decode error [pos 7]: error decoding msg payload decode from interface{} to []byte or nil; got type string",
 		},
 		{
 			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), text(0) ]

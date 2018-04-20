@@ -156,14 +156,18 @@ func (x Ext) UpdateExt(dest interface{}, v interface{}) {
 		panic(fmt.Sprintf("error decoding header bytes; got %s", err))
 	}
 
-	var payload, pok = src[2].([]byte)
-	if !pok {
-		panic(fmt.Sprintf("error decoding msg payload decode from interface{} to []byte; got %T", src[2]))
-	}
-
-	var m = NewSignMessage(payload)
+	var m = NewSignMessage([]byte(""))
 	var message = &m
 	message.Headers = msgHeaders
+
+	switch payload := src[2].(type) {
+	case []byte:
+		message.Payload = payload
+	case nil:
+		message.Payload = nil
+	default:
+		panic(fmt.Sprintf("error decoding msg payload decode from interface{} to []byte or nil; got type %T", src[2]))
+	}
 
 	var sigs, sok = src[3].([]interface{})
 	if !sok {
