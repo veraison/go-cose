@@ -156,7 +156,7 @@ func (x Ext) UpdateExt(dest interface{}, v interface{}) {
 		panic(fmt.Sprintf("error decoding header bytes; got %s", err))
 	}
 
-	var m = NewSignMessage([]byte(""))
+	var m = NewSignMessage()
 	var message = &m
 	message.Headers = msgHeaders
 

@@ -70,14 +70,14 @@ type SignMessage struct {
 
 // NewSignMessage takes a []byte payload and returns a new SignMessage
 // with empty headers and signatures
-func NewSignMessage(payload []byte) (msg SignMessage) {
+func NewSignMessage() (msg SignMessage) {
 	msg = SignMessage{
 		Headers: &Headers{
 			Protected:   map[interface{}]interface{}{},
 			Unprotected: map[interface{}]interface{}{},
 		},
-		Payload:    payload,
-		Signatures: []Signature{},
+		Payload:    nil,
+		Signatures: nil,
 	}
 	return msg
 }

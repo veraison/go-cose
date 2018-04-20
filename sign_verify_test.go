@@ -17,7 +17,8 @@ func TestSignErrors(t *testing.T) {
 
 	randReader := rand.New(rand.NewSource(int64(0)))
 
-	msg := NewSignMessage([]byte("payload to sign"))
+	msg := NewSignMessage()
+	msg.Payload = []byte("payload to sign")
 
 	ecdsaPrivateKey := ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
@@ -128,7 +129,8 @@ func TestVerifyErrors(t *testing.T) {
 	assert := assert.New(t)
 
 	// randReader := rand.New(rand.NewSource(int64(0)))
-	msg := NewSignMessage([]byte("payload to sign"))
+	msg := NewSignMessage()
+	msg.Payload = []byte("payload to sign")
 
 	ecdsaPrivateKey := ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{

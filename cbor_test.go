@@ -149,7 +149,7 @@ func TestCBOREncoding(t *testing.T) {
 func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
 	assert := assert.New(t)
 
-	msg := NewSignMessage([]byte(""))
+	msg := NewSignMessage()
 	msg.Payload = nil
 
 	// tag(98) + array(4) [ bytes(0), map(0), nil/null, array(0) ]

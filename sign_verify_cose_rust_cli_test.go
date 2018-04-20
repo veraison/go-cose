@@ -22,14 +22,14 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 	signers := []Signer{}
 	verifiers := []Verifier{}
 
-	var payload = []byte(testCase.SignPayload)
-	message := NewSignMessage(payload)
+	message := NewSignMessage()
 	msgHeaders := &Headers{
 		Protected:   map[interface{}]interface{}{},
 		Unprotected: map[interface{}]interface{}{},
 	}
 	msgHeaders.Protected[kidTag] = testCase.Certs
 	message.Headers = msgHeaders
+	message.Payload = []byte(testCase.SignPayload)
 
 	for _, param := range testCase.Params {
 		key, err := x509.ParsePKCS8PrivateKey(param.pkcs8)

@@ -33,10 +33,10 @@ func main() {
 	sig.Headers.Protected["alg"] = "ES256"
 
 	// create a message
-	payload := []byte("payload to sign")
 	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
 
-	msg := cose.NewSignMessage(payload) // can update via .Payload later too
+	msg := cose.NewSignMessage()
+	msg.Payload = []byte("payload to sign")
 	msg.AddSignature(sig)
 
 	randReader := rand.New(rand.NewSource(time.Now().UnixNano()))
