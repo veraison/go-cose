@@ -24,15 +24,15 @@ const (
 	ContextCounterSignature = "CounterSignature"
 )
 
-// Signer holds a private key for signing SignMessages implements
-// crypto.Signer interface
+// Signer holds a COSE Algorithm and private key for signing messages
 type Signer struct {
 	privateKey crypto.PrivateKey
+	alg        *Algorithm
 }
 
 // NewSigner checks whether the privateKey is supported and returns a
 // new cose.Signer
-func NewSigner(privateKey crypto.PrivateKey) (signer *Signer, err error) {
+func NewSigner(privateKey crypto.PrivateKey, alg *Algorithm) (signer *Signer, err error) {
 	switch privateKey.(type) {
 	case *rsa.PrivateKey:
 	case *ecdsa.PrivateKey:
@@ -41,6 +41,7 @@ func NewSigner(privateKey crypto.PrivateKey) (signer *Signer, err error) {
 	}
 	return &Signer{
 		privateKey: privateKey,
+		alg: alg,
 	}, nil
 }
 
@@ -56,23 +57,13 @@ func (s *Signer) Public() (publicKey crypto.PublicKey) {
 	}
 }
 
-// SignOpts are options for Signer.Sign()
-//
-// HashFunc is the crypto.Hash to apply to the SigStructure
-// func GetSigner returns the cose.Signer for the signature protected
-// key ID or an error when one isn't found
-type SignOpts struct {
-	HashFunc  crypto.Hash
-	GetSigner func(index int, signature Signature) (Signer, error)
-}
-
 // Sign returns the COSE signature as a byte slice
-func (s *Signer) Sign(rand io.Reader, digest []byte, opts SignOpts) (signature []byte, err error) {
+func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err error) {
 	switch key := s.privateKey.(type) {
 	case *rsa.PrivateKey:
-		sig, err := rsa.SignPSS(rand, key, opts.HashFunc, digest, &rsa.PSSOptions{
+		sig, err := rsa.SignPSS(rand, key, s.alg.HashFunc, digest, &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthEqualsHash,
-			Hash:       opts.HashFunc,
+			Hash:       s.alg.HashFunc,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("rsa.SignPSS error %s", err)

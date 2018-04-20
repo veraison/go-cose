@@ -1,7 +1,6 @@
 package cose
 
 import (
-	"crypto"
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -41,26 +40,19 @@ func TestSignErrors(t *testing.T) {
 		X: FromBase64Int("5078D4D29795CBE76D3AACFE48C9AF0BCDBEE91A"),
 	}
 
-	signer, err := NewSigner(&ecdsaPrivateKey)
+	signer, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
 	assert.Nil(err, fmt.Sprintf("Error creating signer %s", err))
-
-	opts := SignOpts{
-		HashFunc: crypto.SHA256,
-		GetSigner: func(index int, signature Signature) (Signer, error) {
-			return *signer, ErrNoSignerFound
-		},
-	}
 
 	sig := NewSignature()
 	sig.Headers.Protected[algTag] = -41 // RSAES-OAEP w/ SHA-256 from [RFC8230]
 	sig.Headers.Protected[kidTag] = 1
 
 	msg.Signatures = []Signature{}
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNoSignatures, err)
 
 	msg.Signatures = nil
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNilSignatures, err)
 
 	// check that it creates the signatures array from nil
@@ -68,13 +60,13 @@ func TestSignErrors(t *testing.T) {
 	assert.Equal(len(msg.Signatures), 1)
 
 	msg.Signatures[0].Headers = nil
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNilSigHeader, err)
 
 	msg.Signatures = nil
 	msg.AddSignature(sig)
 	msg.Signatures[0].Headers.Protected = nil
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNilSigProtectedHeaders, err)
 
 	msg.Signatures = nil
@@ -86,42 +78,44 @@ func TestSignErrors(t *testing.T) {
 	msg.AddSignature(sig)
 	assert.Equal(len(msg.Signatures), 1)
 	assert.NotNil(msg.Signatures[0].Headers)
-	err = msg.Sign(randReader, []byte(""), opts)
+
+	err = msg.Sign(randReader, []byte(""), []Signer{})
+	assert.Equal(errors.New("0 signers for 1 signatures"), err)
+
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(errors.New("SignMessage signature 0 already has signature bytes"), err)
 
 	msg.Signatures[0].SignatureBytes = nil
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrUnavailableHashFunc, err)
 
-	msg.Signatures[0].Headers.Protected[algTag] = -7 // ECDSA w/ SHA-256 from [RFC8152]
-	err = msg.Sign(randReader, []byte(""), opts)
-	assert.Equal(errors.New("Error finding a Signer for signature 0"), err)
-
+	msg.Signatures[0].Headers.Protected[algTag] = ES256Alg.Value
+	signer.alg = ES256Alg
 	signer.privateKey = dsaPrivateKey
-
-	opts.GetSigner = func(index int, signature Signature) (Signer, error) {
-		return *signer, nil
-	}
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrUnknownPrivateKeyType, err)
 
+	signer.alg = GetAlgByNameOrPanic("PS256")
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	assert.Equal(errors.New("Signer of type PS256 cannot generate a signature of type ES256"), err)
+
 	msg.Signatures[0].Headers.Protected[algTag] = -9000
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
 
 	msg.Signatures[0].Headers.Protected[algTag] = 1
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrInvalidAlg, err)
 
 	delete(msg.Signatures[0].Headers.Protected, algTag)
-	err = msg.Sign(randReader, []byte(""), opts)
+	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrAlgNotFound, err)
 
 	// TODO: make Marshal fail
 	// msg.Signatures[0].Headers.Protected[algTag] = -7
 	// msg.Signatures[0].Headers.Unprotected = nil
 
-	// err = msg.Sign(randReader, []byte(""), opts)
+	// err = msg.Sign(randReader, []byte(""), []Signer{*signer})
 	// assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
 }
 
@@ -145,7 +139,7 @@ func TestVerifyErrors(t *testing.T) {
 	sig.Headers.Protected[algTag] = -41 // RSAES-OAEP w/ SHA-256 from [RFC8230]
 	sig.Headers.Protected[kidTag] = 1
 
-	signer, err := NewSigner(&ecdsaPrivateKey)
+	signer, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
 	assert.Nil(err, "Error creating signer")
 
 	verifier := signer.Verifier(GetAlgByNameOrPanic("ES256"))
