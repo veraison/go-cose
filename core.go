@@ -223,7 +223,8 @@ func hashSigStructure(ToBeSigned []byte, hash crypto.Hash) (digest []byte, err e
 	return digest, nil
 }
 
-// I2OSP converts a nonnegative integer to an octet string of a specified length
+// I2OSP "Integer-to-Octet-String" converts a nonnegative integer to
+// an octet string of a specified length
 // https://tools.ietf.org/html/rfc8017#section-4.1
 //
 // implementation from
