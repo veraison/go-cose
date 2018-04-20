@@ -216,11 +216,6 @@ func TestCBORDecodingErrors(t *testing.T) {
 			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "60"),
 			"cbor decode error [pos 7]: error decoding sigs; got string",
 		},
-		// {
-		// 	// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(0) ]
-		// 	HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "80"),
-		// 	"cbor decode error [pos 7]: error decoding sigs; got string",
-		// },
 	}
 
 	for _, testCase := range cases {
