@@ -38,11 +38,7 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 
 	// Test Verify - signatures CBOR decoded from example
 	assert.NotNil(message.Signatures[0].SignatureBytes)
-	err = message.Verify(external, &VerifyOpts{
-		GetVerifier: func(index int, signature Signature) (Verifier, error) {
-			return *verifier, nil
-		},
-	})
+	err = message.Verify(external, []Verifier{*verifier})
 	if example.Fail {
 		assert.NotNil(err, fmt.Sprintf("%s: verifying signature did not fail. Got nil instead of error from signature verification failure", example.Title))
 

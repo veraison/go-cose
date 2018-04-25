@@ -66,11 +66,7 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 	message.Payload = nil
 
 	// Verify our signature (round trip)
-	err = message.Verify(external, &VerifyOpts{
-		GetVerifier: func(index int, signature Signature) (Verifier, error) {
-			return verifiers[index], nil
-		},
-	})
+	err = message.Verify(external, verifiers)
 
 	// skip round trip verify since it might not do things like verify the cert that nss does
 	// if testCase.ModifySignature || testCase.ModifyPayload {

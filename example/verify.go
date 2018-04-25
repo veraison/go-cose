@@ -50,12 +50,7 @@ func main() {
 	verifier := signer.Verifier(cose.GetAlgByNameOrPanic("ES256"))
 
 	// Verify
-	err = msg.Verify(external, &cose.VerifyOpts{
-		GetVerifier: func(index int, signature cose.Signature) (cose.Verifier, error) {
-			// or return cose.ErrNoVerifierFound
-			return *verifier, nil
-		},
-	})
+	err = msg.Verify(external, []cose.Verifier{*verifier})
 	if err == nil {
 		fmt.Println("Message signature verified")
 	} else {

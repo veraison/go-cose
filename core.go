@@ -119,13 +119,6 @@ type Verifier struct {
 	alg       *Algorithm
 }
 
-// VerifyOpts are options to the Verifier.Verify requires a function
-// that returns verifier or error for a given signature and message
-// index
-type VerifyOpts struct {
-	GetVerifier func(index int, signature Signature) (Verifier, error)
-}
-
 // Verify verifies a signature returning nil for success or an error
 func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 	if v.alg.Value > -1 { // Negative numbers are used for second layer objects (COSE_Signature and COSE_recipient)
