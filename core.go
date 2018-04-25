@@ -27,6 +27,14 @@ const (
 	ContextCounterSignature = "CounterSignature"
 )
 
+var (
+	// Supported Algorithms
+	PS256 = GetAlgByNameOrPanic("PS256")
+	ES256 = GetAlgByNameOrPanic("ES256")
+	ES384 = GetAlgByNameOrPanic("ES384")
+	ES512 = GetAlgByNameOrPanic("ES512")
+)
+
 // Signer holds a COSE Algorithm and private key for signing messages
 type Signer struct {
 	privateKey crypto.PrivateKey
