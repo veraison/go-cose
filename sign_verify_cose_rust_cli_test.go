@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
@@ -51,7 +52,7 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 
 	var external []byte
 
-	err := message.Sign(randReader, external, signers)
+	err := message.Sign(rand.Reader, external, signers)
 	assert.Nil(err, fmt.Sprintf("%s: signing failed with err %s", testCase.Title, err))
 
 	if testCase.ModifySignature {

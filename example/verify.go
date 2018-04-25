@@ -3,10 +3,9 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"fmt"
 	cose "go.mozilla.org/cose"
-	"math/rand"
-	"time"
 )
 
 func main() {
@@ -38,8 +37,7 @@ func main() {
 	msg.Payload = []byte("payload to sign")
 	msg.AddSignature(sig)
 
-	randReader := rand.New(rand.NewSource(time.Now().UnixNano()))
-	err = msg.Sign(randReader, external, []cose.Signer{*signer})
+	err = msg.Sign(rand.Reader, external, []cose.Signer{*signer})
 	if err == nil {
 		fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
 	} else {

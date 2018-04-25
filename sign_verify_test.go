@@ -4,17 +4,15 @@ import (
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"math/rand"
 	"testing"
 )
 
 func TestSignErrors(t *testing.T) {
 	assert := assert.New(t)
-
-	randReader := rand.New(rand.NewSource(int64(0)))
 
 	msg := NewSignMessage()
 	msg.Payload = []byte("payload to sign")
@@ -48,11 +46,11 @@ func TestSignErrors(t *testing.T) {
 	sig.Headers.Protected[kidTag] = 1
 
 	msg.Signatures = []Signature{}
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNoSignatures, err)
 
 	msg.Signatures = nil
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNilSignatures, err)
 
 	// check that it creates the signatures array from nil
@@ -60,13 +58,13 @@ func TestSignErrors(t *testing.T) {
 	assert.Equal(len(msg.Signatures), 1)
 
 	msg.Signatures[0].Headers = nil
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNilSigHeader, err)
 
 	msg.Signatures = nil
 	msg.AddSignature(sig)
 	msg.Signatures[0].Headers.Protected = nil
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrNilSigProtectedHeaders, err)
 
 	msg.Signatures = nil
@@ -79,50 +77,49 @@ func TestSignErrors(t *testing.T) {
 	assert.Equal(len(msg.Signatures), 1)
 	assert.NotNil(msg.Signatures[0].Headers)
 
-	err = msg.Sign(randReader, []byte(""), []Signer{})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{})
 	assert.Equal(errors.New("0 signers for 1 signatures"), err)
 
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(errors.New("SignMessage signature 0 already has signature bytes"), err)
 
 	msg.Signatures[0].SignatureBytes = nil
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrUnavailableHashFunc, err)
 
 	msg.Signatures[0].Headers.Protected[algTag] = ES256Alg.Value
 	signer.alg = ES256Alg
 	signer.privateKey = dsaPrivateKey
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrUnknownPrivateKeyType, err)
 
 	signer.alg = GetAlgByNameOrPanic("PS256")
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(errors.New("Signer of type PS256 cannot generate a signature of type ES256"), err)
 
 	msg.Signatures[0].Headers.Protected[algTag] = -9000
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
 
 	msg.Signatures[0].Headers.Protected[algTag] = 1
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrInvalidAlg, err)
 
 	delete(msg.Signatures[0].Headers.Protected, algTag)
-	err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrAlgNotFound, err)
 
 	// TODO: make Marshal fail
 	// msg.Signatures[0].Headers.Protected[algTag] = -7
 	// msg.Signatures[0].Headers.Unprotected = nil
 
-	// err = msg.Sign(randReader, []byte(""), []Signer{*signer})
+	// err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	// assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
 }
 
 func TestVerifyErrors(t *testing.T) {
 	assert := assert.New(t)
 
-	// randReader := rand.New(rand.NewSource(int64(0)))
 	msg := NewSignMessage()
 	msg.Payload = []byte("payload to sign")
 
