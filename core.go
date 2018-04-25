@@ -161,16 +161,9 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 	}
 }
 
-// imperative functions on byte slices level
-
 // buildAndMarshalSigStructure creates a Sig_structure, populates it
 // with the appropriate fields, and marshals it to CBOR bytes
-func buildAndMarshalSigStructure(
-	bodyProtected []byte,
-	signProtected []byte,
-	external []byte,
-	payload []byte,
-) (ToBeSigned []byte, err error) {
+func buildAndMarshalSigStructure(bodyProtected, signProtected, external, payload []byte) (ToBeSigned []byte, err error) {
 	// 1.  Create a Sig_structure and populate it with the appropriate fields.
 	//
 	// Sig_structure = [
