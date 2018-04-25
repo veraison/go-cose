@@ -30,7 +30,7 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 	message, ok := decoded.(SignMessage)
 	assert.True(ok, fmt.Sprintf("%s: Error casting example CBOR to SignMessage", example.Title))
 
-	signer, err := NewSigner(&privateKey, alg)
+	signer, err := NewSignerFromKey(alg, &privateKey)
 	assert.Nil(err, fmt.Sprintf("%s: Error creating signer %s", example.Title, err))
 
 	verifier := signer.Verifier(alg)

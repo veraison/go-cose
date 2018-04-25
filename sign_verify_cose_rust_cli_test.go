@@ -36,7 +36,7 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 		key, err := x509.ParsePKCS8PrivateKey(param.pkcs8)
 		assert.Nil(err)
 
-		signer, err := NewSigner(key, param.algorithm)
+		signer, err := NewSignerFromKey(param.algorithm, key)
 		assert.Nil(err, fmt.Sprintf("%s: Error creating signer %s", testCase.Title, err))
 		signers = append(signers, *signer)
 		verifiers = append(verifiers, *signer.Verifier(param.algorithm))

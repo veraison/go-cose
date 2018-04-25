@@ -6,9 +6,11 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"math/big"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -31,9 +33,45 @@ type Signer struct {
 	alg        *Algorithm
 }
 
-// NewSigner checks whether the privateKey is supported and returns a
-// new cose.Signer
-func NewSigner(privateKey crypto.PrivateKey, alg *Algorithm) (signer *Signer, err error) {
+type newSignerRSAOptions struct {
+	size int
+}
+
+// NewSigner returns a Signer with a generated key
+func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) {
+	var (
+		privateKey crypto.PrivateKey
+		rsaKeySize int = alg.minKeySize
+	)
+
+	if alg.privateKeyType == "ecdsa" {
+		privateKey, err = ecdsa.GenerateKey(alg.privateKeyCurve, rand.Reader)
+		if err != nil {
+			err = errors.Wrapf(err, "error generating ecdsa signer private key")
+			return nil, err
+		}
+	} else if alg.privateKeyType == "rsa" {
+		opts, ok := options.(newSignerRSAOptions)
+		if ok && opts.size > rsaKeySize {
+			rsaKeySize = opts.size
+		}
+
+		privateKey, err = rsa.GenerateKey(rand.Reader, rsaKeySize)
+		if err != nil {
+			err = errors.Wrapf(err, "error generating rsa signer private key")
+			return nil, err
+		}
+	}
+
+	return &Signer{
+		privateKey: privateKey,
+		alg: alg,
+	}, nil
+}
+
+// NewSignerFromKey checks whether the privateKey is supported and
+// returns a Signer using the provided key
+func NewSignerFromKey(alg *Algorithm, privateKey crypto.PrivateKey) (signer *Signer, err error) {
 	switch privateKey.(type) {
 	case *rsa.PrivateKey:
 	case *ecdsa.PrivateKey:

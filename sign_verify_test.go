@@ -17,15 +17,6 @@ func TestSignErrors(t *testing.T) {
 	msg := NewSignMessage()
 	msg.Payload = []byte("payload to sign")
 
-	ecdsaPrivateKey := ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     FromBase64Int("usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8"),
-			Y:     FromBase64Int("IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"),
-		},
-		D: FromBase64Int("V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"),
-	}
-
 	dsaPrivateKey := dsa.PrivateKey{
 		PublicKey: dsa.PublicKey{
 			Parameters: dsa.Parameters{
@@ -38,7 +29,7 @@ func TestSignErrors(t *testing.T) {
 		X: FromBase64Int("5078D4D29795CBE76D3AACFE48C9AF0BCDBEE91A"),
 	}
 
-	signer, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
+	signer, err := NewSigner(ES256Alg, nil)
 	assert.Nil(err, fmt.Sprintf("Error creating signer %s", err))
 
 	sig := NewSignature()
@@ -123,20 +114,12 @@ func TestVerifyErrors(t *testing.T) {
 	msg := NewSignMessage()
 	msg.Payload = []byte("payload to sign")
 
-	ecdsaPrivateKey := ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     FromBase64Int("usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8"),
-			Y:     FromBase64Int("IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"),
-		},
-		D: FromBase64Int("V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"),
-	}
 
 	sig := NewSignature()
 	sig.Headers.Protected[algTag] = -41 // RSAES-OAEP w/ SHA-256 from [RFC8230]
 	sig.Headers.Protected[kidTag] = 1
 
-	signer, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
+	signer, err := NewSigner(ES256Alg, nil)
 	assert.Nil(err, "Error creating signer")
 
 	verifier := signer.Verifier(GetAlgByNameOrPanic("ES256"))
