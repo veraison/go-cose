@@ -159,11 +159,7 @@ func TestVerifyErrors(t *testing.T) {
 
 	verifiers = []Verifier{
 		Verifier{
-			publicKey: &ecdsa.PublicKey{
-				Curve: elliptic.P256(),
-				X:     FromBase64Int("usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8"),
-				Y:     FromBase64Int("IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"),
-			},
+			publicKey: ecdsaPrivateKey.Public(),
 			alg: GetAlgByNameOrPanic("ES256"),
 		},
 	}
