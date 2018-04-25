@@ -189,6 +189,7 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 // Verify verifies all signatures on the SignMessage returning nil for
 // success or an error from the first failed verification
 func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) {
+	if m == nil || m.Signatures == nil || len(m.Signatures) < 1 {
 		return nil // Nothing to check
 	}
 	if len(m.Signatures) != len(verifiers) {
