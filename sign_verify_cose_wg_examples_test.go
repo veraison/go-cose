@@ -31,8 +31,7 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 	message, ok := decoded.(SignMessage)
 	assert.True(ok, fmt.Sprintf("%s: Error casting example CBOR to SignMessage", example.Title))
 
-	// TODO: pass alg to signer?
-	signer, err := NewSigner(&privateKey)
+	signer, err := NewSigner(&privateKey, alg)
 	assert.Nil(err, fmt.Sprintf("%s: Error creating signer %s", example.Title, err))
 
 	verifier := signer.Verifier(alg)
@@ -59,12 +58,7 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 	// clear the signature
 	message.Signatures[0].SignatureBytes = nil
 
-	err = message.Sign(randReader, external, SignOpts{
-		HashFunc: alg.HashFunc,
-		GetSigner: func(index int, signature Signature) (Signer, error) {
-			return *signer, nil
-		},
-	})
+	err = message.Sign(randReader, external, []Signer{*signer})
 	assert.Nil(err, fmt.Sprintf("%s: signing failed with err %s", example.Title, err))
 
 	// check intermediate

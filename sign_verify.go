@@ -70,14 +70,14 @@ type SignMessage struct {
 
 // NewSignMessage takes a []byte payload and returns a new SignMessage
 // with empty headers and signatures
-func NewSignMessage(payload []byte) (msg SignMessage) {
+func NewSignMessage() (msg SignMessage) {
 	msg = SignMessage{
 		Headers: &Headers{
 			Protected:   map[interface{}]interface{}{},
 			Unprotected: map[interface{}]interface{}{},
 		},
-		Payload:    payload,
-		Signatures: []Signature{},
+		Payload:    nil,
+		Signatures: nil,
 	}
 	return msg
 }
@@ -132,12 +132,15 @@ func (m *SignMessage) SignatureDigest(external []byte, signature *Signature) (di
 // Signing and Verification Process
 // https://tools.ietf.org/html/rfc8152#section-4.4
 
-// Sign signs a SignMessage populating signatures[].signature inplace
-func (m *SignMessage) Sign(rand io.Reader, external []byte, opts SignOpts) (err error) {
+// Sign signs a SignMessage i.e. it populates
+// signatures[].SignatureBytes using the provided array of Signers
+func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (err error) {
 	if m.Signatures == nil {
 		return ErrNilSignatures
 	} else if len(m.Signatures) < 1 {
 		return ErrNoSignatures
+	} else if len(m.Signatures) != len(signers) {
+		return fmt.Errorf("%d signers for %d signatures", len(signers), len(m.Signatures))
 	}
 
 	for i, signature := range m.Signatures {
@@ -158,22 +161,21 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, opts SignOpts) (err 
 		if alg.Value > -1 { // Negative numbers are used for second layer objects (COSE_Signature and COSE_recipient)
 			return ErrInvalidAlg
 		}
-		opts.HashFunc = alg.HashFunc
 
 		digest, err := m.SignatureDigest(external, &signature)
 		if err != nil {
 			return err
 		}
 
-		signer, err := opts.GetSigner(i, signature)
-		if err != nil {
-			return fmt.Errorf("Error finding a Signer for signature %d", i)
+		signer := signers[i]
+		if alg.Value != signer.alg.Value {
+			return fmt.Errorf("Signer of type %s cannot generate a signature of type %s", signer.alg.Name, alg.Name)
 		}
 
 		// 3.  Call the signature creation algorithm passing in K (the key to
 		//     sign with), alg (the algorithm to sign with), and ToBeSigned (the
 		//     value to sign).
-		signatureBytes, err := signer.Sign(rand, digest, opts)
+		signatureBytes, err := signer.Sign(rand, digest)
 		if err != nil {
 			return err
 		}

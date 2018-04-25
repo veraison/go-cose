@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
@@ -22,7 +21,7 @@ func main() {
 	}
 
 	// create a signer
-	signer, err := cose.NewSigner(&ecdsaPrivateKey)
+	signer, err := cose.NewSigner(&ecdsaPrivateKey, cose.GetAlgByNameOrPanic("ES256"))
 	if err != nil {
 		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
 	}
@@ -33,23 +32,14 @@ func main() {
 	sig.Headers.Protected["alg"] = "ES256"
 
 	// create a message
-	payload := []byte("payload to sign")
 	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
 
-	msg := cose.NewSignMessage(payload) // can update via .Payload later too
+	msg := cose.NewSignMessage()
+	msg.Payload = []byte("payload to sign")
 	msg.AddSignature(sig)
 
 	randReader := rand.New(rand.NewSource(time.Now().UnixNano()))
-	err = msg.Sign(randReader, external, cose.SignOpts{
-		HashFunc: crypto.SHA256,
-		GetSigner: func(index int, signature cose.Signature) (cose.Signer, error) {
-			if signature.Headers.Unprotected["kid"] == 1 || signature.Headers.Unprotected[cose.GetCommonHeaderTagOrPanic("kid")] == 1 {
-				return *signer, nil
-			} else {
-				return *signer, cose.ErrNoSignerFound
-			}
-		},
-	})
+	err = msg.Sign(randReader, external, []cose.Signer{*signer})
 	if err == nil {
 		fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
 	} else {
