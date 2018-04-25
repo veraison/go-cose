@@ -1,11 +1,10 @@
 package cose
 
 import (
-	"encoding/binary"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"math/rand"
 	"strings"
 	"testing"
 )
@@ -38,11 +37,7 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 
 	// Test Verify - signatures CBOR decoded from example
 	assert.NotNil(message.Signatures[0].SignatureBytes)
-	err = message.Verify(external, &VerifyOpts{
-		GetVerifier: func(index int, signature Signature) (Verifier, error) {
-			return *verifier, nil
-		},
-	})
+	err = message.Verify(external, []Verifier{*verifier})
 	if example.Fail {
 		assert.NotNil(err, fmt.Sprintf("%s: verifying signature did not fail. Got nil instead of error from signature verification failure", example.Title))
 
@@ -53,12 +48,11 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 	assert.Nil(err, fmt.Sprintf("%s: error verifying signature %+v", example.Title, err))
 
 	// Test Sign
-	randReader := rand.New(rand.NewSource(int64(binary.BigEndian.Uint64([]byte(example.Input.RngDescription)))))
 
 	// clear the signature
 	message.Signatures[0].SignatureBytes = nil
 
-	err = message.Sign(randReader, external, []Signer{*signer})
+	err = message.Sign(rand.Reader, external, []Signer{*signer})
 	assert.Nil(err, fmt.Sprintf("%s: signing failed with err %s", example.Title, err))
 
 	// check intermediate

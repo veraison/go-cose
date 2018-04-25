@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
@@ -51,7 +52,7 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 
 	var external []byte
 
-	err := message.Sign(randReader, external, signers)
+	err := message.Sign(rand.Reader, external, signers)
 	assert.Nil(err, fmt.Sprintf("%s: signing failed with err %s", testCase.Title, err))
 
 	if testCase.ModifySignature {
@@ -66,11 +67,7 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 	message.Payload = nil
 
 	// Verify our signature (round trip)
-	err = message.Verify(external, &VerifyOpts{
-		GetVerifier: func(index int, signature Signature) (Verifier, error) {
-			return verifiers[index], nil
-		},
-	})
+	err = message.Verify(external, verifiers)
 
 	// skip round trip verify since it might not do things like verify the cert that nss does
 	// if testCase.ModifySignature || testCase.ModifyPayload {

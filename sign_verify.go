@@ -187,10 +187,13 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 }
 
 // Verify verifies all signatures on the SignMessage returning nil for
-// success or an error
-func (m *SignMessage) Verify(external []byte, opts *VerifyOpts) (err error) {
-	if m.Signatures == nil || len(m.Signatures) < 1 {
+// success or an error from the first failed verification
+func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) {
+	if m == nil || m.Signatures == nil || len(m.Signatures) < 1 {
 		return nil // Nothing to check
+	}
+	if len(m.Signatures) != len(verifiers) {
+		return fmt.Errorf("Wrong number of signatures %d and verifiers %d", len(m.Signatures), len(verifiers))
 	}
 	// TODO: take a func for a signature kid that returns a key or not?
 
@@ -218,10 +221,7 @@ func (m *SignMessage) Verify(external []byte, opts *VerifyOpts) (err error) {
 			return err
 		}
 
-		verifier, err := opts.GetVerifier(i, signature)
-		if err != nil {
-			return fmt.Errorf("Error finding a Verifier for signature %d", i)
-		}
+		verifier := verifiers[i]
 		if ecdsaKey, ok := verifier.publicKey.(ecdsa.PublicKey); ok {
 			curveBits := ecdsaKey.Curve.Params().BitSize
 			if alg.expectedKeyBitSize != curveBits {
