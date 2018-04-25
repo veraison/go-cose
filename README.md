@@ -23,40 +23,6 @@ From [example/sign.go](example/sign.go):
 
 ```golang
 ...
-	// create a signer
-	signer, err := cose.NewSigner(&ecdsaPrivateKey)
-	if err != nil {
-		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
-	}
-
-	// create a signature
-	sig := cose.NewSignature()
-	sig.Headers.Unprotected["kid"] = 1
-	sig.Headers.Protected["alg"] = "ES256"
-
-	// create a message
-	external := []byte("") // optional external data see https://tools.ietf.org/html/rfc8152#section-4.3
-
-	msg := cose.NewSignMessage()
-	msg.Payload = []byte("payload to sign")
-	msg.AddSignature(sig)
-
-	randReader := rand.New(rand.NewSource(time.Now().UnixNano()))
-	err = msg.Sign(randReader, external, cose.SignOpts{
-		HashFunc: crypto.SHA256,
-		GetSigner: func(index int, signature cose.Signature) (cose.Signer, error) {
-			if signature.Headers.Unprotected["kid"] == 1 || signature.Headers.Unprotected[cose.GetCommonHeaderTagOrPanic("kid")] == 1 {
-				return *signer, nil
-			} else {
-				return *signer, cose.ErrNoSignerFound
-			}
-		},
-	})
-	if err == nil {
-		fmt.Println(fmt.Sprintf("Message signature (ES256): %x", msg.Signatures[0].SignatureBytes))
-	} else {
-		fmt.Println(fmt.Sprintf("Error signing the message %+v", err))
-	}
 ...
 ```
 
@@ -73,21 +39,6 @@ Continuing from the signer example in [example/verify.go](example/verify.go):
 
 ```golang
 ...
-	// derive a verifier from out signer's public key
-	verifier := signer.Verifier(cose.GetAlgByNameOrPanic("ES256"))
-
-	// Verify
-	err = msg.Verify(external, &cose.VerifyOpts{
-		GetVerifier: func(index int, signature cose.Signature) (cose.Verifier, error) {
-			// or return cose.ErrNoVerifierFound
-			return *verifier, nil
-		},
-	})
-	if err == nil {
-		fmt.Println("Message signature verified")
-	} else {
-		fmt.Println(fmt.Sprintf("Error verifying the message %+v", err))
-	}
 ...
 ```
 
