@@ -5,6 +5,7 @@ package cose
 
 import (
 	"crypto"
+	"crypto/elliptic"
 )
 
 // Algorithm represents an IANA algorithm's parameters (Name,
@@ -25,9 +26,16 @@ import (
 type Algorithm struct {
 	Name               string
 	Value              int
-	HashFunc           crypto.Hash // optional hash function for SignMessages
-	keySize            int         // ecdsa signature size of r or s in bytes with padding
-	expectedKeyBitSize int         // ecdsa signature curve key size in bits
+
+	// optional fields
+	HashFunc           crypto.Hash    // hash function for SignMessages
+	privateKeyType     string         // private key type to generate "rsa" or "ecdsa" for new Signers
+
+	minKeySize         int            // minimimum RSA key size to generate
+
+	keySize            int            // ecdsa signature size of r or s in bytes with padding
+	expectedKeyBitSize int            // ecdsa signature curve key size in bits
+	privateKeyCurve    elliptic.Curve // ecdsa private key curve type
 }
 
 // Algorithms is an array/slice of IANA algorithms
@@ -53,16 +61,20 @@ var Algorithms = []Algorithm{
 		Value: -38,
 	},
 	Algorithm{
-		Name:     "PS256", // RSASSA-PSS w/ SHA-256 from [RFC8230]
-		Value:    -37,
-		HashFunc: crypto.SHA256,
+		Name:           "PS256", // RSASSA-PSS w/ SHA-256 from [RFC8230]
+		Value:          -37,
+		HashFunc:       crypto.SHA256,
+		privateKeyType: "rsa",
+		minKeySize:     2048,
 	},
 	Algorithm{
 		Name:               "ES512", // ECDSA w/ SHA-512 from [RFC8152]
 		Value:              -36,
 		HashFunc:           crypto.SHA512,
 		keySize:            66,
-		expectedKeyBitSize: 521, // P-521
+		expectedKeyBitSize: 521,
+		privateKeyType:     "ecdsa",
+		privateKeyCurve:    elliptic.P521(),
 	},
 	Algorithm{
 		Name:               "ES384", // ECDSA w/ SHA-384 from [RFC8152]
@@ -70,6 +82,8 @@ var Algorithms = []Algorithm{
 		HashFunc:           crypto.SHA384,
 		keySize:            48,
 		expectedKeyBitSize: 384,
+		privateKeyType:     "ecdsa",
+		privateKeyCurve:    elliptic.P384(),
 	},
 	Algorithm{
 		Name:  "ECDH-SS + A256KW", // ECDH SS w/ Concat KDF and AES Key Wrap w/ 256-bit key from [RFC8152]
@@ -137,6 +151,8 @@ var Algorithms = []Algorithm{
 		HashFunc:           crypto.SHA256,
 		keySize:            32,
 		expectedKeyBitSize: 256,
+		privateKeyType:     "ecdsa",
+		privateKeyCurve:    elliptic.P521(),
 	},
 	Algorithm{
 		Name:  "direct", // Direct use of CEK from [RFC8152]

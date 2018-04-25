@@ -58,23 +58,23 @@ func fromBase10(base10 string) *big.Int {
 func TestNewSigner(t *testing.T) {
 	assert := assert.New(t)
 
-	_, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
+	_, err := NewSignerFromKey(ES256Alg, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer with ecdsaPrivateKey")
 
-	_, err = NewSigner(&rsaPrivateKey, ES256Alg)
+	_, err = NewSignerFromKey(ES256Alg, &rsaPrivateKey)
 	assert.Nil(err, "Error creating signer with rsaPrivateKey")
 
-	_, err = NewSigner(&dsaPrivateKey, ES256Alg)
+	_, err = NewSignerFromKey(ES256Alg, &dsaPrivateKey)
 	assert.Equal(ErrUnknownPrivateKeyType, err, "Did not error creating signer with unsupported dsaPrivateKey")
 }
 
 func TestSignerPublic(t *testing.T) {
 	assert := assert.New(t)
 
-	ecdsaSigner, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
+	ecdsaSigner, err := NewSignerFromKey(ES256Alg, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer with ecdsaPrivateKey")
 
-	rsaSigner, err := NewSigner(&rsaPrivateKey, ES256Alg)
+	rsaSigner, err := NewSignerFromKey(ES256Alg, &rsaPrivateKey)
 	assert.Nil(err, "Error creating signer with rsaPrivateKey")
 
 	ecdsaSigner.Public()
@@ -88,7 +88,7 @@ func TestSignerPublic(t *testing.T) {
 func TestVerifyInvalidAlgErrors(t *testing.T) {
 	assert := assert.New(t)
 
-	signer, err := NewSigner(&ecdsaPrivateKey, ES256Alg)
+	signer, err := NewSignerFromKey(ES256Alg, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer")
 
 	verifier := signer.Verifier(GetAlgByNameOrPanic("A128GCM"))
