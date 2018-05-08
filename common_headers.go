@@ -186,7 +186,7 @@ func GetCommonHeaderLabel(tag int) (label string, err error) {
 
 // getAlgByName returns a Algorithm for an IANA name
 func getAlgByName(name string) (alg *Algorithm, err error) {
-	for _, alg := range Algorithms {
+	for _, alg := range algorithms {
 		if alg.Name == name {
 			return &alg, nil
 		}
@@ -205,7 +205,7 @@ func getAlgByNameOrPanic(name string) (alg *Algorithm) {
 
 // getAlgByValue returns a Algorithm for an IANA value
 func getAlgByValue(value int64) (alg *Algorithm, err error) {
-	for _, alg := range Algorithms {
+	for _, alg := range algorithms {
 		if int64(alg.Value) == value {
 			return &alg, nil
 		}
