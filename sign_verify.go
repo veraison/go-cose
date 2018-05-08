@@ -190,12 +190,11 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 // success or an error from the first failed verification
 func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) {
 	if m == nil || m.Signatures == nil || len(m.Signatures) < 1 {
-		return nil // Nothing to check
+		return nil
 	}
 	if len(m.Signatures) != len(verifiers) {
 		return fmt.Errorf("Wrong number of signatures %d and verifiers %d", len(m.Signatures), len(verifiers))
 	}
-	// TODO: take a func for a signature kid that returns a key or not?
 
 	for i, signature := range m.Signatures {
 		if signature.Headers == nil {
