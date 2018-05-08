@@ -184,9 +184,9 @@ func GetCommonHeaderLabel(tag int) (label string, err error) {
 	}
 }
 
-// GetAlgByName returns a Algorithm for an IANA name
-func GetAlgByName(name string) (alg *Algorithm, err error) {
-	for _, alg := range Algorithms {
+// getAlgByName returns a Algorithm for an IANA name
+func getAlgByName(name string) (alg *Algorithm, err error) {
+	for _, alg := range algorithms {
 		if alg.Name == name {
 			return &alg, nil
 		}
@@ -194,18 +194,18 @@ func GetAlgByName(name string) (alg *Algorithm, err error) {
 	return nil, fmt.Errorf("Algorithm named %s not found", name)
 }
 
-// GetAlgByNameOrPanic returns a Algorithm for an IANA name and panics otherwise
-func GetAlgByNameOrPanic(name string) (alg *Algorithm) {
-	alg, err := GetAlgByName(name)
+// getAlgByNameOrPanic returns a Algorithm for an IANA name and panics otherwise
+func getAlgByNameOrPanic(name string) (alg *Algorithm) {
+	alg, err := getAlgByName(name)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to get algorithm named %s", name))
 	}
 	return alg
 }
 
-// GetAlgByValue returns a Algorithm for an IANA value
-func GetAlgByValue(value int64) (alg *Algorithm, err error) {
-	for _, alg := range Algorithms {
+// getAlgByValue returns a Algorithm for an IANA value
+func getAlgByValue(value int64) (alg *Algorithm, err error) {
+	for _, alg := range algorithms {
 		if int64(alg.Value) == value {
 			return &alg, nil
 		}
@@ -227,7 +227,7 @@ func CompressHeaders(headers map[interface{}]interface{}) (compressed map[interf
 				k = tag
 
 				if kstr == "alg" && vok {
-					alg, err := GetAlgByName(vstr)
+					alg, err := getAlgByName(vstr)
 					if err == nil {
 						v = alg.Value
 					}
@@ -253,7 +253,7 @@ func DecompressHeaders(headers map[interface{}]interface{}) (decompressed map[in
 			if err == nil {
 				k = label
 				if label == "alg" && vok {
-					alg, err := GetAlgByValue(int64(vint))
+					alg, err := getAlgByValue(int64(vint))
 					if err == nil {
 						v = alg.Name
 					}
@@ -270,7 +270,7 @@ func DecompressHeaders(headers map[interface{}]interface{}) (decompressed map[in
 func getAlg(h *Headers) (alg *Algorithm, err error) {
 	if tmp, ok := h.Protected["alg"]; ok {
 		if algName, ok := tmp.(string); ok {
-			alg, err = GetAlgByName(algName)
+			alg, err = getAlgByName(algName)
 			if err != nil {
 				return nil, err
 			}
@@ -278,7 +278,7 @@ func getAlg(h *Headers) (alg *Algorithm, err error) {
 		}
 	} else if tmp, ok := h.Protected[uint64(1)]; ok {
 		if algValue, ok := tmp.(int64); ok {
-			alg, err = GetAlgByValue(algValue)
+			alg, err = getAlgByValue(algValue)
 			if err != nil {
 				return nil, err
 			}
@@ -286,7 +286,7 @@ func getAlg(h *Headers) (alg *Algorithm, err error) {
 		}
 	} else if tmp, ok := h.Protected[int(1)]; ok {
 		if algValue, ok := tmp.(int); ok {
-			alg, err = GetAlgByValue(int64(algValue))
+			alg, err = getAlgByValue(int64(algValue))
 			if err != nil {
 				return nil, err
 			}

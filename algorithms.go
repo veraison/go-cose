@@ -50,7 +50,7 @@ type Algorithm struct {
 }
 
 // Algorithms is an array/slice of IANA algorithms
-var Algorithms = []Algorithm{
+var algorithms = []Algorithm{
 	Algorithm{
 		Name:  "RSAES-OAEP w/ SHA-512", // RSAES-OAEP w/ SHA-512 from [RFC8230]
 		Value: -42,
