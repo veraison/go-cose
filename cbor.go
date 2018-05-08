@@ -73,7 +73,7 @@ func (x Ext) ConvertExt(v interface{}) interface{} {
 }
 
 // UpdateExt updates a value from a simpler interface for easy
-// decoding dest is always a point
+// decoding dest is always a pointer to a SignMessage
 //
 // Note: dest is always a pointer kind to the registered extension type.
 //
