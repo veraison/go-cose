@@ -37,12 +37,6 @@ func GetCOSEHandle() (h *codec.CborHandle) {
 	h.Canonical = true         // sort map keys
 
 	var cExt Ext
-	// h.SetInterfaceExt(reflect.TypeOf(Encrypt0Message{}), EncryptMessageCBORTag, cExt)
-	// h.SetInterfaceExt(reflect.TypeOf(MAC0Message{}), MAC0MessageCBORTag, cExt)
-	// h.SetInterfaceExt(reflect.TypeOf(Sign1Message{}), Sign1MessageCBORTag, cExt)
-
-	// h.SetInterfaceExt(reflect.TypeOf(EncryptMessage{}), EncryptMessageCBORTag, cExt)
-	// h.SetInterfaceExt(reflect.TypeOf(MACMessage{}), MACMessageCBORTag, cExt)
 	h.SetInterfaceExt(reflect.TypeOf(SignMessage{}), SignMessageCBORTag, cExt)
 
 	return h
