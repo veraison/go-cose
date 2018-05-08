@@ -33,7 +33,7 @@ func main() {
 	}
 
 	// derive a verifier from out signer's public key
-	verifier := signer.Verifier(cose.GetAlgByNameOrPanic("ES256"))
+	verifier := signer.Verifier(cose.ES256)
 
 	// Verify
 	err = msg.Verify(external, []cose.Verifier{*verifier})

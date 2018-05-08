@@ -83,14 +83,13 @@ func TestSignerPublic(t *testing.T) {
 	assert.Panics(func () { ecdsaSigner.Public() })
 }
 
-
 func TestVerifyInvalidAlgErrors(t *testing.T) {
 	assert := assert.New(t)
 
 	signer, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer")
 
-	verifier := signer.Verifier(GetAlgByNameOrPanic("A128GCM"))
+	verifier := signer.Verifier(getAlgByNameOrPanic("A128GCM"))
 	assert.Nil(err, "Error creating verifier")
 
 	err = verifier.Verify([]byte(""), []byte(""))

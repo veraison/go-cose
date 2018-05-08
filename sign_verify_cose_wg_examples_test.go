@@ -17,7 +17,7 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 	assert.Equal(len(example.Input.Sign.Signers), 1)
 
 	signerInput := example.Input.Sign.Signers[0]
-	alg := GetAlgByNameOrPanic(signerInput.Protected.Alg)
+	alg := getAlgByNameOrPanic(signerInput.Protected.Alg)
 	external := HexToBytesOrDie(signerInput.External)
 
 	decoded, err := Unmarshal(HexToBytesOrDie(example.Output.Cbor))
