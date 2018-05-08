@@ -52,13 +52,13 @@ func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) 
 		rsaKeySize int = alg.minKeySize
 	)
 
-	if alg.privateKeyType == "ecdsa" {
+	if alg.privateKeyType == KeyTypeECDSA {
 		privateKey, err = ecdsa.GenerateKey(alg.privateKeyCurve, rand.Reader)
 		if err != nil {
 			err = errors.Wrapf(err, "error generating ecdsa signer private key")
 			return nil, err
 		}
-	} else if alg.privateKeyType == "rsa" {
+	} else if alg.privateKeyType == KeyTypeRSA {
 		opts, ok := options.(newSignerRSAOptions)
 		if ok && opts.size > rsaKeySize {
 			rsaKeySize = opts.size
@@ -108,6 +108,13 @@ func (s *Signer) Public() (publicKey crypto.PublicKey) {
 func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err error) {
 	switch key := s.privateKey.(type) {
 	case *rsa.PrivateKey:
+		if s.alg.privateKeyType != KeyTypeRSA {
+			return nil, fmt.Errorf("Key type must be RSA")
+		}
+		if key.N.BitLen() < s.alg.minKeySize {
+			return nil, fmt.Errorf("RSA key must be at least %d bits long", s.alg.minKeySize)
+		}
+
 		sig, err := rsa.SignPSS(rand, key, s.alg.HashFunc, digest, &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthEqualsHash,
 			Hash:       s.alg.HashFunc,
@@ -117,6 +124,10 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 		}
 		return sig, nil
 	case *ecdsa.PrivateKey:
+		if s.alg.privateKeyType != KeyTypeECDSA {
+			return nil, fmt.Errorf("Key type must be ECDSA")
+		}
+
 		// https://tools.ietf.org/html/rfc8152#section-8.1
 		r, s, err := ecdsa.Sign(rand, key, digest)
 		if err != nil {
