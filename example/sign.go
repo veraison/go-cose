@@ -1,26 +1,14 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
 	cose "go.mozilla.org/cose"
 )
 
 func main() {
-	// create a private key
-	ecdsaPrivateKey := ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     cose.FromBase64Int("usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8"),
-			Y:     cose.FromBase64Int("IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"),
-		},
-		D: cose.FromBase64Int("V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"),
-	}
-
-	// create a signer
-	signer, err := cose.NewSigner(&ecdsaPrivateKey, cose.GetAlgByNameOrPanic("ES256"))
+	// create a signer with a new private key
+	signer, err := cose.NewSigner(cose.ES256, nil)
 	if err != nil {
 		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
 	}
