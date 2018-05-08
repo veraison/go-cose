@@ -8,6 +8,17 @@ import (
 	"crypto/elliptic"
 )
 
+// KeyType is the type to use in keyOptions to tell MakeDEREndEntity
+// which type of crypto.PrivateKey to generate
+type KeyType int
+const (
+	// keyTypeRSA is the type to generate an rsa.PrivateKey
+	KeyTypeRSA KeyType = iota
+
+	// keyTypeECDSA is the type to generate an ecdsa.PrivateKey
+	KeyTypeECDSA KeyType = iota
+)
+
 // Algorithm represents an IANA algorithm's parameters (Name,
 // Value/ID, and optional extra data)
 //
@@ -29,7 +40,7 @@ type Algorithm struct {
 
 	// optional fields
 	HashFunc           crypto.Hash    // hash function for SignMessages
-	privateKeyType     string         // private key type to generate "rsa" or "ecdsa" for new Signers
+	privateKeyType     KeyType        // private key type to generate for new Signers
 
 	minKeySize         int            // minimimum RSA key size to generate
 
@@ -64,7 +75,7 @@ var Algorithms = []Algorithm{
 		Name:           "PS256", // RSASSA-PSS w/ SHA-256 from [RFC8230]
 		Value:          -37,
 		HashFunc:       crypto.SHA256,
-		privateKeyType: "rsa",
+		privateKeyType: KeyTypeRSA,
 		minKeySize:     2048,
 	},
 	Algorithm{
@@ -73,7 +84,7 @@ var Algorithms = []Algorithm{
 		HashFunc:           crypto.SHA512,
 		keySize:            66,
 		expectedKeyBitSize: 521,
-		privateKeyType:     "ecdsa",
+		privateKeyType:     KeyTypeECDSA,
 		privateKeyCurve:    elliptic.P521(),
 	},
 	Algorithm{
@@ -82,7 +93,7 @@ var Algorithms = []Algorithm{
 		HashFunc:           crypto.SHA384,
 		keySize:            48,
 		expectedKeyBitSize: 384,
-		privateKeyType:     "ecdsa",
+		privateKeyType:     KeyTypeECDSA,
 		privateKeyCurve:    elliptic.P384(),
 	},
 	Algorithm{
@@ -151,7 +162,7 @@ var Algorithms = []Algorithm{
 		HashFunc:           crypto.SHA256,
 		keySize:            32,
 		expectedKeyBitSize: 256,
-		privateKeyType:     "ecdsa",
+		privateKeyType:     KeyTypeECDSA,
 		privateKeyCurve:    elliptic.P521(),
 	},
 	Algorithm{
