@@ -48,7 +48,7 @@ func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) 
 	var privateKey crypto.PrivateKey
 
 	if alg.privateKeyType == KeyTypeECDSA {
-		privateKey, err = ecdsa.GenerateKey(alg.privateKeyCurve, rand.Reader)
+		privateKey, err = ecdsa.GenerateKey(alg.privateKeyECDSACurve, rand.Reader)
 		if err != nil {
 			err = errors.Wrapf(err, "error generating ecdsa signer private key")
 			return nil, err

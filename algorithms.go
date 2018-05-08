@@ -46,7 +46,7 @@ type Algorithm struct {
 
 	keySize            int            // ecdsa signature size of r or s in bytes with padding
 	expectedKeyBitSize int            // ecdsa signature curve key size in bits
-	privateKeyCurve    elliptic.Curve // ecdsa private key curve type
+	privateKeyECDSACurve    elliptic.Curve // ecdsa private key curve type
 }
 
 // algorithms is an array/slice of IANA algorithms
@@ -85,7 +85,7 @@ var algorithms = []Algorithm{
 		keySize:            66,
 		expectedKeyBitSize: 521,
 		privateKeyType:     KeyTypeECDSA,
-		privateKeyCurve:    elliptic.P521(),
+		privateKeyECDSACurve:    elliptic.P521(),
 	},
 	Algorithm{
 		Name:               "ES384", // ECDSA w/ SHA-384 from [RFC8152]
@@ -94,7 +94,7 @@ var algorithms = []Algorithm{
 		keySize:            48,
 		expectedKeyBitSize: 384,
 		privateKeyType:     KeyTypeECDSA,
-		privateKeyCurve:    elliptic.P384(),
+		privateKeyECDSACurve:    elliptic.P384(),
 	},
 	Algorithm{
 		Name:  "ECDH-SS + A256KW", // ECDH SS w/ Concat KDF and AES Key Wrap w/ 256-bit key from [RFC8152]
@@ -163,7 +163,7 @@ var algorithms = []Algorithm{
 		keySize:            32,
 		expectedKeyBitSize: 256,
 		privateKeyType:     KeyTypeECDSA,
-		privateKeyCurve:    elliptic.P521(),
+		privateKeyECDSACurve:    elliptic.P521(),
 	},
 	Algorithm{
 		Name:  "direct", // Direct use of CEK from [RFC8152]
