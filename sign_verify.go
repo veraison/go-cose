@@ -1,7 +1,6 @@
 package cose
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"io"
 )
@@ -221,12 +220,6 @@ func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) 
 		}
 
 		verifier := verifiers[i]
-		if ecdsaKey, ok := verifier.publicKey.(ecdsa.PublicKey); ok {
-			curveBits := ecdsaKey.Curve.Params().BitSize
-			if alg.expectedKeyBitSize != curveBits {
-				return fmt.Errorf("Error verifying signature %d expected %d bit key, got %d bits instead", i, alg.expectedKeyBitSize, curveBits)
-			}
-		}
 
 		// 3.  Call the signature creation algorithm passing in K (the key to
 		//     sign with), alg (the algorithm to sign with), and ToBeSigned (the
