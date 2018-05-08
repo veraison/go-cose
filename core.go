@@ -13,19 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	// text strings identifying the context of the signature
-	// https://tools.ietf.org/html/rfc8152#section-4.4
-
-	// ContextSignature for signatures using the COSE_Signature structure
-	ContextSignature = "Signature"
-
-	// ContextSignature1 for signatures using the COSE_Sign1 structure
-	ContextSignature1 = "Signature1"
-
-	// ContextCounterSignature for signatures used as counter signature attributes
-	ContextCounterSignature = "CounterSignature"
-)
+// ContextSignature identifies the context of the signature as a
+// COSE_Signature structure per
+// https://tools.ietf.org/html/rfc8152#section-4.4
+const ContextSignature = "Signature"
 
 var (
 	// Supported Algorithms
