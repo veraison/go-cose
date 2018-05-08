@@ -12,10 +12,10 @@ import (
 // which type of crypto.PrivateKey to generate
 type KeyType int
 const (
-	// keyTypeRSA is the type to generate an rsa.PrivateKey
+	// KeyTypeRSA is the type to generate an rsa.PrivateKey
 	KeyTypeRSA KeyType = iota
 
-	// keyTypeECDSA is the type to generate an ecdsa.PrivateKey
+	// KeyTypeECDSA is the type to generate an ecdsa.PrivateKey
 	KeyTypeECDSA KeyType = iota
 )
 

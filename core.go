@@ -18,11 +18,18 @@ import (
 // https://tools.ietf.org/html/rfc8152#section-4.4
 const ContextSignature = "Signature"
 
+// Supported Algorithms
 var (
-	// Supported Algorithms
+	// PS256 is RSASSA-PSS w/ SHA-256 from [RFC8230]
 	PS256 = getAlgByNameOrPanic("PS256")
+
+	// ES256 is ECDSA w/ SHA-256 from [RFC8152]
 	ES256 = getAlgByNameOrPanic("ES256")
+
+	// ES384 is ECDSA w/ SHA-384 from [RFC8152]
 	ES384 = getAlgByNameOrPanic("ES384")
+
+	// ES512 is ECDSA w/ SHA-512 from [RFC8152]
 	ES512 = getAlgByNameOrPanic("ES512")
 )
 
@@ -40,7 +47,7 @@ type newSignerRSAOptions struct {
 func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) {
 	var (
 		privateKey crypto.PrivateKey
-		rsaKeySize int = alg.minKeySize
+		rsaKeySize = alg.minKeySize
 	)
 
 	if alg.privateKeyType == KeyTypeECDSA {

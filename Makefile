@@ -18,25 +18,12 @@ coverage:
 
 what-todo:
 	rg -g '**/*.go' -i TODO
+	rg -g '**/*.go' -i XXX
 
-util/data:
-	mkdir -p util/data
-
-util/data/tags.csv: util/data
-	cd util/data && wget 'https://www.iana.org/assignments/cbor-tags/tags.csv'
-
-util/data/algorithms.csv: util/data
-	cd util/data && wget 'https://www.iana.org/assignments/cose/algorithms.csv'
-
-util/data/elliptic-curves.csv: util/data
-	cd util/data && wget 'https://www.iana.org/assignments/cose/elliptic-curves.csv'
-
-iana-csvs: util/data/tags.csv util/data/algorithms.csv util/data/elliptic-curves.csv
-
-golint:
+install-golint:
 	go get -u golang.org/x/lint/golint
 
-godep:
+install-godep:
 	curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
 goveralls:
@@ -46,5 +33,5 @@ smoketest-examples:
 	go run example/sign.go
 	go run example/verify.go
 
-ci: godep golint goveralls install coverage lint vet
+ci: install-godep install-golint goveralls install coverage lint vet
 	goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $(COVERALLS_TOKEN)
