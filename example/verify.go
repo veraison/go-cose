@@ -8,7 +8,7 @@ import (
 
 func main() {
 	// create a signer with a new private key
-	signer, err := cose.NewSigner(cose.GetAlgByNameOrPanic("ES256"), nil)
+	signer, err := cose.NewSigner(cose.ES256, nil)
 	if err != nil {
 		panic(fmt.Sprintf(fmt.Sprintf("Error creating signer %s", err)))
 	}
