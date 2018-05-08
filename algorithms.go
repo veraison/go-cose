@@ -42,7 +42,7 @@ type Algorithm struct {
 	HashFunc           crypto.Hash    // hash function for SignMessages
 	privateKeyType     KeyType        // private key type to generate for new Signers
 
-	minKeySize         int            // minimimum RSA key size to generate
+	minRSAKeyBitLen    int            // minimimum RSA key size to generate in bits
 
 	keySize            int            // ecdsa signature size of r or s in bytes with padding
 	expectedKeyBitSize int            // ecdsa signature curve key size in bits
@@ -72,11 +72,11 @@ var algorithms = []Algorithm{
 		Value: -38,
 	},
 	Algorithm{
-		Name:           "PS256", // RSASSA-PSS w/ SHA-256 from [RFC8230]
-		Value:          -37,
-		HashFunc:       crypto.SHA256,
-		privateKeyType: KeyTypeRSA,
-		minKeySize:     2048,
+		Name:            "PS256", // RSASSA-PSS w/ SHA-256 from [RFC8230]
+		Value:           -37,
+		HashFunc:        crypto.SHA256,
+		privateKeyType:  KeyTypeRSA,
+		minRSAKeyBitLen: 2048,
 	},
 	Algorithm{
 		Name:               "ES512", // ECDSA w/ SHA-512 from [RFC8152]
