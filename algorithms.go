@@ -49,7 +49,7 @@ type Algorithm struct {
 	privateKeyCurve    elliptic.Curve // ecdsa private key curve type
 }
 
-// Algorithms is an array/slice of IANA algorithms
+// algorithms is an array/slice of IANA algorithms
 var algorithms = []Algorithm{
 	Algorithm{
 		Name:  "RSAES-OAEP w/ SHA-512", // RSAES-OAEP w/ SHA-512 from [RFC8230]
