@@ -190,9 +190,11 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 		}
 		return nil
 	case *ecdsa.PublicKey:
-		curveBits := key.Curve.Params().BitSize
-		if v.alg.expectedKeyBitSize != curveBits {
-			return fmt.Errorf("Expected %d bit key, got %d bits instead", v.alg.expectedKeyBitSize, curveBits)
+		algCurveBitSize := v.alg.privateKeyECDSACurve.Params().BitSize
+		keyCurveBitSize := key.Curve.Params().BitSize
+
+		if algCurveBitSize != keyCurveBitSize {
+			return fmt.Errorf("Expected %d bit key, got %d bits instead", algCurveBitSize, keyCurveBitSize)
 		}
 
 		keySize := v.alg.keySize
