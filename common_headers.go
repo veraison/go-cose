@@ -26,16 +26,6 @@ import (
 //
 // empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
 //
-// Generic_Headers = (
-//        ? 1 => int / tstr,  ; algorithm identifier
-//        ? 2 => [+label],    ; criticality
-//        ? 3 => tstr / int,  ; content type
-//        ? 4 => bstr,        ; key identifier
-//        ? 5 => bstr,        ; IV
-//        ? 6 => bstr,        ; Partial IV
-//        ? 7 => COSE_Signature / [+COSE_Signature] ; Counter signature
-// )
-//
 type Headers struct {
 	Protected   map[interface{}]interface{}
 	Unprotected map[interface{}]interface{}
