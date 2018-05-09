@@ -171,7 +171,6 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 		} else if signature.SignatureBytes != nil || len(signature.SignatureBytes) > 0 {
 			return fmt.Errorf("SignMessage signature %d already has signature bytes", i)
 		}
-		// TODO: check if provided privateKey verify alg, bitsize, and supported key_ops in protected
 
 		alg, err := getAlg(signature.Headers)
 		if err != nil {
@@ -223,7 +222,6 @@ func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) 
 		} else if signature.SignatureBytes == nil || len(signature.SignatureBytes) < 1 {
 			return fmt.Errorf("SignMessage signature %d missing signature bytes to verify", i)
 		}
-		// TODO: check if provided privateKey verify alg, bitsize, and supported key_ops in protected
 
 		alg, err := getAlg(signature.Headers)
 		if err != nil {

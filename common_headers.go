@@ -267,6 +267,7 @@ func DecompressHeaders(headers map[interface{}]interface{}) (decompressed map[in
 }
 
 // getAlg returns the alg by label, int, or uint64 tag (as from Unmarshal)
+// only checks Protected headers since alg should only be in Protected headers
 func getAlg(h *Headers) (alg *Algorithm, err error) {
 	if tmp, ok := h.Protected["alg"]; ok {
 		if algName, ok := tmp.(string); ok {
