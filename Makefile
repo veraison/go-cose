@@ -19,7 +19,6 @@ coverage:
 
 what-todo:
 	rg -g '**/*.go' -i TODO
-	rg -g '**/*.go' -i XXX
 
 install-golint:
 	go get -u golang.org/x/lint/golint
