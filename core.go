@@ -130,16 +130,21 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 			return nil, fmt.Errorf("ecdsa.Sign error %s", err)
 		}
 
-		// TODO: assert r and s are the same length will be
-		// the same length as the length of the key used for
-		// the signature process
+		// These integers (r and s) will be the same length as
+		// the length of the key used for the signature
+		// process.
+		if !(s.BitLen() == r.BitLen() && s.BitLen() == key.D.BitLen()) {
+			// TODO: figure out why these lengths don't match
+			fmt.Printf("Bit lengths of integers r and s (%d and %d) do not match the key length %d", s.BitLen(), r.BitLen(), key.D.BitLen())
+		}
 
-		// The signature is encoded by converting the integers into
-		// byte strings of the same length as the key size.  The
-		// length is rounded up to the nearest byte and is left padded
-		// with zero bits to get to the correct length.  The two
-		// integers are then concatenated together to form a byte
-		// string that is the resulting signature.
+		// The signature is encoded by converting the integers
+		// into byte strings of the same length as the key
+		// size.  The length is rounded up to the nearest byte
+		// and is left padded with zero bits to get to the
+		// correct length.  The two integers are then
+		// concatenated together to form a byte string that is
+		// the resulting signature.
 		n := ecdsaCurveKeyBytesSize(key.Curve)
 		sig := make([]byte, 0)
 		sig = append(sig, I2OSP(r, n)...)
