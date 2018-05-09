@@ -2,6 +2,7 @@
 
 install:
 	dep ensure || echo "go dep not found (try https://golang.github.io/dep/docs/installation.html)"
+	go get -u github.com/stretchr/testify/assert
 	mkdir -p test
 	cd test && git clone https://github.com/cose-wg/Examples.git cose-wg-examples || true
 	cd test && git clone https://github.com/g-k/cose-rust.git || true

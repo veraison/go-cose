@@ -45,24 +45,21 @@ type newSignerRSAOptions struct {
 
 // NewSigner returns a Signer with a generated key
 func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) {
-	var (
-		privateKey crypto.PrivateKey
-		rsaKeySize = alg.minKeySize
-	)
+	var privateKey crypto.PrivateKey
 
 	if alg.privateKeyType == KeyTypeECDSA {
-		privateKey, err = ecdsa.GenerateKey(alg.privateKeyCurve, rand.Reader)
+		privateKey, err = ecdsa.GenerateKey(alg.privateKeyECDSACurve, rand.Reader)
 		if err != nil {
 			err = errors.Wrapf(err, "error generating ecdsa signer private key")
 			return nil, err
 		}
 	} else if alg.privateKeyType == KeyTypeRSA {
 		opts, ok := options.(newSignerRSAOptions)
-		if ok && opts.size > rsaKeySize {
-			rsaKeySize = opts.size
+		if ok && opts.size > alg.minRSAKeyBitLen {
+			privateKey, err = rsa.GenerateKey(rand.Reader, opts.size)
+		} else {
+			privateKey, err = rsa.GenerateKey(rand.Reader, alg.minRSAKeyBitLen)
 		}
-
-		privateKey, err = rsa.GenerateKey(rand.Reader, rsaKeySize)
 		if err != nil {
 			err = errors.Wrapf(err, "error generating rsa signer private key")
 			return nil, err
@@ -109,8 +106,8 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 		if s.alg.privateKeyType != KeyTypeRSA {
 			return nil, fmt.Errorf("Key type must be RSA")
 		}
-		if key.N.BitLen() < s.alg.minKeySize {
-			return nil, fmt.Errorf("RSA key must be at least %d bits long", s.alg.minKeySize)
+		if key.N.BitLen() < s.alg.minRSAKeyBitLen {
+			return nil, fmt.Errorf("RSA key must be at least %d bits long", s.alg.minRSAKeyBitLen)
 		}
 
 		sig, err := rsa.SignPSS(rand, key, s.alg.HashFunc, digest, &rsa.PSSOptions{
