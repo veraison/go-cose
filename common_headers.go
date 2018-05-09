@@ -31,17 +31,6 @@ type Headers struct {
 	Unprotected map[interface{}]interface{}
 }
 
-// MarshalBinary is called by codec to serialize Headers to CBOR bytes
-func (h *Headers) MarshalBinary() (data []byte, err error) {
-	// TODO: include unprotected?
-	return h.EncodeProtected(), nil
-}
-
-// UnmarshalBinary is not implemented and panics
-func (h *Headers) UnmarshalBinary(data []byte) (err error) {
-	panic("Headers.UnmarshalBinary is not implemented")
-}
-
 // EncodeUnprotected returns compressed unprotected headers
 func (h *Headers) EncodeUnprotected() (encoded map[interface{}]interface{}) {
 	return CompressHeaders(h.Unprotected)

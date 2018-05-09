@@ -9,8 +9,7 @@ import (
 	"testing"
 )
 
-/// Tests for encoding and decoding go-cose objects to and from CBOR
-// TODO: combine into a single test that: round trips and checks expected marshal / unmarshal results
+// Tests for encoding and decoding go-cose objects to and from CBOR
 
 type CBORTestCase struct {
 	name  string
@@ -31,49 +30,85 @@ var CBORTestCases = []CBORTestCase{
 		HexToBytesOrDie("A10126"),
 	},
 
-	// Headers
+	// SignMessage Headers
 	{
-		"empty headers",
-		Headers{
-			Protected:   map[interface{}]interface{}{},
-			Unprotected: map[interface{}]interface{}{},
-		},
-		[]byte("\x40"),
-	},
-	{
-		"alg in protected header",
-		Headers{
-			Protected:   map[interface{}]interface{}{"alg": "ES256"},
-			Unprotected: map[interface{}]interface{}{},
-		},
-		// 0x43 for bytes h'A10126'
-		// decoding h'A10126' gives:
-		//     A1    # map(1)
-		//       01 # unsigned(1)
-		//       26 # negative(7)
-		[]byte("\x43\xA1\x01\x26"),
-	},
-	{
-		"alg in unprotected header",
-		Headers{
-			Protected:   map[interface{}]interface{}{},
-			Unprotected: map[interface{}]interface{}{"alg": "ES256"},
-		},
-		[]byte("\x40"),
-	},
-	{
-		"duplicate key across protected and unprotected maps",
-		// TODO: throw a duplicate key error?
-		Headers{
-			Protected: map[interface{}]interface{}{
-				"alg": "ES256",
+		"sign message with empty headers",
+		SignMessage{
+			Headers: &Headers{
+				Protected:   map[interface{}]interface{}{},
+				Unprotected: map[interface{}]interface{}{},
 			},
-			Unprotected: map[interface{}]interface{}{
-				"alg": "PS256",
-			},
+			Payload:    nil,
+			Signatures: nil,
 		},
-		HexToBytesOrDie("43a10126"), // see "alg in protected header" comment
+		// D8 62     # tag(98) COSE SignMessage tag
+		//    84     # array(4)
+		//       40  # bytes(0) empty protected headers
+		//           # ""
+		//       A0  # map(0) empty unprotectd headers
+		//       F6  # primitive(22) nil / null payload
+		//       80  # array(0) no signatures
+		[]byte("\xd8\x62\x84\x40\xa0\xf6\x80"),
 	},
+	{
+		"sign message with alg in protected header",
+		SignMessage{
+			Headers: &Headers{
+				Protected:   map[interface{}]interface{}{"alg": "ES256"},
+				Unprotected: map[interface{}]interface{}{},
+			},
+			Payload:    nil,
+			Signatures: nil,
+		},
+		// D8 62           # tag(98) COSE SignMessage tag
+		//    84           # array(4)
+		//       43        # bytes(3) bstr protected header
+		//          A10126 # "\xA1\x01&"
+		//       A0        # map(0) empty unprotected headers
+		//       F6        # primitive(22) nil / null payload
+		//       80        # array(0) no signatures
+		//
+		// where bstr h'A10126' is:
+		//     A1   # map(1)
+		//       01 # unsigned(1) common header ID for alg
+		//       26 # negative(7) ES256 alg ID
+		[]byte("\xd8\x62\x84\x43\xa1\x01\x26\xa0\xf6\x80"),
+	},
+	{
+		"sign message with alg in unprotected header",
+		SignMessage{
+			Headers: &Headers{
+				Protected:   map[interface{}]interface{}{},
+				Unprotected: map[interface{}]interface{}{"alg": "ES256"},
+			},
+			Payload:    nil,
+			Signatures: nil,
+		},
+		// D8 62        # tag(98) COSE SignMessage tag
+		//    84        # array(4)
+		//       40     # bytes(0) empty protected headers
+		//              # ""
+		//       A1     # map(1) unprotected headers
+		//          01  # unsigned(1) common header ID for alg
+		//          26  # negative(7) ES256 alg ID
+		//       F6     # primitive(22) nil / null payload
+		//       80     # array(0) no signatures
+		[]byte("\xd8\x62\x84\x40\xa1\x01\x26\xf6\x80"),
+	},
+
+	// {
+	// 	"duplicate key across protected and unprotected maps",
+	// 	// TODO: throw a duplicate key error?
+	// 	Headers{
+	// 		Protected: map[interface{}]interface{}{
+	// 			"alg": "ES256",
+	// 		},
+	// 		Unprotected: map[interface{}]interface{}{
+	// 			"alg": "PS256",
+	// 		},
+	// 	},
+	// 	HexToBytesOrDie("43a10126"), // see "alg in protected header" comment
+	// },
 	// TODO: test this despite golang not allowing duplicate key "alg" in map literal
 	// {
 	// 	"duplicate key in protected",
