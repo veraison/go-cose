@@ -190,18 +190,29 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 		}
 		return nil
 	case *ecdsa.PublicKey:
-		keySize := v.alg.keySize
-		if keySize < 1 {
-			return fmt.Errorf("Could not find a keySize for the ecdsa algorithm")
+		if v.alg.privateKeyECDSACurve == nil {
+			return fmt.Errorf("Could not find an elliptic curve for the ecdsa algorithm")
 		}
 
-		// r and s from sig
-		if len(signature) != 2*keySize {
+		algCurveBitSize := v.alg.privateKeyECDSACurve.Params().BitSize
+		keyCurveBitSize := key.Curve.Params().BitSize
+
+		if algCurveBitSize != keyCurveBitSize {
+			return fmt.Errorf("Expected %d bit key, got %d bits instead", algCurveBitSize, keyCurveBitSize)
+		}
+
+		algKeyBytesSize := keyCurveBitSize / 8
+		if keyCurveBitSize%8 != 0 {  // add a byte of padding for curves like P521
+			algKeyBytesSize += 1
+		}
+
+		// signature bytes is the keys with padding r and s
+		if len(signature) != 2*algKeyBytesSize {
 			return fmt.Errorf("invalid signature length: %d", len(signature))
 		}
 
-		r := big.NewInt(0).SetBytes(signature[:keySize])
-		s := big.NewInt(0).SetBytes(signature[keySize:])
+		r := big.NewInt(0).SetBytes(signature[:algKeyBytesSize])
+		s := big.NewInt(0).SetBytes(signature[algKeyBytesSize:])
 
 		ok := ecdsa.Verify(key, digest, r, s)
 		if ok {

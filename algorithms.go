@@ -44,8 +44,6 @@ type Algorithm struct {
 
 	minRSAKeyBitLen    int            // minimimum RSA key size to generate in bits
 
-	keySize            int            // ecdsa signature size of r or s in bytes with padding
-	expectedKeyBitSize int            // ecdsa signature curve key size in bits
 	privateKeyECDSACurve    elliptic.Curve // ecdsa private key curve type
 }
 
@@ -82,8 +80,6 @@ var algorithms = []Algorithm{
 		Name:               "ES512", // ECDSA w/ SHA-512 from [RFC8152]
 		Value:              -36,
 		HashFunc:           crypto.SHA512,
-		keySize:            66,
-		expectedKeyBitSize: 521,
 		privateKeyType:     KeyTypeECDSA,
 		privateKeyECDSACurve:    elliptic.P521(),
 	},
@@ -91,8 +87,6 @@ var algorithms = []Algorithm{
 		Name:               "ES384", // ECDSA w/ SHA-384 from [RFC8152]
 		Value:              -35,
 		HashFunc:           crypto.SHA384,
-		keySize:            48,
-		expectedKeyBitSize: 384,
 		privateKeyType:     KeyTypeECDSA,
 		privateKeyECDSACurve:    elliptic.P384(),
 	},
@@ -160,10 +154,8 @@ var algorithms = []Algorithm{
 		Name:               "ES256", // ECDSA w/ SHA-256 from [RFC8152]
 		Value:              -7,
 		HashFunc:           crypto.SHA256,
-		keySize:            32,
-		expectedKeyBitSize: 256,
 		privateKeyType:     KeyTypeECDSA,
-		privateKeyECDSACurve:    elliptic.P521(),
+		privateKeyECDSACurve:    elliptic.P256(),
 	},
 	Algorithm{
 		Name:  "direct", // Direct use of CEK from [RFC8152]

@@ -147,7 +147,7 @@ func TestVerifyErrors(t *testing.T) {
 
 	verifiers = []Verifier{
 		Verifier{
-			publicKey: ecdsa.PublicKey{
+			publicKey: &ecdsa.PublicKey{
 				Curve: elliptic.P384(),
 				X:     FromBase64Int("usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8"),
 				Y:     FromBase64Int("IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"),
@@ -155,7 +155,7 @@ func TestVerifyErrors(t *testing.T) {
 			alg: ES256,
 		},
 	}
-	assert.Equal(errors.New("Error verifying signature 0 expected 256 bit key, got 384 bits instead"), msg.Verify(payload, verifiers))
+	assert.Equal(errors.New("Expected 256 bit key, got 384 bits instead"), msg.Verify(payload, verifiers))
 
 	verifiers = []Verifier{
 		Verifier{
