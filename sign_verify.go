@@ -2,6 +2,7 @@ package cose
 
 import (
 	"bytes"
+	"crypto"
 	"fmt"
 	"io"
 )
@@ -115,7 +116,7 @@ func (m *SignMessage) SigStructure(external []byte, signature *Signature) (ToBeS
 // signatureDigest takes an extra external byte slice and a Signature
 // and returns the SigStructure (i.e. ToBeSigned) hashed using the
 // algorithm from the signature parameter
-func (m *SignMessage) signatureDigest(external []byte, signature *Signature) (digest []byte, err error) {
+func (m *SignMessage) signatureDigest(external []byte, signature *Signature, hashFunc crypto.Hash) (digest []byte, err error) {
 	if m == nil {
 		err = fmt.Errorf("Missing SignMessage compute signatureDigest")
 		return
@@ -140,12 +141,7 @@ func (m *SignMessage) signatureDigest(external []byte, signature *Signature) (di
 		return nil, err
 	}
 
-	alg, err := getAlg(signature.Headers)
-	if err != nil {
-		return nil, err
-	}
-
-	digest, err = hashSigStructure(ToBeSigned, alg.HashFunc)
+	digest, err = hashSigStructure(ToBeSigned, hashFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +173,6 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 		}
 		// TODO: check if provided privateKey verify alg, bitsize, and supported key_ops in protected
 
-		// TODO: dedup with alg in m.signatureDigest()?
 		alg, err := getAlg(signature.Headers)
 		if err != nil {
 			return err
@@ -186,7 +181,7 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 			return ErrInvalidAlg
 		}
 
-		digest, err := m.signatureDigest(external, &signature)
+		digest, err := m.signatureDigest(external, &signature, alg.HashFunc)
 		if err != nil {
 			return err
 		}
@@ -230,7 +225,6 @@ func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) 
 		}
 		// TODO: check if provided privateKey verify alg, bitsize, and supported key_ops in protected
 
-		// TODO: dedup with alg in m.signatureDigest()?
 		alg, err := getAlg(signature.Headers)
 		if err != nil {
 			return err
@@ -239,7 +233,7 @@ func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) 
 			return ErrInvalidAlg
 		}
 
-		digest, err := m.signatureDigest(external, &signature)
+		digest, err := m.signatureDigest(external, &signature, alg.HashFunc)
 		if err != nil {
 			return err
 		}
