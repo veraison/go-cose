@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 )
@@ -28,6 +29,13 @@ func NewSignature() (s *Signature) {
 		},
 		SignatureBytes: nil,
 	}
+}
+
+func (s *Signature) Equal(other *Signature) bool {
+	if s == nil && other == nil {
+		return true
+	}
+	return bytes.Equal(s.SignatureBytes, other.SignatureBytes) && s.Headers == other.Headers
 }
 
 // Decode updates the signature inplace from its COSE serialization
@@ -107,9 +115,26 @@ func (m *SignMessage) SigStructure(external []byte, signature *Signature) (ToBeS
 // SignatureDigest takes an extra external byte slice and a Signature
 // and returns the SigStructure (i.e. ToBeSigned) hashed using the
 // algorithm from the signature parameter
-//
-// TODO: check that signature is in SignMessage?
 func (m *SignMessage) SignatureDigest(external []byte, signature *Signature) (digest []byte, err error) {
+	if m == nil {
+		err = fmt.Errorf("Missing SignMessage compute SignatureDigest")
+		return
+	}
+	if m.Signatures == nil {
+		err = fmt.Errorf("Missing SignMessage.Signatures")
+		return
+	}
+	signatureInMessage := false
+	for _, msgSig := range m.Signatures {
+		if msgSig.Equal(signature) {
+			signatureInMessage = true
+		}
+	}
+	if !signatureInMessage {
+		err = fmt.Errorf("SignMessage.Signatures does not include the signature to digest")
+		return
+	}
+
 	ToBeSigned, err := m.SigStructure(external, signature)
 	if err != nil {
 		return nil, err
