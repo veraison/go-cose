@@ -2,6 +2,7 @@ package cose
 
 import (
 	"bytes"
+	"crypto"
 	"fmt"
 	"io"
 )
@@ -112,12 +113,12 @@ func (m *SignMessage) SigStructure(external []byte, signature *Signature) (ToBeS
 	return
 }
 
-// SignatureDigest takes an extra external byte slice and a Signature
+// signatureDigest takes an extra external byte slice and a Signature
 // and returns the SigStructure (i.e. ToBeSigned) hashed using the
 // algorithm from the signature parameter
-func (m *SignMessage) SignatureDigest(external []byte, signature *Signature) (digest []byte, err error) {
+func (m *SignMessage) signatureDigest(external []byte, signature *Signature, hashFunc crypto.Hash) (digest []byte, err error) {
 	if m == nil {
-		err = fmt.Errorf("Missing SignMessage compute SignatureDigest")
+		err = fmt.Errorf("Missing SignMessage compute signatureDigest")
 		return
 	}
 	if m.Signatures == nil {
@@ -140,12 +141,7 @@ func (m *SignMessage) SignatureDigest(external []byte, signature *Signature) (di
 		return nil, err
 	}
 
-	alg, err := getAlg(signature.Headers)
-	if err != nil {
-		return nil, err
-	}
-
-	digest, err = hashSigStructure(ToBeSigned, alg.HashFunc)
+	digest, err = hashSigStructure(ToBeSigned, hashFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -175,9 +171,7 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 		} else if signature.SignatureBytes != nil || len(signature.SignatureBytes) > 0 {
 			return fmt.Errorf("SignMessage signature %d already has signature bytes", i)
 		}
-		// TODO: check if provided privateKey verify alg, bitsize, and supported key_ops in protected
 
-		// TODO: dedup with alg in m.SignatureDigest()?
 		alg, err := getAlg(signature.Headers)
 		if err != nil {
 			return err
@@ -186,7 +180,7 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) (e
 			return ErrInvalidAlg
 		}
 
-		digest, err := m.SignatureDigest(external, &signature)
+		digest, err := m.signatureDigest(external, &signature, alg.HashFunc)
 		if err != nil {
 			return err
 		}
@@ -228,9 +222,7 @@ func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) 
 		} else if signature.SignatureBytes == nil || len(signature.SignatureBytes) < 1 {
 			return fmt.Errorf("SignMessage signature %d missing signature bytes to verify", i)
 		}
-		// TODO: check if provided privateKey verify alg, bitsize, and supported key_ops in protected
 
-		// TODO: dedup with alg in m.SignatureDigest()?
 		alg, err := getAlg(signature.Headers)
 		if err != nil {
 			return err
@@ -239,7 +231,7 @@ func (m *SignMessage) Verify(external []byte, verifiers []Verifier) (err error) 
 			return ErrInvalidAlg
 		}
 
-		digest, err := m.SignatureDigest(external, &signature)
+		digest, err := m.signatureDigest(external, &signature, alg.HashFunc)
 		if err != nil {
 			return err
 		}

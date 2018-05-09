@@ -34,6 +34,18 @@ var (
 	ES512 = getAlgByNameOrPanic("ES512")
 )
 
+// ByteSigner take a signature digest and returns COSE signature bytes
+type ByteSigner interface {
+	// Sign returns the COSE signature as a byte slice
+	Sign(rand io.Reader, digest []byte) (signature []byte, err error)
+}
+
+// ByteVerifier checks COSE signatures
+type ByteVerifier interface {
+	// Verify returns nil for a successfully verified signature or an error
+	Verify(digest []byte, signature []byte) (err error)
+}
+
 // Signer holds a COSE Algorithm and private key for signing messages
 type Signer struct {
 	privateKey crypto.PrivateKey
@@ -135,7 +147,7 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 		// process.
 		if !(s.BitLen() == r.BitLen() && s.BitLen() == key.D.BitLen()) {
 			// TODO: figure out why these lengths don't match
-			fmt.Printf("Bit lengths of integers r and s (%d and %d) do not match the key length %d", s.BitLen(), r.BitLen(), key.D.BitLen())
+			fmt.Printf("Bit lengths of integers r and s (%d and %d) do not match the key length %d\n", s.BitLen(), r.BitLen(), key.D.BitLen())
 		}
 
 		// The signature is encoded by converting the integers
@@ -301,4 +313,35 @@ func FromBase64Int(data string) *big.Int {
 		panic("Invalid test data")
 	}
 	return new(big.Int).SetBytes(val)
+}
+
+
+// Sign returns the SignatureBytes for each Signer in the same order
+// on the digest or the error from the first failing Signer
+func Sign(rand io.Reader, digest []byte, signers []ByteSigner) (signatures [][]byte, err error) {
+	var signatureBytes []byte
+
+	for _, signer := range signers {
+		signatureBytes, err = signer.Sign(rand, digest)
+		if err != nil {
+			return
+		}
+		signatures = append(signatures, signatureBytes)
+	}
+	return
+}
+
+// Verify returns nil if all Verifier verify the SignatureBytes or the
+// error from the first failing Verifier
+func Verify(digest []byte, signatures [][]byte, verifiers []ByteVerifier) (err error) {
+	if len(signatures) != len(verifiers) {
+		return fmt.Errorf("Wrong number of signatures %d and verifiers %d", len(signatures), len(verifiers))
+	}
+	for i, verifier := range verifiers {
+		err = verifier.Verify(digest, signatures[i])
+		if err != nil {
+			return
+		}
+	}
+	return nil
 }
