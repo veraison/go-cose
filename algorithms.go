@@ -159,7 +159,7 @@ var algorithms = []Algorithm{
 		HashFunc:           crypto.SHA256,
 		keySize:            32,
 		privateKeyType:     KeyTypeECDSA,
-		privateKeyECDSACurve:    elliptic.P521(),
+		privateKeyECDSACurve:    elliptic.P256(),
 	},
 	Algorithm{
 		Name:  "direct", // Direct use of CEK from [RFC8152]
