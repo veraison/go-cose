@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/rand"
+	"crypto/elliptic"
 	"fmt"
 	"io"
 	"math/big"
@@ -139,13 +140,7 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 		// with zero bits to get to the correct length.  The two
 		// integers are then concatenated together to form a byte
 		// string that is the resulting signature.
-		curveBits := key.Curve.Params().BitSize
-		keyBytes := curveBits / 8
-		if curveBits%8 > 0 {
-			keyBytes++
-		}
-
-		n := keyBytes
+		n := ecdsaCurveKeyBytesSize(key.Curve)
 		sig := make([]byte, 0)
 		sig = append(sig, I2OSP(r, n)...)
 		sig = append(sig, I2OSP(s, n)...)
@@ -201,10 +196,7 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 			return fmt.Errorf("Expected %d bit key, got %d bits instead", algCurveBitSize, keyCurveBitSize)
 		}
 
-		algKeyBytesSize := keyCurveBitSize / 8
-		if keyCurveBitSize%8 != 0 {  // add a byte of padding for curves like P521
-			algKeyBytesSize += 1
-		}
+		algKeyBytesSize := ecdsaCurveKeyBytesSize(v.alg.privateKeyECDSACurve)
 
 		// signature bytes is the keys with padding r and s
 		if len(signature) != 2*algKeyBytesSize {
@@ -262,6 +254,18 @@ func hashSigStructure(ToBeSigned []byte, hash crypto.Hash) (digest []byte, err e
 	_, _ = hasher.Write(ToBeSigned) // Write() on hash never fails
 	digest = hasher.Sum(nil)
 	return digest, nil
+}
+
+// ecdsaCurveKeyBytesSize returns the ECDSA key size in bytes with padding
+func ecdsaCurveKeyBytesSize(curve elliptic.Curve) (keyBytesSize int) {
+	curveBits := curve.Params().BitSize
+	keyBytesSize = curveBits / 8
+
+	// add a byte of padding for curves like P521
+	if curveBits%8 > 0 {
+		keyBytesSize++
+	}
+	return
 }
 
 // I2OSP "Integer-to-Octet-String" converts a nonnegative integer to
