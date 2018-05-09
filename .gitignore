@@ -22,3 +22,5 @@ vendor/
 
 # OSX fs files
 .DS_Store
+/cose-fuzz.zip
+/workdir/
