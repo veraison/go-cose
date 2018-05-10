@@ -16,10 +16,10 @@ func GetCOSEHandle() (h *codec.CborHandle) {
 	h = new(codec.CborHandle)
 	h.IndefiniteLength = false // no streaming
 	h.Canonical = true         // sort map keys
+	h.SignedInteger = true
 
 	var cExt Ext
 	h.SetInterfaceExt(reflect.TypeOf(SignMessage{}), SignMessageCBORTag, cExt)
-
 	return h
 }
 

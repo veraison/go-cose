@@ -26,7 +26,7 @@ var CBORTestCases = []CBORTestCase{
 	},
 	{
 		"generic interface map",
-		map[interface{}]interface{}{uint64(1): int64(-7)},
+		map[interface{}]interface{}{int64(1): int64(-7)},
 		HexToBytesOrDie("A10126"),
 	},
 
