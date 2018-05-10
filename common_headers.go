@@ -192,27 +192,56 @@ func getAlgByValue(value int64) (alg *Algorithm, err error) {
 	return nil, fmt.Errorf("Algorithm with value %v not found", value)
 }
 
+func compressHeader(k, v interface{}) (compressedK, compressedV interface{}) {
+	kstr, kok := k.(string)
+	vstr, vok := v.(string)
+	compressedK = k
+	compressedV = v
+	if !kok {
+		return
+	}
+	tag, err := GetCommonHeaderTag(kstr)
+	if err == nil {
+		compressedK = tag
+
+		if kstr == "alg" && vok {
+			alg, err := getAlgByName(vstr)
+			if err == nil {
+				compressedV = alg.Value
+			}
+		}
+	}
+	return
+}
+
+func decompressHeader(k, v interface{}) (decompressedK, decompressedV interface{}) {
+	kint, kok := k.(int)
+	vint, vok := v.(int)
+	decompressedK = k
+	decompressedV = v
+	if !kok {
+		return
+	}
+	label, err := GetCommonHeaderLabel(kint)
+	if err == nil {
+		decompressedK = label
+		if label == "alg" && vok {
+			alg, err := getAlgByValue(int64(vint))
+			if err == nil {
+				decompressedV = alg.Name
+			}
+		}
+	}
+	return
+}
+
 // CompressHeaders replaces string tags with their int values and alg
 // tags with their IANA int values. Is the inverse of DecompressHeaders.
 func CompressHeaders(headers map[interface{}]interface{}) (compressed map[interface{}]interface{}) {
 	compressed = map[interface{}]interface{}{}
 
 	for k, v := range headers {
-		kstr, kok := k.(string)
-		vstr, vok := v.(string)
-		if kok {
-			tag, err := GetCommonHeaderTag(kstr)
-			if err == nil {
-				k = tag
-
-				if kstr == "alg" && vok {
-					alg, err := getAlgByName(vstr)
-					if err == nil {
-						v = alg.Value
-					}
-				}
-			}
-		}
+		k, v = compressHeader(k, v)
 		compressed[k] = v
 	}
 
@@ -225,20 +254,7 @@ func DecompressHeaders(headers map[interface{}]interface{}) (decompressed map[in
 	decompressed = map[interface{}]interface{}{}
 
 	for k, v := range headers {
-		kint, kok := k.(int)
-		vint, vok := v.(int)
-		if kok {
-			label, err := GetCommonHeaderLabel(kint)
-			if err == nil {
-				k = label
-				if label == "alg" && vok {
-					alg, err := getAlgByValue(int64(vint))
-					if err == nil {
-						v = alg.Name
-					}
-				}
-			}
-		}
+		k, v = decompressHeader(k, v)
 		decompressed[k] = v
 	}
 
