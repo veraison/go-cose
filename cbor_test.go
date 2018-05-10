@@ -95,43 +95,6 @@ var CBORTestCases = []CBORTestCase{
 		//       80     # array(0) no signatures
 		[]byte("\xd8\x62\x84\x40\xa1\x01\x26\xf6\x80"),
 	},
-
-	// {
-	// 	"duplicate key across protected and unprotected maps",
-	// 	// TODO: throw a duplicate key error?
-	// 	Headers{
-	// 		Protected: map[interface{}]interface{}{
-	// 			"alg": "ES256",
-	// 		},
-	// 		Unprotected: map[interface{}]interface{}{
-	// 			"alg": "PS256",
-	// 		},
-	// 	},
-	// 	HexToBytesOrDie("43a10126"), // see "alg in protected header" comment
-	// },
-	// TODO: test this despite golang not allowing duplicate key "alg" in map literal
-	// {
-	// 	"duplicate key in protected",
-	// 	[]byte(""),
-	// 	Headers{
-	// 		Protected: map[interface{}]interface{}{
-	// 			"alg": "ES256",
-	// 			"alg": "PS256",
-	// 		},
-	// 		Unprotected: map[interface{}]interface{}{},
-	// 	},
-	// },
-	// {
-	// 	"duplicate key in unprotected",
-	// 	Headers{
-	// 		Protected: map[interface{}]interface{}{},
-	// 		Unprotected: map[interface{}]interface{}{
-	// 			"alg": "ES256",
-	// 			"alg": "PS256",
-	// 		},
-	// 	},
-	// 	[]byte(""),
-	// },
 }
 
 func MarshalsToExpectedBytes(t *testing.T, testCase CBORTestCase) {
