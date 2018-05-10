@@ -143,14 +143,11 @@ func MarshalsToExpectedBytes(t *testing.T, testCase CBORTestCase) {
 	assert.Equal(testCase.bytes, bytes)
 }
 
-func UnmarshalsToExpectedInterface(t *testing.T, testCase CBORTestCase) {
+func UnmarshalsWithoutErr(t *testing.T, testCase CBORTestCase) {
 	assert := assert.New(t)
 
 	_, err := Unmarshal(testCase.bytes)
 	assert.Nil(err)
-
-	// TODO: support untagged messages
-	// assert.Equal(testCase.obj, obj)
 }
 
 func RoundtripsToExpectedBytes(t *testing.T, testCase CBORTestCase) {
@@ -172,7 +169,7 @@ func TestCBOREncoding(t *testing.T) {
 		})
 
 		t.Run(fmt.Sprintf("%s: UnmarshalsToExpectedInterface", testCase.name), func(t *testing.T) {
-			UnmarshalsToExpectedInterface(t, testCase)
+			UnmarshalsWithoutErr(t, testCase)
 		})
 
 		t.Run(fmt.Sprintf("%s: RoundtripsToExpectedBytes", testCase.name), func(t *testing.T) {
