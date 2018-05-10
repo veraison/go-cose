@@ -38,7 +38,6 @@ func (h *Headers) EncodeUnprotected() (encoded map[interface{}]interface{}) {
 
 // EncodeProtected compresses and Marshals protected headers to bytes
 // to encode as a CBOR bstr
-// TODO: check for dups in maps
 func (h *Headers) EncodeProtected() (bstr []byte) {
 	if h == nil {
 		panic("Cannot encode nil Headers")
@@ -73,7 +72,6 @@ func (h *Headers) DecodeProtected(o interface{}) (err error) {
 	if !ok {
 		return fmt.Errorf("error casting protected to map; got %T", protected)
 	}
-
 	h.Protected = protectedMap
 	return nil
 }
@@ -92,7 +90,7 @@ func (h *Headers) DecodeUnprotected(o interface{}) (err error) {
 // and unprotected respectively
 func (h *Headers) Decode(o []interface{}) (err error) {
 	if len(o) != 2 {
-		panic(fmt.Sprintf("can only decode headers from 2-item array; got %d", len(o)))
+		return fmt.Errorf("can only decode headers from 2-item array; got %d", len(o))
 	}
 	err = h.DecodeProtected(o[0])
 	if err != nil {
@@ -101,6 +99,10 @@ func (h *Headers) Decode(o []interface{}) (err error) {
 	err = h.DecodeUnprotected(o[1])
 	if err != nil {
 		return err
+	}
+	dup := FindDuplicateHeader(h)
+	if dup != nil {
+		return fmt.Errorf("Duplicate header %+v found", dup)
 	}
 	return nil
 }
@@ -236,15 +238,18 @@ func decompressHeader(k, v interface{}) (decompressedK, decompressedV interface{
 }
 
 // CompressHeaders replaces string tags with their int values and alg
-// tags with their IANA int values. Is the inverse of DecompressHeaders.
+// tags with their IANA int values.
+// panics when a compressed header tag already exists (e.g. alg and 1)
 func CompressHeaders(headers map[interface{}]interface{}) (compressed map[interface{}]interface{}) {
 	compressed = map[interface{}]interface{}{}
-
 	for k, v := range headers {
-		k, v = compressHeader(k, v)
-		compressed[k] = v
+		compressedK, compressedV := compressHeader(k, v)
+		if _, ok := compressed[compressedK]; ok {
+			panic(fmt.Sprintf("Duplicate compressed and uncompressed common header %v found in headers", compressedK))
+		} else {
+			compressed[compressedK] = compressedV
+		}
 	}
-
 	return compressed
 }
 
@@ -259,6 +264,23 @@ func DecompressHeaders(headers map[interface{}]interface{}) (decompressed map[in
 	}
 
 	return decompressed
+}
+
+// FindDuplicateHeader compresses the headers and returns the first
+// duplicate header or nil for none found
+func FindDuplicateHeader(headers *Headers) interface{} {
+	if headers == nil {
+		return nil
+	}
+	headers.Protected = CompressHeaders(headers.Protected)
+	headers.Unprotected = CompressHeaders(headers.Unprotected)
+	for k, _ := range headers.Protected {
+		_, ok := headers.Unprotected[k]
+		if ok {
+			return k
+		}
+	}
+	return nil
 }
 
 // getAlg returns the alg by label, int, or int64 tag (as from Unmarshal)

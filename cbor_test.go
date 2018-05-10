@@ -141,6 +141,87 @@ func TestCBOREncoding(t *testing.T) {
 	}
 }
 
+func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
+	assert := assert.New(t)
+
+	// NB: golang does not allow duplicate keys in a map literal
+	// so we don't test Marshalling duplicate entries both in
+	// Protected or Unprotected
+
+	// uncompressed one in each
+	msg := NewSignMessage()
+	msg.Payload = nil
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{
+			"alg": "ES256",
+		},
+		Unprotected: map[interface{}]interface{}{
+			"alg": "PS256",
+		},
+	}
+	_, err := Marshal(msg)
+	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+
+	// compressed one in each
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{
+			1: -7,
+		},
+		Unprotected: map[interface{}]interface{}{
+			1: -37,
+		},
+	}
+	_, err = Marshal(msg)
+	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+
+	// compressed and uncompressed both in Protected
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{
+			"alg": "ES256",
+			1: -37,
+		},
+		Unprotected: map[interface{}]interface{}{
+		},
+	}
+	_, err = Marshal(msg)
+	assert.Equal(errors.New("cbor encode error: Duplicate compressed and uncompressed common header 1 found in headers"), err)
+
+	// compressed and uncompressed both in Unprotected
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{
+		},
+		Unprotected: map[interface{}]interface{}{
+			"alg": "ES256",
+			1: -37,
+		},
+	}
+	_, err = Marshal(msg)
+	assert.Equal(errors.New("cbor encode error: Duplicate compressed and uncompressed common header 1 found in headers"), err)
+
+	// compressed and uncompressed one in each
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{
+			"alg": "ES256",
+		},
+		Unprotected: map[interface{}]interface{}{
+			1: -37,
+		},
+	}
+	_, err = Marshal(msg)
+	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{
+			1: -37,
+		},
+		Unprotected: map[interface{}]interface{}{
+			"alg": "ES256",
+		},
+	}
+	_, err = Marshal(msg)
+	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+}
+
 func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
 	assert := assert.New(t)
 
@@ -180,6 +261,111 @@ func TestCBOREncodingErrsOnUnexpectedType(t *testing.T) {
 	assert.Equal(errors.New("cbor encode error: unsupported format expecting to encode SignMessage; got *cose.Flub"), err)
 }
 
+func TestCBORDecodingDuplicateKeys(t *testing.T) {
+	assert := assert.New(t)
+
+	type DecodeTestCase struct {
+		bytes        []byte
+		result       SignMessage
+	}
+	var cases = []DecodeTestCase{
+		{
+			// duplicate compressed key in protected
+			// tag(98) + array(4) [ bytes(5), map(0), bytes(0), array(0) ]
+			//
+			// where our bytes(5) is A201260128 or
+			// A2    # map(2)
+			//    01 # unsigned(1)
+			//    26 # negative(6)
+			//    01 # unsigned(1)
+			//    29 # negative(10)
+			//
+			// and decodes to map[1:-10] so last/rightmost value wins
+			HexToBytesOrDie("D862" + "84" + "45A201260129" + "A0" + "40" + "80"),
+			SignMessage{
+				Headers: &Headers{
+					Protected:   map[interface{}]interface{}{1: -10},
+					Unprotected: map[interface{}]interface{}{},
+				},
+				Payload:    []byte(""),
+				Signatures: nil,
+			},
+		},
+		{
+			// duplicate compressed key in unprotected
+			// tag(98) + array(4) [ bytes(0), map(2), bytes(0), array(0) ]
+			//
+			// where our map(2) is
+			//    01 # unsigned(1)
+			//    26 # negative(6)
+			//    01 # unsigned(1)
+			//    29 # negative(10)
+			//
+			// and decodes to map[1:-10] so last/rightmost value wins
+			HexToBytesOrDie("D862" + "84" + "40" + "A201260129" + "40" + "80"),
+			SignMessage{
+				Headers: &Headers{
+					Protected:   map[interface{}]interface{}{},
+					Unprotected: map[interface{}]interface{}{1: -10},
+				},
+				Payload:    []byte(""),
+				Signatures: nil,
+			},
+		},
+		{
+			// duplicate uncompressed key in protected
+			// tag(98) + array(4) [ bytes(21), map(0), bytes(0), array(0) ]
+			//
+			// see next test for what bytes(21) represents
+			HexToBytesOrDie("D862" + "84" + "55" + "A2" + "63" + "616C67" + "65" + "4553323536" + "63" + "616C67" + "65" + "5053323536" + "A0" + "40" + "80"),
+			SignMessage{
+				Headers: &Headers{
+					Protected: map[interface{}]interface{}{
+						1: -37, // decoding compresses to check for duplicate keys
+					},
+					Unprotected: map[interface{}]interface{}{},
+				},
+				Payload:    []byte(""),
+				Signatures: nil,
+			},
+		},
+		{
+			// duplicate uncompressed key in unprotected
+			// tag(98) + array(4) [ bytes(0), map(2), bytes(0), array(0) ]
+			//
+			// where our map(2) is
+			//
+			// A2               # map(2)
+			//    63            # text(3)
+			//       616C67     # "alg"
+			//    65            # text(5)
+			//       4553323536 # "ES256"
+			//    63            # text(3)
+			//       616C67     # "alg"
+			//    65            # text(5)
+			//       5053323536 # "PS256"
+			//
+			HexToBytesOrDie("D862" + "84" + "40" + "A2" + "63" + "616C67" + "65" + "4553323536" + "63" + "616C67" + "65" + "5053323536" + "40" + "80"),
+			SignMessage{
+				Headers: &Headers{
+					Protected: map[interface{}]interface{}{},
+					Unprotected: map[interface{}]interface{}{
+						1: -37, // decoding compresses to check for duplicate keys
+					},
+				},
+				Payload:    []byte(""),
+				Signatures: nil,
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		result, err := Unmarshal(testCase.bytes)
+		assert.Nil(err)
+		assert.Equal(testCase.result, result)
+	}
+}
+
 func TestCBORDecodingErrors(t *testing.T) {
 	assert := assert.New(t)
 
@@ -210,6 +396,38 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), text(0) ]
 			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "60"),
 			"cbor decode error [pos 7]: error decoding sigs; got string",
+		},
+		{
+			// duplicate compressed key in protected and unprotected
+			// tag(98) + array(4) [ bytes(3), map(2), bytes(0), array(0) ]
+			// bytes(3) is protected {2: -7}
+			// map(1) is {2: -5}
+			HexToBytesOrDie("D862" + "84" + "43A10226" + "A10224" + "40" + "80"),
+			"cbor decode error [pos 12]: error decoding header bytes; got Duplicate header 2 found",
+		},
+		{
+			// duplicate uncompressed key in protected and unprotected
+			// tag(98) + array(4) [ bytes(11), map(1), bytes(0), array(0) ]
+			// bytes(11) is protected {"alg": "ES256"}
+			// map(1) is unprotected {"alg": "ES256"}
+			HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
+			"cbor decode error [pos 28]: error decoding header bytes; got Duplicate header 1 found",
+		},
+		{
+			// duplicate key compressed in protected and uncompressed in unprotected
+			// tag(98) + array(4) [ bytes(3), map(1), bytes(0), array(0) ]
+			// bytes(3) is protected {1: -7}
+			// map(1) is unprotected {"alg": "PS256"}
+			HexToBytesOrDie("D862" + "84" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
+			"cbor decode error [pos 20]: error decoding header bytes; got Duplicate header 1 found",
+		},
+		{
+			// duplicate key uncompressed in protected and compressed in unprotected
+			// tag(98) + array(4) [ bytes(11), map(1), bytes(0), array(0) ]
+			// bytes(11) is protected {"alg": "ES256"}
+			// map(1) is unprotected {1: -7}
+			HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40" + "80"),
+			"cbor decode error [pos 20]: error decoding header bytes; got Duplicate header 1 found",
 		},
 	}
 
