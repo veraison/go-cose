@@ -26,8 +26,8 @@ var CBORTestCases = []CBORTestCase{
 	},
 	{
 		"generic interface map",
-		map[interface{}]interface{}{int64(1): int64(-7)},
-		HexToBytesOrDie("A10126"),
+		map[interface{}]interface{}{1: -7},
+		[]byte("\xA1\x01\x26"),
 	},
 
 	// SignMessage Headers
