@@ -3,6 +3,7 @@ package cose
 import (
 	"fmt"
 	"log"
+	"github.com/pkg/errors"
 )
 
 // Headers represents "two buckets of information that are not
@@ -56,6 +57,10 @@ func (h *Headers) EncodeProtected() (bstr []byte) {
 
 // DecodeProtected Unmarshals and sets Headers.protected from an interface{}
 func (h *Headers) DecodeProtected(o interface{}) (err error) {
+	if h == nil {
+		return errors.New("error decoding protected headers on nil headers")
+	}
+
 	b, ok := o.([]byte)
 	if !ok {
 		return fmt.Errorf("error casting protected header bytes; got %T", o)

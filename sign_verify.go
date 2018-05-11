@@ -41,9 +41,13 @@ func (s *Signature) Equal(other *Signature) bool {
 
 // Decode updates the signature inplace from its COSE serialization
 func (s *Signature) Decode(o interface{}) {
+	if s == nil {
+		panic("error decoding on nil Signature")
+	}
+
 	array, ok := o.([]interface{})
 	if !ok {
-		panic(fmt.Sprintf("error decoding sigArray; got %T", array))
+		panic(fmt.Sprintf("error decoding signature Array; got %T", array))
 	}
 	if len(array) != 3 {
 		panic(fmt.Sprintf("can only decode Signature with 3 items; got %d", len(array)))
