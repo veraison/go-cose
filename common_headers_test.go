@@ -138,3 +138,10 @@ func TestHeaderCompressionDoesNotDecompressUnknownTag(t *testing.T) {
 		DecompressHeaders(compressed),
 		"header decompression modifies unknown tag")
 }
+
+func TestFindDuplicateHeaderWithNilHeaders(t *testing.T) {
+	assert := assert.New(t)
+
+	var h *Headers = nil
+	assert.Nil(FindDuplicateHeader(h))
+}
