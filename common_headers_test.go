@@ -10,9 +10,11 @@ var CompressionTestCases = []struct {
 	name         string
 	input        map[interface{}]interface{}
 	intermediate map[interface{}]interface{}
+	roundtrip    map[interface{}]interface{}
 }{
 	{
 		"all empty",
+		map[interface{}]interface{}{},
 		map[interface{}]interface{}{},
 		map[interface{}]interface{}{},
 	},
@@ -36,9 +38,21 @@ var CompressionTestCases = []struct {
 			6: "foo",
 			7: []int{1, 2, -3},
 		},
+		map[interface{}]interface{}{
+			"counter signature": []int{1, 2, -3},
+			"Partial IV":        "foo",
+			"alg":               true,
+			"IV":                nil,
+			"content type":      false,
+			"kid":               -1,
+			"crit":              true,
+		},
 	},
 	{
 		"unknown key",
+		map[interface{}]interface{}{
+			"unknown": -1,
+		},
 		map[interface{}]interface{}{
 			"unknown": -1,
 		},
@@ -54,6 +68,9 @@ var CompressionTestCases = []struct {
 		map[interface{}]interface{}{
 			"ALG": 1,
 		},
+		map[interface{}]interface{}{
+			"ALG": 1,
+		},
 	},
 	{
 		"supported alg value \"ES256\" compressed",
@@ -63,6 +80,9 @@ var CompressionTestCases = []struct {
 		map[interface{}]interface{}{
 			1: -7,
 		},
+		map[interface{}]interface{}{
+			"alg": "ES256",
+		},
 	},
 	{
 		"supported alg value \"PS256\" compressed",
@@ -71,6 +91,21 @@ var CompressionTestCases = []struct {
 		},
 		map[interface{}]interface{}{
 			1: -37,
+		},
+		map[interface{}]interface{}{
+			"alg": "PS256",
+		},
+	},
+	{
+		"converts int64 to int",
+		map[interface{}]interface{}{
+			int64(1): int64(-37),
+		},
+		map[interface{}]interface{}{
+			1: -37,
+		},
+		map[interface{}]interface{}{
+			"alg": "PS256",
 		},
 	},
 }
@@ -86,7 +121,7 @@ func TestHeaderCompressionRoundTrip(t *testing.T) {
 			fmt.Sprintf("%s: header compression failed", testCase.name))
 
 		assert.Equal(
-			testCase.input,
+			testCase.roundtrip,
 			DecompressHeaders(compressed),
 			fmt.Sprintf("%s: header compression-decompression roundtrip failed", testCase.name))
 	}

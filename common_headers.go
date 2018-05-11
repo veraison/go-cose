@@ -185,9 +185,9 @@ func getAlgByNameOrPanic(name string) (alg *Algorithm) {
 }
 
 // getAlgByValue returns a Algorithm for an IANA value
-func getAlgByValue(value int64) (alg *Algorithm, err error) {
+func getAlgByValue(value int) (alg *Algorithm, err error) {
 	for _, alg := range algorithms {
-		if int64(alg.Value) == value {
+		if alg.Value == value {
 			return &alg, nil
 		}
 	}
@@ -195,40 +195,59 @@ func getAlgByValue(value int64) (alg *Algorithm, err error) {
 }
 
 func compressHeader(k, v interface{}) (compressedK, compressedV interface{}) {
-	kstr, kok := k.(string)
-	vstr, vok := v.(string)
+	var keyIsAlg = false
+
 	compressedK = k
 	compressedV = v
-	if !kok {
-		return
-	}
-	tag, err := GetCommonHeaderTag(kstr)
-	if err == nil {
-		compressedK = tag
 
-		if kstr == "alg" && vok {
-			alg, err := getAlgByName(vstr)
+	switch key := k.(type) {
+	case string:
+		if key == "alg" {
+			keyIsAlg = true
+		}
+		tag, err := GetCommonHeaderTag(key)
+		if err == nil {
+			compressedK = tag
+		}
+	case int64:
+		compressedK = int(key)
+	}
+
+	switch val := v.(type) {
+	case string:
+		if keyIsAlg {
+			alg, err := getAlgByName(val)
 			if err == nil {
 				compressedV = alg.Value
 			}
 		}
+	case int64:
+		compressedV = int(val)
 	}
 	return
 }
 
 func decompressHeader(k, v interface{}) (decompressedK, decompressedV interface{}) {
-	kint, kok := k.(int)
-	vint, vok := v.(int)
+	var keyIsAlg = false
+
 	decompressedK = k
 	decompressedV = v
-	if !kok {
-		return
+
+	switch key := k.(type) {
+	case int:
+		label, err := GetCommonHeaderLabel(key)
+		if err == nil {
+			decompressedK = label
+		}
+		if label == "alg" {
+			keyIsAlg = true
+		}
 	}
-	label, err := GetCommonHeaderLabel(kint)
-	if err == nil {
-		decompressedK = label
-		if label == "alg" && vok {
-			alg, err := getAlgByValue(int64(vint))
+
+	switch val := v.(type) {
+	case int:
+		if keyIsAlg {
+			alg, err := getAlgByValue(val)
 			if err == nil {
 				decompressedV = alg.Name
 			}
@@ -239,7 +258,9 @@ func decompressHeader(k, v interface{}) (decompressedK, decompressedV interface{
 
 // CompressHeaders replaces string tags with their int values and alg
 // tags with their IANA int values.
+//
 // panics when a compressed header tag already exists (e.g. alg and 1)
+// casts int64 keys to int to make looking up common header IDs easier
 func CompressHeaders(headers map[interface{}]interface{}) (compressed map[interface{}]interface{}) {
 	compressed = map[interface{}]interface{}{}
 	for k, v := range headers {
@@ -283,8 +304,8 @@ func FindDuplicateHeader(headers *Headers) interface{} {
 	return nil
 }
 
-// getAlg returns the alg by label, int, or int64 tag (as from Unmarshal)
-// only checks Protected headers since alg should only be in Protected headers
+// getAlg returns the alg by label or int
+// alg should only be in Protected headers so it does not check Unprotected headers
 func getAlg(h *Headers) (alg *Algorithm, err error) {
 	if tmp, ok := h.Protected["alg"]; ok {
 		if algName, ok := tmp.(string); ok {
@@ -294,17 +315,9 @@ func getAlg(h *Headers) (alg *Algorithm, err error) {
 			}
 			return alg, nil
 		}
-	} else if tmp, ok := h.Protected[int64(1)]; ok {
-		if algValue, ok := tmp.(int64); ok {
-			alg, err = getAlgByValue(algValue)
-			if err != nil {
-				return nil, err
-			}
-			return alg, nil
-		}
 	} else if tmp, ok := h.Protected[int(1)]; ok {
 		if algValue, ok := tmp.(int); ok {
-			alg, err = getAlgByValue(int64(algValue))
+			alg, err = getAlgByValue(algValue)
 			if err != nil {
 				return nil, err
 			}
