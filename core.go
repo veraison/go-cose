@@ -146,7 +146,6 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 		// the length of the key used for the signature
 		// process.
 		if !(s.BitLen() == r.BitLen() && s.BitLen() == key.D.BitLen()) {
-			// TODO: figure out why these lengths don't match
 			fmt.Printf("Bit lengths of integers r and s (%d and %d) do not match the key length %d\n", s.BitLen(), r.BitLen(), key.D.BitLen())
 		}
 

@@ -62,10 +62,6 @@ func WGExampleSignsAndVerifies(t *testing.T, example WGExample) {
 		strings.ToUpper(hex.EncodeToString(ToBeSigned)),
 		fmt.Sprintf("%s: signing wrong Hex Intermediate", example.Title))
 
-	// check cbor matches (will not match per message keys k match which depend on our RNGs)
-	// signed := strings.ToUpper(hex.EncodeToString(Marshal(output)))
-	// assert.Equal(example.Output.Cbor, signed, "CBOR encoded message wrong")
-
 	// Verify our signature (round trip)
 	digest, err := hashSigStructure(ToBeSigned, alg.HashFunc)
 	assert.Nil(err, fmt.Sprintf("%s: round trip failed to hash signature %s", example.Title, err))

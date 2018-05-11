@@ -16,10 +16,10 @@ func GetCOSEHandle() (h *codec.CborHandle) {
 	h = new(codec.CborHandle)
 	h.IndefiniteLength = false // no streaming
 	h.Canonical = true         // sort map keys
+	h.SignedInteger = true
 
 	var cExt Ext
 	h.SetInterfaceExt(reflect.TypeOf(SignMessage{}), SignMessageCBORTag, cExt)
-
 	return h
 }
 
@@ -32,8 +32,6 @@ func Marshal(o interface{}) (b []byte, err error) {
 }
 
 // Unmarshal returns the CBOR decoding of a []byte into param o
-// TODO: decode into object inplace to implement the more encoding interface func Unmarshal(data []byte, v interface{}) error
-// TODO: decode with readers for better interop in autograph
 func Unmarshal(b []byte) (o interface{}, err error) {
 	var dec *codec.Decoder = codec.NewDecoderBytes(b, GetCOSEHandle())
 
@@ -53,6 +51,13 @@ func (x Ext) ConvertExt(v interface{}) interface{} {
 	message, ok := v.(*SignMessage)
 	if !ok {
 		panic(fmt.Sprintf("unsupported format expecting to encode SignMessage; got %T", v))
+	}
+	if message.Headers == nil {
+		panic("SignMessage has nil Headers")
+	}
+	dup := FindDuplicateHeader(message.Headers)
+	if dup != nil {
+		panic(fmt.Sprintf("Duplicate header %+v found", dup))
 	}
 
 	sigs := make([]interface{}, len(message.Signatures))
