@@ -122,11 +122,11 @@ func (m *SignMessage) SigStructure(external []byte, signature *Signature) (ToBeS
 // algorithm from the signature parameter
 func (m *SignMessage) signatureDigest(external []byte, signature *Signature, hashFunc crypto.Hash) (digest []byte, err error) {
 	if m == nil {
-		err = fmt.Errorf("Missing SignMessage compute signatureDigest")
+		err = fmt.Errorf("Cannot compute signatureDigest on nil SignMessage")
 		return
 	}
 	if m.Signatures == nil {
-		err = fmt.Errorf("Missing SignMessage.Signatures")
+		err = fmt.Errorf("Cannot compute signatureDigest on nil SignMessage.Signatures")
 		return
 	}
 	signatureInMessage := false

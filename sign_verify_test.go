@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -150,6 +151,39 @@ func TestSignatureDecodeErrors(t *testing.T) {
 	assert.Panics(func () { s.Decode(result) })
 }
 
+func TestSignMessageSignatureDigest(t *testing.T) {
+	assert := assert.New(t)
+
+	var (
+		external = []byte("")
+		hashFunc = crypto.SHA256
+		signature *Signature = nil
+		msg *SignMessage = nil
+		digest []byte
+		err error
+	)
+
+	digest, err = msg.signatureDigest(external, signature, hashFunc)
+	assert.Equal(err.Error(), "Cannot compute signatureDigest on nil SignMessage")
+	assert.Equal(len(digest), 0)
+
+	msg = &SignMessage{}
+	digest, err = msg.signatureDigest(external, signature, hashFunc)
+	assert.Equal(err.Error(), "Cannot compute signatureDigest on nil SignMessage.Signatures")
+	assert.Equal(len(digest), 0)
+
+	msg.AddSignature(&Signature{
+		Headers: nil,
+		SignatureBytes: []byte("123"),
+	})
+	signature = &Signature{
+		Headers: nil,
+		SignatureBytes: nil,
+	}
+	digest, err = msg.signatureDigest(external, signature, hashFunc)
+	assert.Equal(err.Error(), "SignMessage.Signatures does not include the signature to digest")
+	assert.Equal(len(digest), 0)
+}
 
 func TestVerifyErrors(t *testing.T) {
 	assert := assert.New(t)
