@@ -141,6 +141,16 @@ func TestCBOREncoding(t *testing.T) {
 	}
 }
 
+func TestCBORMarshalSignMessageWithNilHeadersErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	msg := NewSignMessage()
+	msg.Payload = nil
+	msg.Headers = nil
+	_, err := Marshal(msg)
+	assert.Equal("cbor encode error: SignMessage has nil Headers", err.Error())
+}
+
 func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 	assert := assert.New(t)
 
