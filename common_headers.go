@@ -142,7 +142,7 @@ func GetCommonHeaderTag(label string) (tag int, err error) {
 func GetCommonHeaderTagOrPanic(label string) (tag int) {
 	tag, err := GetCommonHeaderTag(label)
 	if err != nil {
-		log.Fatalf(fmt.Sprintf("Failed to find a tag for label %s", label))
+		panic(fmt.Sprintf("Failed to find a tag for label %s", label))
 	}
 	return tag
 }
@@ -312,6 +312,11 @@ func FindDuplicateHeader(headers *Headers) interface{} {
 // getAlg returns the alg by label or int
 // alg should only be in Protected headers so it does not check Unprotected headers
 func getAlg(h *Headers) (alg *Algorithm, err error) {
+	if h == nil {
+		err = errors.New("Cannot getAlg on nil Headers")
+		return
+	}
+
 	if tmp, ok := h.Protected["alg"]; ok {
 		if algName, ok := tmp.(string); ok {
 			alg, err = getAlgByName(algName)

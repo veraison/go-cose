@@ -139,9 +139,63 @@ func TestHeaderCompressionDoesNotDecompressUnknownTag(t *testing.T) {
 		"header decompression modifies unknown tag")
 }
 
+func TestGetAlgPanics(t *testing.T) {
+	assert := assert.New(t)
+
+	var algName = "FOOOO"
+	assert.Panics(func () { getAlgByNameOrPanic(algName) })
+}
+
+func TestGetCommonHeaderTagOrPanicPanics(t *testing.T) {
+	assert := assert.New(t)
+
+	var label = "FOOOO"
+	assert.Panics(func () { GetCommonHeaderTagOrPanic(label) })
+}
+
+func TestGetAlgWithString(t *testing.T) {
+	assert := assert.New(t)
+
+	var h *Headers = nil
+	alg, err := getAlg(h)
+	assert.Nil(alg)
+	assert.NotNil(err)
+	assert.Equal("Cannot getAlg on nil Headers", err.Error())
+
+	h = &Headers{}
+	h.Protected = map[interface{}]interface{}{
+		"alg": "ROT13",
+	}
+	alg, err = getAlg(h)
+	assert.Nil(alg)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Algorithm named ROT13 not found")
+
+	h.Protected["alg"] = "ES256"
+	alg, err = getAlg(h)
+	assert.NotNil(alg)
+	assert.Nil(err)
+	assert.Equal(alg.Name, "ES256")
+}
+
 func TestFindDuplicateHeaderWithNilHeaders(t *testing.T) {
 	assert := assert.New(t)
 
 	var h *Headers = nil
 	assert.Nil(FindDuplicateHeader(h))
+}
+
+func TestHeaderEncodeErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	var h *Headers = nil
+	assert.Panics(func () { h.EncodeProtected() })
+
+	h = &Headers{
+		Protected: map[interface{}]interface{}{
+			"alg": -3,
+			1: -7,
+		},
+	}
+	assert.Panics(func () { h.EncodeProtected() })
 }
