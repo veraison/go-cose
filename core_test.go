@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"fmt"
 	"crypto/dsa"
 	"crypto/rsa"
 	"crypto/ecdsa"
@@ -57,7 +58,24 @@ func fromBase10(base10 string) *big.Int {
 func TestNewSigner(t *testing.T) {
 	assert := assert.New(t)
 
-	_, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
+	_, err := NewSigner(ES256, nil)
+	assert.Nil(err)
+
+	_, err = NewSigner(PS256, nil)
+	assert.Nil(err)
+
+	signer, err := NewSigner(PS256, RSAOptions{Size: 2050})
+	assert.Nil(err)
+	rkey := signer.privateKey.(*rsa.PrivateKey)
+	keySize := rkey.D.BitLen()
+	bitSizeDiff := 2050 - keySize
+	assert.True(bitSizeDiff <= 8, fmt.Sprintf("generated key size %d not within 8 bits of expected size 2050", keySize))
+
+	_, err = NewSigner(PS256, RSAOptions{Size: 128})
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "error generating rsa signer private key RSA key size must be at least 2048")
+
+	_, err = NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer with ecdsaPrivateKey")
 
 	_, err = NewSignerFromKey(ES256, &rsaPrivateKey)
