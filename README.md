@@ -61,12 +61,3 @@ Running tests:
 1. If you already have `dep` and `golint` commands installed, run `make install-godep install-golint`
 
 1. Run `go test`
-
-### rust-cose interop tests
-
-To see the output from `sign_verify_cose_rust_cli_test.go` shelling out cose-rust add the following to the test file:
-
-	```golang
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	```

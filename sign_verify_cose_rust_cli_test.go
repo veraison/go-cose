@@ -81,6 +81,8 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 
 	cmd.Dir = "./test/cose-rust"
 	cmd.Env = append(os.Environ(), "RUSTFLAGS=-A dead_code -A unused_imports")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 
 	if testCase.ModifySignature || testCase.ModifyPayload {
