@@ -2,7 +2,6 @@ package cose
 
 import (
 	"fmt"
-	"log"
 	"github.com/pkg/errors"
 )
 
@@ -50,7 +49,7 @@ func (h *Headers) EncodeProtected() (bstr []byte) {
 
 	encoded, err := Marshal(CompressHeaders(h.Protected))
 	if err != nil {
-		log.Fatalf("Marshal error of protected headers %s", err)
+		panic(fmt.Sprintf("Marshal error of protected headers %s", err))
 	}
 	return encoded
 }
