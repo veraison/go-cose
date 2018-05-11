@@ -33,7 +33,6 @@ func Marshal(o interface{}) (b []byte, err error) {
 
 // Unmarshal returns the CBOR decoding of a []byte into param o
 // TODO: decode into object inplace to implement the more encoding interface func Unmarshal(data []byte, v interface{}) error
-// TODO: decode with buffered readers for better interop in autograph
 func Unmarshal(b []byte) (o interface{}, err error) {
 	var dec *codec.Decoder = codec.NewDecoderBytes(b, GetCOSEHandle())
 
