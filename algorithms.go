@@ -12,6 +12,9 @@ import (
 // which type of crypto.PrivateKey to generate
 type KeyType int
 const (
+	// KeyTypeUnsupported is the type to not generate a key
+	KeyTypeUnsupported KeyType = iota
+
 	// KeyTypeRSA is the type to generate an rsa.PrivateKey
 	KeyTypeRSA KeyType = iota
 
