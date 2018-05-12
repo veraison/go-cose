@@ -65,7 +65,18 @@ func TestNewSigner(t *testing.T) {
 	_, err = NewSigner(PS256, nil)
 	assert.Nil(err)
 
-	signer, err := NewSigner(PS256, RSAOptions{Size: 2050})
+	edDSA := getAlgByNameOrPanic("EdDSA")
+
+	signer, err := NewSigner(edDSA, nil)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), ErrUnknownPrivateKeyType.Error())
+
+	edDSA.privateKeyType = KeyTypeECDSA
+	signer, err = NewSigner(edDSA, nil)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "No ECDSA curve found for algorithm")
+
+	signer, err = NewSigner(PS256, RSAOptions{Size: 2050})
 	assert.Nil(err)
 	rkey := signer.privateKey.(*rsa.PrivateKey)
 	keySize := rkey.D.BitLen()
@@ -123,11 +134,7 @@ func TestVerifyRSASuccess(t *testing.T) {
 func TestVerifyInvalidAlgErrors(t *testing.T) {
 	assert := assert.New(t)
 
-	signer, err := NewSigner(getAlgByNameOrPanic("EdDSA"), nil)
-	assert.NotNil(err)
-	assert.Equal(err.Error(), ErrUnknownPrivateKeyType.Error())
-
-	signer, err = NewSignerFromKey(ES256, &ecdsaPrivateKey)
+	signer, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer")
 
 	verifier := signer.Verifier()
