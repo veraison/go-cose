@@ -107,9 +107,9 @@ func TestVerifyInvalidAlgErrors(t *testing.T) {
 	signer, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer")
 
-	verifier := signer.Verifier(getAlgByNameOrPanic("A128GCM"))
-	assert.Nil(err, "Error creating verifier")
+	verifier := signer.Verifier()
 
+	verifier.alg.Value = 20
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.Equal(ErrInvalidAlg, err)
 }

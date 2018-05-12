@@ -199,8 +199,7 @@ func TestVerifyErrors(t *testing.T) {
 	signer, err := NewSigner(ES256, nil)
 	assert.Nil(err, "Error creating signer")
 
-	verifier := signer.Verifier(ES256)
-	assert.Nil(err, "Error creating verifier")
+	verifier := signer.Verifier()
 
 	verifiers := []Verifier{*verifier}
 	payload := []byte("")

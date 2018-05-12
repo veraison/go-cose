@@ -175,11 +175,11 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 }
 
 // Verifier returns a Verifier using the Signer's public key and
-// provided Algorithm
-func (s *Signer) Verifier(alg *Algorithm) (verifier *Verifier) {
+// Algorithm
+func (s *Signer) Verifier() (verifier *Verifier) {
 	return &Verifier{
 		publicKey: s.Public(),
-		alg:       alg,
+		alg:       s.alg,
 	}
 }
 
