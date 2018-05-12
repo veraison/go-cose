@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"crypto/dsa"
 	"crypto/rsa"
+	"crypto/rand"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"github.com/stretchr/testify/assert"
@@ -101,6 +102,24 @@ func TestSignerPublic(t *testing.T) {
 	assert.Panics(func () { ecdsaSigner.Public() })
 }
 
+func TestVerifyRSASuccess(t *testing.T) {
+	assert := assert.New(t)
+
+	signer, err := NewSigner(PS256, nil)
+	assert.Nil(err, "Error creating signer")
+
+	hasher := signer.alg.HashFunc.New()
+	_, _ = hasher.Write([]byte("ahoy")) // Write() on hash never fails
+	digest := hasher.Sum(nil)
+
+	signatureBytes, err := signer.Sign(rand.Reader, digest)
+	assert.Nil(err)
+
+	verifier := signer.Verifier()
+	err = verifier.Verify(digest, signatureBytes)
+	assert.Nil(err)
+}
+
 func TestVerifyInvalidAlgErrors(t *testing.T) {
 	assert := assert.New(t)
 
@@ -112,4 +131,32 @@ func TestVerifyInvalidAlgErrors(t *testing.T) {
 	verifier.alg.Value = 20
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.Equal(ErrInvalidAlg, err)
+
+	verifier.alg.Value = -7
+
+	verifier.publicKey = rsaPrivateKey.Public()
+	verifier.alg = PS256
+	err = verifier.Verify([]byte(""), []byte(""))
+	assert.NotNil(err)
+	assert.Equal("verification failed rsa.VerifyPSS err crypto/rsa: verification error", err.Error())
+
+	verifier.publicKey = dsaPrivateKey.PublicKey
+	verifier.alg = ES256
+	err = verifier.Verify([]byte(""), []byte(""))
+	assert.NotNil(err)
+	assert.Equal("Unrecognized public key type", err.Error())
+
+	verifier.publicKey = ecdsaPrivateKey.Public()
+	verifier.alg = ES256
+	verifier.alg.privateKeyECDSACurve = nil
+	err = verifier.Verify([]byte(""), []byte(""))
+	assert.NotNil(err)
+	assert.Equal("Could not find an elliptic curve for the ecdsa algorithm", err.Error())
+
+	verifier.alg.privateKeyECDSACurve = elliptic.P256()
+}
+
+func TestFromBase64IntErrors(t *testing.T) {
+	assert := assert.New(t)
+	assert.Panics(func () { FromBase64Int("z") })
 }
