@@ -123,7 +123,11 @@ func TestVerifyRSASuccess(t *testing.T) {
 func TestVerifyInvalidAlgErrors(t *testing.T) {
 	assert := assert.New(t)
 
-	signer, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
+	signer, err := NewSigner(getAlgByNameOrPanic("EdDSA"), nil)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), ErrUnknownPrivateKeyType.Error())
+
+	signer, err = NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer")
 
 	verifier := signer.Verifier()

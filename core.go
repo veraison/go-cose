@@ -84,7 +84,9 @@ func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) 
 			err = errors.Wrapf(err, "error generating rsa signer private key")
 			return nil, err
 		}
-	}
+	} else {
+                return nil, ErrUnknownPrivateKeyType
+        }
 
 	return &Signer{
 		privateKey: privateKey,
