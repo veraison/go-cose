@@ -408,6 +408,12 @@ func TestCBORDecodingErrors(t *testing.T) {
 			"cbor decode error [pos 7]: error decoding sigs; got string",
 		},
 		{
+			// wrong # of protected header bytes
+			// tag(98) + array(4) [ bytes(2) (but actually 1), map(0), bytes(0), text(0) ]
+			HexToBytesOrDie("D862" + "84" + "4263" + "A0" + "40" + "60"),
+			"EOF",
+		},
+		{
 			// duplicate compressed key in protected and unprotected
 			// tag(98) + array(4) [ bytes(3), map(2), bytes(0), array(0) ]
 			// bytes(3) is protected {2: -7}

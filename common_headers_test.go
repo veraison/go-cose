@@ -199,3 +199,34 @@ func TestHeaderEncodeErrors(t *testing.T) {
 	}
 	assert.Panics(func () { h.EncodeProtected() })
 }
+
+func TestHeaderDecodeErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	var (
+		h *Headers = &Headers{
+			Protected: nil,
+			Unprotected: nil,
+		}
+		v []interface{}
+		err error
+	)
+	err = h.Decode(v)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "can only decode headers from 2-item array; got 0")
+
+	v = []interface{}{[]byte("\x90"), map[interface{}]interface{}{}}
+	err = h.Decode(v)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "error CBOR decoding protected header bytes; got <nil>")
+
+	v = []interface{}{[]byte("\x60"), map[interface{}]interface{}{}}
+	err = h.Decode(v)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "error casting protected to map; got string")
+
+	v = []interface{}{[]byte("\xA1\x02\x26"), -1}
+	err = h.Decode(v)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "error decoding unprotected header as map[interface {}]interface {}; got int")
+}
