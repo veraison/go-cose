@@ -32,8 +32,8 @@ func main() {
 		panic(fmt.Sprintf("Error signing the message %+v", err))
 	}
 
-	// derive a verifier from out signer's public key
-	verifier := signer.Verifier(cose.ES256)
+	// derive a verifier using the signer's public key and COSE algorithm
+	verifier := signer.Verifier()
 
 	// Verify
 	err = msg.Verify(external, []cose.Verifier{*verifier})
