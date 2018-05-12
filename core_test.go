@@ -1,8 +1,10 @@
 package cose
 
 import (
+	"fmt"
 	"crypto/dsa"
 	"crypto/rsa"
+	"crypto/rand"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"github.com/stretchr/testify/assert"
@@ -57,7 +59,35 @@ func fromBase10(base10 string) *big.Int {
 func TestNewSigner(t *testing.T) {
 	assert := assert.New(t)
 
-	_, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
+	_, err := NewSigner(ES256, nil)
+	assert.Nil(err)
+
+	_, err = NewSigner(PS256, nil)
+	assert.Nil(err)
+
+	edDSA := getAlgByNameOrPanic("EdDSA")
+
+	signer, err := NewSigner(edDSA, nil)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), ErrUnknownPrivateKeyType.Error())
+
+	edDSA.privateKeyType = KeyTypeECDSA
+	signer, err = NewSigner(edDSA, nil)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "No ECDSA curve found for algorithm")
+
+	signer, err = NewSigner(PS256, RSAOptions{Size: 2050})
+	assert.Nil(err)
+	rkey := signer.privateKey.(*rsa.PrivateKey)
+	keySize := rkey.D.BitLen()
+	bitSizeDiff := 2050 - keySize
+	assert.True(bitSizeDiff <= 8, fmt.Sprintf("generated key size %d not within 8 bits of expected size 2050", keySize))
+
+	_, err = NewSigner(PS256, RSAOptions{Size: 128})
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "error generating rsa signer private key RSA key size must be at least 2048")
+
+	_, err = NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer with ecdsaPrivateKey")
 
 	_, err = NewSignerFromKey(ES256, &rsaPrivateKey)
@@ -83,15 +113,118 @@ func TestSignerPublic(t *testing.T) {
 	assert.Panics(func () { ecdsaSigner.Public() })
 }
 
+func TestSignerSignErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	signer, err := NewSigner(ES256, nil)
+	assert.Nil(err, "Error creating ES256 signer")
+
+	hasher := signer.alg.HashFunc.New()
+	_, _ = hasher.Write([]byte("ahoy")) // Write() on hash never fails
+	digest := hasher.Sum(nil)
+
+	signer.alg.privateKeyType = KeyTypeUnsupported
+	_, err = signer.Sign(rand.Reader, digest)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Key type must be ECDSA")
+	signer.alg.privateKeyType = KeyTypeECDSA
+
+
+	signer, err = NewSigner(PS256, nil)
+	assert.Nil(err, "Error creating PS256 signer")
+
+	signer.alg.privateKeyType = KeyTypeUnsupported
+	_, err = signer.Sign(rand.Reader, digest)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Key type must be RSA")
+	signer.alg.privateKeyType = KeyTypeRSA
+
+	weakKey, err := rsa.GenerateKey(rand.Reader, 128)
+	assert.Nil(err, "Error creating weak RSA key")
+	signer.privateKey = weakKey
+	_, err = signer.Sign(rand.Reader, digest)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "RSA key must be at least 2048 bits long")
+}
+
+func TestVerifyRSASuccess(t *testing.T) {
+	assert := assert.New(t)
+
+	signer, err := NewSigner(PS256, nil)
+	assert.Nil(err, "Error creating signer")
+
+	hasher := signer.alg.HashFunc.New()
+	_, _ = hasher.Write([]byte("ahoy")) // Write() on hash never fails
+	digest := hasher.Sum(nil)
+
+	signatureBytes, err := signer.Sign(rand.Reader, digest)
+	assert.Nil(err)
+
+	verifier := signer.Verifier()
+	err = verifier.Verify(digest, signatureBytes)
+	assert.Nil(err)
+}
+
 func TestVerifyInvalidAlgErrors(t *testing.T) {
 	assert := assert.New(t)
 
 	signer, err := NewSignerFromKey(ES256, &ecdsaPrivateKey)
 	assert.Nil(err, "Error creating signer")
 
-	verifier := signer.Verifier(getAlgByNameOrPanic("A128GCM"))
-	assert.Nil(err, "Error creating verifier")
+	verifier := signer.Verifier()
 
+	verifier.alg.Value = 20
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.Equal(ErrInvalidAlg, err)
+
+	verifier.alg.Value = -7
+
+	verifier.publicKey = rsaPrivateKey.Public()
+	verifier.alg = PS256
+	err = verifier.Verify([]byte(""), []byte(""))
+	assert.NotNil(err)
+	assert.Equal("verification failed rsa.VerifyPSS err crypto/rsa: verification error", err.Error())
+
+	verifier.publicKey = dsaPrivateKey.PublicKey
+	verifier.alg = ES256
+	err = verifier.Verify([]byte(""), []byte(""))
+	assert.NotNil(err)
+	assert.Equal("Unrecognized public key type", err.Error())
+
+	verifier.publicKey = ecdsaPrivateKey.Public()
+	verifier.alg = ES256
+	verifier.alg.privateKeyECDSACurve = nil
+	err = verifier.Verify([]byte(""), []byte(""))
+	assert.NotNil(err)
+	assert.Equal("Could not find an elliptic curve for the ecdsa algorithm", err.Error())
+
+	verifier.alg.privateKeyECDSACurve = elliptic.P256()
+}
+
+func TestFromBase64IntErrors(t *testing.T) {
+	assert := assert.New(t)
+	assert.Panics(func () { FromBase64Int("z") })
+}
+
+func TestSignVerifyWithoutMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	signer, err := NewSigner(ES256, nil)
+	assert.Nil(err, "Error creating ES256 signer")
+
+	verifier := signer.Verifier()
+
+	hasher := signer.alg.HashFunc.New()
+	_, _ = hasher.Write([]byte("ahoy")) // Write() on hash never fails
+	digest := hasher.Sum(nil)
+
+	sigs, err := Sign(rand.Reader, digest, []ByteSigner{signer})
+	assert.Nil(err)
+
+	err = Verify(digest, sigs, []ByteVerifier{verifier})
+	assert.Nil(err)
+
+	err = Verify(digest, sigs, []ByteVerifier{})
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Wrong number of signatures 1 and verifiers 0")
 }

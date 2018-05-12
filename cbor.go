@@ -62,6 +62,11 @@ func (x Ext) ConvertExt(v interface{}) interface{} {
 
 	sigs := make([]interface{}, len(message.Signatures))
 	for i, s := range message.Signatures {
+		dup := FindDuplicateHeader(s.Headers)
+		if dup != nil {
+			panic(fmt.Sprintf("Duplicate signature header %+v found", dup))
+		}
+
 		sigs[i] = []interface{}{
 			s.Headers.EncodeProtected(),
 			s.Headers.EncodeUnprotected(),

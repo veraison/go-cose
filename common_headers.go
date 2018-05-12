@@ -2,7 +2,7 @@ package cose
 
 import (
 	"fmt"
-	"log"
+	"github.com/pkg/errors"
 )
 
 // Headers represents "two buckets of information that are not
@@ -49,13 +49,17 @@ func (h *Headers) EncodeProtected() (bstr []byte) {
 
 	encoded, err := Marshal(CompressHeaders(h.Protected))
 	if err != nil {
-		log.Fatalf("Marshal error of protected headers %s", err)
+		panic(fmt.Sprintf("Marshal error of protected headers %s", err))
 	}
 	return encoded
 }
 
 // DecodeProtected Unmarshals and sets Headers.protected from an interface{}
 func (h *Headers) DecodeProtected(o interface{}) (err error) {
+	if h == nil {
+		return errors.New("error decoding protected headers on nil headers")
+	}
+
 	b, ok := o.([]byte)
 	if !ok {
 		return fmt.Errorf("error casting protected header bytes; got %T", o)
@@ -137,7 +141,7 @@ func GetCommonHeaderTag(label string) (tag int, err error) {
 func GetCommonHeaderTagOrPanic(label string) (tag int) {
 	tag, err := GetCommonHeaderTag(label)
 	if err != nil {
-		log.Fatalf(fmt.Sprintf("Failed to find a tag for label %s", label))
+		panic(fmt.Sprintf("Failed to find a tag for label %s", label))
 	}
 	return tag
 }
@@ -307,6 +311,11 @@ func FindDuplicateHeader(headers *Headers) interface{} {
 // getAlg returns the alg by label or int
 // alg should only be in Protected headers so it does not check Unprotected headers
 func getAlg(h *Headers) (alg *Algorithm, err error) {
+	if h == nil {
+		err = errors.New("Cannot getAlg on nil Headers")
+		return
+	}
+
 	if tmp, ok := h.Protected["alg"]; ok {
 		if algName, ok := tmp.(string); ok {
 			alg, err = getAlgByName(algName)

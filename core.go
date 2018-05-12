@@ -52,8 +52,10 @@ type Signer struct {
 	alg        *Algorithm
 }
 
-type newSignerRSAOptions struct {
-	size int
+// RSAOptions are options for NewSigner currently just the RSA Key
+// size
+type RSAOptions struct {
+	Size int
 }
 
 // NewSigner returns a Signer with a generated key
@@ -61,23 +63,35 @@ func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) 
 	var privateKey crypto.PrivateKey
 
 	if alg.privateKeyType == KeyTypeECDSA {
+		if alg.privateKeyECDSACurve == nil {
+			err = fmt.Errorf("No ECDSA curve found for algorithm")
+			return nil, err
+		}
+
 		privateKey, err = ecdsa.GenerateKey(alg.privateKeyECDSACurve, rand.Reader)
 		if err != nil {
 			err = errors.Wrapf(err, "error generating ecdsa signer private key")
 			return nil, err
 		}
 	} else if alg.privateKeyType == KeyTypeRSA {
-		opts, ok := options.(newSignerRSAOptions)
-		if ok && opts.size > alg.minRSAKeyBitLen {
-			privateKey, err = rsa.GenerateKey(rand.Reader, opts.size)
-		} else {
-			privateKey, err = rsa.GenerateKey(rand.Reader, alg.minRSAKeyBitLen)
+		var keyBitLen int = alg.minRSAKeyBitLen
+
+		if opts, ok := options.(RSAOptions); ok {
+			if opts.Size > alg.minRSAKeyBitLen {
+				keyBitLen = opts.Size
+			} else {
+				err = fmt.Errorf("error generating rsa signer private key RSA key size must be at least %d", alg.minRSAKeyBitLen)
+				return nil, err
+			}
 		}
+		privateKey, err = rsa.GenerateKey(rand.Reader, keyBitLen)
 		if err != nil {
 			err = errors.Wrapf(err, "error generating rsa signer private key")
 			return nil, err
 		}
-	}
+	} else {
+                return nil, ErrUnknownPrivateKeyType
+        }
 
 	return &Signer{
 		privateKey: privateKey,
@@ -168,11 +182,11 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 }
 
 // Verifier returns a Verifier using the Signer's public key and
-// provided Algorithm
-func (s *Signer) Verifier(alg *Algorithm) (verifier *Verifier) {
+// Algorithm
+func (s *Signer) Verifier() (verifier *Verifier) {
 	return &Verifier{
 		publicKey: s.Public(),
-		alg:       alg,
+		alg:       s.alg,
 	}
 }
 

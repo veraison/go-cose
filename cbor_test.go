@@ -141,6 +141,16 @@ func TestCBOREncoding(t *testing.T) {
 	}
 }
 
+func TestCBORMarshalSignMessageWithNilHeadersErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	msg := NewSignMessage()
+	msg.Payload = nil
+	msg.Headers = nil
+	_, err := Marshal(msg)
+	assert.Equal("cbor encode error: SignMessage has nil Headers", err.Error())
+}
+
 func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 	assert := assert.New(t)
 
@@ -220,6 +230,25 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 	}
 	_, err = Marshal(msg)
 	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+
+	// duplicate headers in a SignMessage Signature
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{},
+		Unprotected: map[interface{}]interface{}{},
+	}
+	msg.AddSignature(&Signature{
+		Headers: &Headers{
+			Protected: map[interface{}]interface{}{
+				1: -37,
+			},
+			Unprotected: map[interface{}]interface{}{
+				"alg": "ES256",
+			},
+		},
+		SignatureBytes: []byte(""),
+	})
+	_, err = Marshal(msg)
+	assert.Equal("cbor encode error: Duplicate signature header 1 found", err.Error())
 }
 
 func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
@@ -396,6 +425,12 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), text(0) ]
 			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "60"),
 			"cbor decode error [pos 7]: error decoding sigs; got string",
+		},
+		{
+			// wrong # of protected header bytes
+			// tag(98) + array(4) [ bytes(2) (but actually 1), map(0), bytes(0), text(0) ]
+			HexToBytesOrDie("D862" + "84" + "4263" + "A0" + "40" + "60"),
+			"EOF",
 		},
 		{
 			// duplicate compressed key in protected and unprotected

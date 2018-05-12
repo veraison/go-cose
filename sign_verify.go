@@ -41,9 +41,13 @@ func (s *Signature) Equal(other *Signature) bool {
 
 // Decode updates the signature inplace from its COSE serialization
 func (s *Signature) Decode(o interface{}) {
+	if s == nil {
+		panic("error decoding on nil Signature")
+	}
+
 	array, ok := o.([]interface{})
 	if !ok {
-		panic(fmt.Sprintf("error decoding sigArray; got %T", array))
+		panic(fmt.Sprintf("error decoding signature Array; got %T", array))
 	}
 	if len(array) != 3 {
 		panic(fmt.Sprintf("can only decode Signature with 3 items; got %d", len(array)))
@@ -118,11 +122,11 @@ func (m *SignMessage) SigStructure(external []byte, signature *Signature) (ToBeS
 // algorithm from the signature parameter
 func (m *SignMessage) signatureDigest(external []byte, signature *Signature, hashFunc crypto.Hash) (digest []byte, err error) {
 	if m == nil {
-		err = fmt.Errorf("Missing SignMessage compute signatureDigest")
+		err = fmt.Errorf("Cannot compute signatureDigest on nil SignMessage")
 		return
 	}
 	if m.Signatures == nil {
-		err = fmt.Errorf("Missing SignMessage.Signatures")
+		err = fmt.Errorf("Cannot compute signatureDigest on nil SignMessage.Signatures")
 		return
 	}
 	signatureInMessage := false

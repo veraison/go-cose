@@ -39,7 +39,7 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 		signer, err := NewSignerFromKey(param.algorithm, key)
 		assert.Nil(err, fmt.Sprintf("%s: Error creating signer %s", testCase.Title, err))
 		signers = append(signers, *signer)
-		verifiers = append(verifiers, *signer.Verifier(param.algorithm))
+		verifiers = append(verifiers, *signer.Verifier())
 
 		sig := NewSignature()
 		sig.Headers.Protected[algTag] = param.algorithm.Value
@@ -81,6 +81,8 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 
 	cmd.Dir = "./test/cose-rust"
 	cmd.Env = append(os.Environ(), "RUSTFLAGS=-A dead_code -A unused_imports")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 
 	if testCase.ModifySignature || testCase.ModifyPayload {

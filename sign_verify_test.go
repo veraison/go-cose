@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -86,13 +87,102 @@ func TestSignErrors(t *testing.T) {
 	delete(msg.Signatures[0].Headers.Protected, algTag)
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrAlgNotFound, err)
+}
 
-	// TODO: make Marshal fail
-	// msg.Signatures[0].Headers.Protected[algTag] = -7
-	// msg.Signatures[0].Headers.Unprotected = nil
+func TestSignatureEqual(t *testing.T) {
+	assert := assert.New(t)
 
-	// err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
-	// assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
+	var s1, s2 *Signature = nil, nil
+	assert.Equal(s1.Equal(s2), true)
+
+	s1 = &Signature{}
+	s2 = s1
+	assert.Equal(s1.Equal(s2), true)
+
+	s1.SignatureBytes = []byte("123")
+	assert.Equal(s1.Equal(s2), true)
+
+	s2 = &Signature{SignatureBytes: []byte("000")}
+	assert.Equal(s1.Equal(s2), false)
+
+	s2.SignatureBytes = s1.SignatureBytes
+	assert.Equal(s1.Equal(s2), true)
+
+	s1.Headers = &Headers{
+		Protected: map[interface{}]interface{}{algTag: -41}, // RSAES-OAEP w/ SHA-256 from [RFC8230]
+	}
+	assert.Equal(s1.Equal(s2), false)
+
+	s2.Headers = s1.Headers
+	assert.Equal(s1.Equal(s2), true)
+}
+
+func TestSignatureDecodeErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	var (
+		s *Signature = nil
+		result interface{}
+	)
+	assert.Panics(func () { s.Decode(result) })
+
+	s = &Signature{}
+	result = 5
+	assert.Panics(func () { s.Decode(result) })
+
+	s = &Signature{}
+	result = []interface{}{1, 2}
+	assert.Panics(func () { s.Decode(result) })
+
+	s = &Signature{}
+	result = []interface{}{
+		[]byte("\xA0"),
+		map[interface{}]interface{}{},
+		[]byte(""),
+	}
+	assert.Panics(func () { s.Decode(result) })
+
+	s.Headers = &Headers{}
+	result =  []interface{}{
+		[]byte("\xA0"),
+		map[interface{}]interface{}{},
+		-1,
+	}
+	assert.Panics(func () { s.Decode(result) })
+}
+
+func TestSignMessageSignatureDigest(t *testing.T) {
+	assert := assert.New(t)
+
+	var (
+		external = []byte("")
+		hashFunc = crypto.SHA256
+		signature *Signature = nil
+		msg *SignMessage = nil
+		digest []byte
+		err error
+	)
+
+	digest, err = msg.signatureDigest(external, signature, hashFunc)
+	assert.Equal(err.Error(), "Cannot compute signatureDigest on nil SignMessage")
+	assert.Equal(len(digest), 0)
+
+	msg = &SignMessage{}
+	digest, err = msg.signatureDigest(external, signature, hashFunc)
+	assert.Equal(err.Error(), "Cannot compute signatureDigest on nil SignMessage.Signatures")
+	assert.Equal(len(digest), 0)
+
+	msg.AddSignature(&Signature{
+		Headers: nil,
+		SignatureBytes: []byte("123"),
+	})
+	signature = &Signature{
+		Headers: nil,
+		SignatureBytes: nil,
+	}
+	digest, err = msg.signatureDigest(external, signature, hashFunc)
+	assert.Equal(err.Error(), "SignMessage.Signatures does not include the signature to digest")
+	assert.Equal(len(digest), 0)
 }
 
 func TestVerifyErrors(t *testing.T) {
@@ -109,8 +199,7 @@ func TestVerifyErrors(t *testing.T) {
 	signer, err := NewSigner(ES256, nil)
 	assert.Nil(err, "Error creating signer")
 
-	verifier := signer.Verifier(ES256)
-	assert.Nil(err, "Error creating verifier")
+	verifier := signer.Verifier()
 
 	verifiers := []Verifier{*verifier}
 	payload := []byte("")
