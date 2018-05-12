@@ -113,6 +113,40 @@ func TestSignerPublic(t *testing.T) {
 	assert.Panics(func () { ecdsaSigner.Public() })
 }
 
+func TestSignerSignErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	signer, err := NewSigner(ES256, nil)
+	assert.Nil(err, "Error creating ES256 signer")
+
+	hasher := signer.alg.HashFunc.New()
+	_, _ = hasher.Write([]byte("ahoy")) // Write() on hash never fails
+	digest := hasher.Sum(nil)
+
+	signer.alg.privateKeyType = KeyTypeUnsupported
+	_, err = signer.Sign(rand.Reader, digest)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Key type must be ECDSA")
+	signer.alg.privateKeyType = KeyTypeECDSA
+
+
+	signer, err = NewSigner(PS256, nil)
+	assert.Nil(err, "Error creating PS256 signer")
+
+	signer.alg.privateKeyType = KeyTypeUnsupported
+	_, err = signer.Sign(rand.Reader, digest)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Key type must be RSA")
+	signer.alg.privateKeyType = KeyTypeRSA
+
+	weakKey, err := rsa.GenerateKey(rand.Reader, 128)
+	assert.Nil(err, "Error creating weak RSA key")
+	signer.privateKey = weakKey
+	_, err = signer.Sign(rand.Reader, digest)
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "RSA key must be at least 2048 bits long")
+}
+
 func TestVerifyRSASuccess(t *testing.T) {
 	assert := assert.New(t)
 
