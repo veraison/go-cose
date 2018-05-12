@@ -230,6 +230,25 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 	}
 	_, err = Marshal(msg)
 	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+
+	// duplicate headers in a SignMessage Signature
+	msg.Headers = &Headers{
+		Protected: map[interface{}]interface{}{},
+		Unprotected: map[interface{}]interface{}{},
+	}
+	msg.AddSignature(&Signature{
+		Headers: &Headers{
+			Protected: map[interface{}]interface{}{
+				1: -37,
+			},
+			Unprotected: map[interface{}]interface{}{
+				"alg": "ES256",
+			},
+		},
+		SignatureBytes: []byte(""),
+	})
+	_, err = Marshal(msg)
+	assert.Equal("cbor encode error: Duplicate signature header 1 found", err.Error())
 }
 
 func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
