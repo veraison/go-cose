@@ -205,3 +205,26 @@ func TestFromBase64IntErrors(t *testing.T) {
 	assert := assert.New(t)
 	assert.Panics(func () { FromBase64Int("z") })
 }
+
+func TestSignVerifyWithoutMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	signer, err := NewSigner(ES256, nil)
+	assert.Nil(err, "Error creating ES256 signer")
+
+	verifier := signer.Verifier()
+
+	hasher := signer.alg.HashFunc.New()
+	_, _ = hasher.Write([]byte("ahoy")) // Write() on hash never fails
+	digest := hasher.Sum(nil)
+
+	sigs, err := Sign(rand.Reader, digest, []ByteSigner{signer})
+	assert.Nil(err)
+
+	err = Verify(digest, sigs, []ByteVerifier{verifier})
+	assert.Nil(err)
+
+	err = Verify(digest, sigs, []ByteVerifier{})
+	assert.NotNil(err)
+	assert.Equal(err.Error(), "Wrong number of signatures 1 and verifiers 0")
+}
