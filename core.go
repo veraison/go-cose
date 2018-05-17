@@ -48,7 +48,7 @@ type ByteVerifier interface {
 
 // Signer holds a COSE Algorithm and private key for signing messages
 type Signer struct {
-	privateKey crypto.PrivateKey
+	PrivateKey crypto.PrivateKey
 	alg        *Algorithm
 }
 
@@ -94,7 +94,7 @@ func NewSigner(alg *Algorithm, options interface{}) (signer *Signer, err error) 
         }
 
 	return &Signer{
-		privateKey: privateKey,
+		PrivateKey: privateKey,
 		alg: alg,
 	}, nil
 }
@@ -109,14 +109,14 @@ func NewSignerFromKey(alg *Algorithm, privateKey crypto.PrivateKey) (signer *Sig
 		return nil, ErrUnknownPrivateKeyType
 	}
 	return &Signer{
-		privateKey: privateKey,
+		PrivateKey: privateKey,
 		alg: alg,
 	}, nil
 }
 
 // Public returns the crypto.PublicKey for the Signer's privateKey
 func (s *Signer) Public() (publicKey crypto.PublicKey) {
-	switch key := s.privateKey.(type) {
+	switch key := s.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		return key.Public()
 	case *ecdsa.PrivateKey:
@@ -128,7 +128,7 @@ func (s *Signer) Public() (publicKey crypto.PublicKey) {
 
 // Sign returns the COSE signature as a byte slice
 func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err error) {
-	switch key := s.privateKey.(type) {
+	switch key := s.PrivateKey.(type) {
 	case *rsa.PrivateKey:
 		if s.alg.privateKeyType != KeyTypeRSA {
 			return nil, fmt.Errorf("Key type must be RSA")

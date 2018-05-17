@@ -68,7 +68,7 @@ func TestSignErrors(t *testing.T) {
 
 	msg.Signatures[0].Headers.Protected[algTag] = ES256.Value
 	signer.alg = ES256
-	signer.privateKey = dsaPrivateKey
+	signer.PrivateKey = dsaPrivateKey
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
 	assert.Equal(ErrUnknownPrivateKeyType, err)
 
