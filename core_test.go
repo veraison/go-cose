@@ -78,7 +78,7 @@ func TestNewSigner(t *testing.T) {
 
 	signer, err = NewSigner(PS256, RSAOptions{Size: 2050})
 	assert.Nil(err)
-	rkey := signer.privateKey.(*rsa.PrivateKey)
+	rkey := signer.PrivateKey.(*rsa.PrivateKey)
 	keySize := rkey.D.BitLen()
 	bitSizeDiff := 2050 - keySize
 	assert.True(bitSizeDiff <= 8, fmt.Sprintf("generated key size %d not within 8 bits of expected size 2050", keySize))
@@ -109,7 +109,7 @@ func TestSignerPublic(t *testing.T) {
 	ecdsaSigner.Public()
 	rsaSigner.Public()
 
-	ecdsaSigner.privateKey = dsaPrivateKey
+	ecdsaSigner.PrivateKey = dsaPrivateKey
 	assert.Panics(func () { ecdsaSigner.Public() })
 }
 
@@ -141,7 +141,7 @@ func TestSignerSignErrors(t *testing.T) {
 
 	weakKey, err := rsa.GenerateKey(rand.Reader, 128)
 	assert.Nil(err, "Error creating weak RSA key")
-	signer.privateKey = weakKey
+	signer.PrivateKey = weakKey
 	_, err = signer.Sign(rand.Reader, digest)
 	assert.NotNil(err)
 	assert.Equal(err.Error(), "RSA key must be at least 2048 bits long")
