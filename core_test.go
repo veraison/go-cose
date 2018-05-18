@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+	"time"
 )
 
 var (
@@ -227,4 +228,55 @@ func TestSignVerifyWithoutMessage(t *testing.T) {
 	err = Verify(digest, sigs, []ByteVerifier{})
 	assert.NotNil(err)
 	assert.Equal(err.Error(), "Wrong number of signatures 1 and verifiers 0")
+}
+
+func TestI2OSPCorrectness(t *testing.T) {
+	assert := assert.New(t)
+
+	// negative int
+	assert.Panics(func () { I2OSP(big.NewInt(int64(-1)), 2) })
+
+	// not enough bytes in output / "integer too large"
+	assert.Panics(func () { I2OSP(big.NewInt(int64(0)), 0) })
+	assert.Panics(func () { I2OSP(big.NewInt(int64(1)), 0) })
+	assert.Panics(func () { I2OSP(big.NewInt(int64(256)), 1) })
+
+	assert.Equal(I2OSP(big.NewInt(int64(0)), 2), []byte("\x00\x00"))
+	assert.Equal(I2OSP(big.NewInt(int64(1)), 2), []byte("\x00\x01"))
+	assert.Equal(I2OSP(big.NewInt(int64(255)), 2), []byte("\x00\xFF"))
+	assert.Equal(I2OSP(big.NewInt(int64(256)), 2), []byte("\x01\x00"))
+	assert.Equal(I2OSP(big.NewInt(int64(65535)), 2), []byte("\xFF\xFF"))
+
+}
+
+func TestI2OSPTiming(t *testing.T) {
+	assert := assert.New(t)
+
+	var (
+		toleranceNS = int64(500) // i.e. 0.5 microseconds
+		zero = big.NewInt(int64(0))
+		biggerN = rsaPrivateKey.Primes[0]
+		biggerNSize = len(biggerN.Bytes())
+		call_args = []struct{
+			N *big.Int
+			Size int
+		}{
+			{zero, biggerNSize},
+			{biggerN, biggerNSize},
+		}
+		elapsed_times []time.Duration
+	)
+
+	for _, args := range call_args {
+		start := time.Now()
+		I2OSP(args.N, args.Size)
+		elapsed_times = append(elapsed_times, time.Since(start))
+	}
+	assert.Equal(len(call_args), len(elapsed_times))
+
+	diff := int64(elapsed_times[0]) - int64(elapsed_times[1])
+	if diff < 0 {
+		diff = -diff
+	}
+	assert.True(diff < toleranceNS)
 }

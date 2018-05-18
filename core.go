@@ -2,12 +2,12 @@ package cose
 
 import (
 	"encoding/base64"
-	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/rand"
 	"crypto/elliptic"
+	"crypto/subtle"
 	"fmt"
 	"io"
 	"math/big"
@@ -300,20 +300,24 @@ func ecdsaCurveKeyBytesSize(curve elliptic.Curve) (keyBytesSize int) {
 
 // I2OSP "Integer-to-Octet-String" converts a nonnegative integer to
 // an octet string of a specified length
-// https://tools.ietf.org/html/rfc8017#section-4.1
 //
-// implementation from
-// https://github.com/r2ishiguro/vrf/blob/69d5bfb37b72b7b932ffe34213778bdb319f0438/go/vrf_ed25519/vrf_ed25519.go#L206
-// (Apache License 2.0)
+// https://tools.ietf.org/html/rfc8017#section-4.1
 func I2OSP(b *big.Int, n int) []byte {
-	os := b.Bytes()
-	if n > len(os) {
-		var buf bytes.Buffer
-		buf.Write(make([]byte, n-len(os))) // prepend 0s
-		buf.Write(os)
-		return buf.Bytes()
+	var (
+		octetString = b.Bytes()
+		octetStringSize = len(octetString)
+		result = make([]byte, n)
+	)
+	if !(b.Sign() == 0 || b.Sign() == 1) {
+		panic("I2OSP error: integer must be zero or positive")
 	}
-	return os[:n]
+	if n == 0 || octetStringSize > n {
+		panic("I2OSP error: integer too large")
+	}
+
+	subtle.ConstantTimeCopy(1, result[:n - octetStringSize], result[:n - octetStringSize])
+	subtle.ConstantTimeCopy(1, result[n - octetStringSize:], octetString)
+	return result
 }
 
 // FromBase64Int decodes a base64-encoded string into a big.Int or panics
