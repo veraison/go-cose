@@ -183,6 +183,14 @@ func TestSignMessageSignatureDigest(t *testing.T) {
 	digest, err = msg.signatureDigest(external, signature, hashFunc)
 	assert.Equal(err.Error(), "SignMessage.Signatures does not include the signature to digest")
 	assert.Equal(len(digest), 0)
+
+	tmp := NewSignMessage()
+	msg = &tmp
+	signature = NewSignature()
+	signature.Headers.Protected[algTag] = ES256
+	msg.Signatures = []Signature{*signature}
+	digest, err = msg.signatureDigest(nil, signature, hashFunc)
+	assert.Equal(err, nil, "signatureDigest does not accept nil external")
 }
 
 func TestVerifyErrors(t *testing.T) {
