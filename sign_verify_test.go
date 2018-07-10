@@ -244,20 +244,20 @@ func TestVerifyErrors(t *testing.T) {
 
 	verifiers = []Verifier{
 		Verifier{
-			publicKey: &ecdsa.PublicKey{
+			PublicKey: &ecdsa.PublicKey{
 				Curve: elliptic.P384(),
 				X:     FromBase64Int("usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8"),
 				Y:     FromBase64Int("IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"),
 			},
-			alg: ES256,
+			Alg: ES256,
 		},
 	}
 	assert.Equal(errors.New("Expected 256 bit key, got 384 bits instead"), msg.Verify(payload, verifiers))
 
 	verifiers = []Verifier{
 		Verifier{
-			publicKey: ecdsaPrivateKey.Public(),
-			alg: ES256,
+			PublicKey: ecdsaPrivateKey.Public(),
+			Alg: ES256,
 		},
 	}
 	assert.Equal(errors.New("invalid signature length: 14"), msg.Verify(payload, verifiers))
