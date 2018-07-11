@@ -490,3 +490,14 @@ func TestCBORDecodingErrors(t *testing.T) {
 	err := dec.Decode(&obj)
 	assert.Equal(errors.New("cbor decode error [pos 7]: unsupported format expecting to decode into *SignMessage; got *cose.Flub"), err)
 }
+
+
+func TestIsSignMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.Equal(IsSignMessage([]byte("deadbeef")), false)
+
+	msgBytes, err := Marshal(NewSignMessage())
+	assert.Nil(err)
+	assert.Equal(IsSignMessage(msgBytes), true)
+}
