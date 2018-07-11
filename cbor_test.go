@@ -262,7 +262,7 @@ func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
 
 	result, err := Unmarshal(b)
 	assert.Nil(err)
-	assert.Equal(result, msg)
+	assert.Equal(result, *msg)
 
 	bytes, err := Marshal(result)
 	assert.Nil(err)

@@ -184,8 +184,7 @@ func TestSignMessageSignatureDigest(t *testing.T) {
 	assert.Equal(err.Error(), "SignMessage.Signatures does not include the signature to digest")
 	assert.Equal(len(digest), 0)
 
-	tmp := NewSignMessage()
-	msg = &tmp
+	msg = NewSignMessage()
 	signature = NewSignature()
 	signature.Headers.Protected[algTag] = ES256
 	msg.Signatures = []Signature{*signature}
