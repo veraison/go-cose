@@ -174,32 +174,32 @@ func TestVerifyInvalidAlgErrors(t *testing.T) {
 
 	verifier := signer.Verifier()
 
-	verifier.alg.Value = 20
+	verifier.Alg.Value = 20
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.Equal(ErrInvalidAlg, err)
 
-	verifier.alg.Value = -7
+	verifier.Alg.Value = -7
 
-	verifier.publicKey = rsaPrivateKey.Public()
-	verifier.alg = PS256
+	verifier.PublicKey = rsaPrivateKey.Public()
+	verifier.Alg = PS256
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.NotNil(err)
 	assert.Equal("verification failed rsa.VerifyPSS err crypto/rsa: verification error", err.Error())
 
-	verifier.publicKey = dsaPrivateKey.PublicKey
-	verifier.alg = ES256
+	verifier.PublicKey = dsaPrivateKey.PublicKey
+	verifier.Alg = ES256
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.NotNil(err)
 	assert.Equal("Unrecognized public key type", err.Error())
 
-	verifier.publicKey = ecdsaPrivateKey.Public()
-	verifier.alg = ES256
-	verifier.alg.privateKeyECDSACurve = nil
+	verifier.PublicKey = ecdsaPrivateKey.Public()
+	verifier.Alg = ES256
+	verifier.Alg.privateKeyECDSACurve = nil
 	err = verifier.Verify([]byte(""), []byte(""))
 	assert.NotNil(err)
 	assert.Equal("Could not find an elliptic curve for the ecdsa algorithm", err.Error())
 
-	verifier.alg.privateKeyECDSACurve = elliptic.P256()
+	verifier.Alg.privateKeyECDSACurve = elliptic.P256()
 }
 
 func TestFromBase64IntErrors(t *testing.T) {
