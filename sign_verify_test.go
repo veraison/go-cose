@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -57,10 +56,10 @@ func TestSignErrors(t *testing.T) {
 	assert.NotNil(msg.Signatures[0].Headers)
 
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{})
-	assert.Equal(errors.New("0 signers for 1 signatures"), err)
+	assert.Equal("0 signers for 1 signatures", err.Error())
 
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
-	assert.Equal(errors.New("SignMessage signature 0 already has signature bytes"), err)
+	assert.Equal("SignMessage signature 0 already has signature bytes", err.Error())
 
 	msg.Signatures[0].SignatureBytes = nil
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
@@ -74,11 +73,11 @@ func TestSignErrors(t *testing.T) {
 
 	signer.alg = PS256
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
-	assert.Equal(errors.New("Signer of type PS256 cannot generate a signature of type ES256"), err)
+	assert.Equal("Signer of type PS256 cannot generate a signature of type ES256", err.Error())
 
 	msg.Signatures[0].Headers.Protected[algTag] = -9000
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
-	assert.Equal(errors.New("Algorithm with value -9000 not found"), err)
+	assert.Equal("Algorithm with value -9000 not found", err.Error())
 
 	msg.Signatures[0].Headers.Protected[algTag] = 1
 	err = msg.Sign(rand.Reader, []byte(""), []Signer{*signer})
@@ -228,7 +227,7 @@ func TestVerifyErrors(t *testing.T) {
 	sig.Headers.Protected[algTag] = -41 // RSAES-OAEP w/ SHA-256 from [RFC8230]
 	sig.Headers.Protected[kidTag] = 1
 	msg.Signatures[0] = *sig
-	assert.Equal(errors.New("SignMessage signature 0 missing signature bytes to verify"), msg.Verify(payload, verifiers))
+	assert.Equal("SignMessage signature 0 missing signature bytes to verify", msg.Verify(payload, verifiers).Error())
 
 	msg.Signatures[0].Headers.Protected[algTag] = -41 // RSAES-OAEP w/ SHA-256 from [RFC8230]
 	msg.Signatures[0].Headers.Protected[kidTag] = 1
@@ -239,7 +238,7 @@ func TestVerifyErrors(t *testing.T) {
 	assert.Equal(ErrInvalidAlg, msg.Verify(payload, verifiers))
 
 	msg.Signatures[0].Headers.Protected[algTag] = -7 // ECDSA w/ SHA-256 from [RFC8152]
-	assert.Equal(errors.New("Wrong number of signatures 1 and verifiers 0"), msg.Verify(payload, []Verifier{}))
+	assert.Equal("Wrong number of signatures 1 and verifiers 0", msg.Verify(payload, []Verifier{}).Error())
 
 	verifiers = []Verifier{
 		Verifier{
@@ -251,7 +250,7 @@ func TestVerifyErrors(t *testing.T) {
 			Alg: ES256,
 		},
 	}
-	assert.Equal(errors.New("Expected 256 bit key, got 384 bits instead"), msg.Verify(payload, verifiers))
+	assert.Equal("Expected 256 bit key, got 384 bits instead", msg.Verify(payload, verifiers).Error())
 
 	verifiers = []Verifier{
 		Verifier{
@@ -259,5 +258,5 @@ func TestVerifyErrors(t *testing.T) {
 			Alg: ES256,
 		},
 	}
-	assert.Equal(errors.New("invalid signature length: 14"), msg.Verify(payload, verifiers))
+	assert.Equal("invalid signature length: 14", msg.Verify(payload, verifiers).Error())
 }
