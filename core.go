@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/elliptic"
 	"crypto/subtle"
-	"fmt"
 	"io"
 	"math/big"
 	"github.com/pkg/errors"
@@ -159,8 +158,9 @@ func (s *Signer) Sign(rand io.Reader, digest []byte) (signature []byte, err erro
 		// These integers (r and s) will be the same length as
 		// the length of the key used for the signature
 		// process.
-		if !(s.BitLen() == r.BitLen() && s.BitLen() == key.D.BitLen()) {
-			fmt.Printf("Bit lengths of integers r and s (%d and %d) do not match the key length %d\n", s.BitLen(), r.BitLen(), key.D.BitLen())
+		rByteLen, sByteLen, dByteLen := len(s.Bits()), len(r.Bits()), len(key.D.Bits())
+		if !(sByteLen == rByteLen && sByteLen == dByteLen) {
+			return nil, errors.Errorf("Byte lengths of integers r and s (%d and %d) do not match the key length %d\n", sByteLen, rByteLen, dByteLen)
 		}
 
 		// The signature is encoded by converting the integers
