@@ -1,14 +1,15 @@
 package cose
 
 import (
-	"fmt"
 	"crypto/dsa"
-	"crypto/rsa"
-	"crypto/rand"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 )
@@ -55,7 +56,6 @@ func fromBase10(base10 string) *big.Int {
 
 	return i
 }
-
 
 func TestNewSigner(t *testing.T) {
 	assert := assert.New(t)
@@ -111,7 +111,7 @@ func TestSignerPublic(t *testing.T) {
 	rsaSigner.Public()
 
 	ecdsaSigner.PrivateKey = dsaPrivateKey
-	assert.Panics(func () { ecdsaSigner.Public() })
+	assert.Panics(func() { ecdsaSigner.Public() })
 }
 
 func TestSignerSignErrors(t *testing.T) {
@@ -129,7 +129,6 @@ func TestSignerSignErrors(t *testing.T) {
 	assert.NotNil(err)
 	assert.Equal(err.Error(), "Key type must be ECDSA")
 	signer.alg.privateKeyType = KeyTypeECDSA
-
 
 	signer, err = NewSigner(PS256, nil)
 	assert.Nil(err, "Error creating PS256 signer")
@@ -204,7 +203,7 @@ func TestVerifyInvalidAlgErrors(t *testing.T) {
 
 func TestFromBase64IntErrors(t *testing.T) {
 	assert := assert.New(t)
-	assert.Panics(func () { FromBase64Int("z") })
+	assert.Panics(func() { FromBase64Int("z") })
 }
 
 func TestSignVerifyWithoutMessage(t *testing.T) {
@@ -234,12 +233,12 @@ func TestI2OSPCorrectness(t *testing.T) {
 	assert := assert.New(t)
 
 	// negative int
-	assert.Panics(func () { I2OSP(big.NewInt(int64(-1)), 2) })
+	assert.Panics(func() { I2OSP(big.NewInt(int64(-1)), 2) })
 
 	// not enough bytes in output / "integer too large"
-	assert.Panics(func () { I2OSP(big.NewInt(int64(0)), 0) })
-	assert.Panics(func () { I2OSP(big.NewInt(int64(1)), 0) })
-	assert.Panics(func () { I2OSP(big.NewInt(int64(256)), 1) })
+	assert.Panics(func() { I2OSP(big.NewInt(int64(0)), 0) })
+	assert.Panics(func() { I2OSP(big.NewInt(int64(1)), 0) })
+	assert.Panics(func() { I2OSP(big.NewInt(int64(256)), 1) })
 
 	assert.Equal(I2OSP(big.NewInt(int64(0)), 2), []byte("\x00\x00"))
 	assert.Equal(I2OSP(big.NewInt(int64(1)), 2), []byte("\x00\x01"))
@@ -254,11 +253,11 @@ func TestI2OSPTiming(t *testing.T) {
 
 	var (
 		toleranceNS = int64(500) // i.e. 0.5 microseconds
-		zero = big.NewInt(int64(0))
-		biggerN = rsaPrivateKey.Primes[0]
+		zero        = big.NewInt(int64(0))
+		biggerN     = rsaPrivateKey.Primes[0]
 		biggerNSize = len(biggerN.Bytes())
-		call_args = []struct{
-			N *big.Int
+		call_args   = []struct {
+			N    *big.Int
 			Size int
 		}{
 			{zero, biggerNSize},
@@ -266,6 +265,10 @@ func TestI2OSPTiming(t *testing.T) {
 		}
 		elapsed_times []time.Duration
 	)
+	if os.Getenv("CI") == "true" {
+		toleranceNS = int64(5000) // i.e. 5 microseconds
+		fmt.Printf("I2OSPTiming using larger timing diff in CI of %s", time.Duration(toleranceNS))
+	}
 
 	for _, args := range call_args {
 		start := time.Now()
@@ -278,5 +281,6 @@ func TestI2OSPTiming(t *testing.T) {
 	if diff < 0 {
 		diff = -diff
 	}
+	fmt.Printf("I2OSPTiming timing diff is %s", time.Duration(diff))
 	assert.True(diff < toleranceNS)
 }
