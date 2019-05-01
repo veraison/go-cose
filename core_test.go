@@ -284,3 +284,16 @@ func TestI2OSPTiming(t *testing.T) {
 	fmt.Printf("I2OSPTiming timing diff is %s", time.Duration(diff))
 	assert.True(diff < toleranceNS)
 }
+
+func TestApproxEqual(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.True(approxEqual(1, 1, 0))
+	assert.True(approxEqual(8, 9, 1))
+	assert.True(approxEqual(9, 8, 1))
+	assert.True(approxEqual(10, 5, 5))
+	assert.True(approxEqual(-1, 0, 1))
+
+	assert.False(approxEqual(10, 5, 1))
+	assert.False(approxEqual(6, 5, 0))
+}
