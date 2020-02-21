@@ -266,7 +266,7 @@ func TestI2OSPTiming(t *testing.T) {
 		elapsed_times []time.Duration
 	)
 	if os.Getenv("CI") == "true" {
-		toleranceNS = int64(5000) // i.e. 5 microseconds
+		toleranceNS = int64(50000) // i.e. 50 microseconds
 		fmt.Printf("I2OSPTiming using larger timing diff in CI of %s", time.Duration(toleranceNS))
 	}
 
