@@ -1,6 +1,6 @@
 # go-cose
 
-[![Build Status](https://travis-ci.org/mozilla-services/go-cose.svg?branch=master)](https://travis-ci.org/mozilla-services/go-cose)
+[![CircleCI](https://circleci.com/gh/mozilla-services/go-cose.svg?style=svg)](https://circleci.com/gh/mozilla-services/go-cose) 
 [![Coverage Status](https://coveralls.io/repos/github/mozilla-services/go-cose/badge.svg)](https://coveralls.io/github/mozilla-services/go-cose)
 
 A [COSE](https://tools.ietf.org/html/rfc8152) library for go.
