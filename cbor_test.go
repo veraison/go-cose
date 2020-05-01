@@ -3,9 +3,10 @@ package cose
 import (
 	"errors"
 	"fmt"
+
+	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/assert"
-	codec "github.com/ugorji/go/codec"
-	"reflect"
+
 	"testing"
 )
 
@@ -148,7 +149,7 @@ func TestCBORMarshalSignMessageWithNilHeadersErrors(t *testing.T) {
 	msg.Payload = nil
 	msg.Headers = nil
 	_, err := Marshal(msg)
-	assert.Equal("cbor encode error: SignMessage has nil Headers", err.Error())
+	assert.Equal("cbor: SignMessage has nil Headers", err.Error())
 }
 
 func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
@@ -170,7 +171,7 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 		},
 	}
 	_, err := Marshal(msg)
-	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+	assert.Equal(errors.New("cbor: Duplicate header 1 found"), err)
 
 	// compressed one in each
 	msg.Headers = &Headers{
@@ -182,31 +183,29 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 		},
 	}
 	_, err = Marshal(msg)
-	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+	assert.Equal(errors.New("cbor: Duplicate header 1 found"), err)
 
 	// compressed and uncompressed both in Protected
 	msg.Headers = &Headers{
 		Protected: map[interface{}]interface{}{
 			"alg": "ES256",
-			1: -37,
+			1:     -37,
 		},
-		Unprotected: map[interface{}]interface{}{
-		},
+		Unprotected: map[interface{}]interface{}{},
 	}
 	_, err = Marshal(msg)
-	assert.Equal(errors.New("cbor encode error: Duplicate compressed and uncompressed common header 1 found in headers"), err)
+	assert.Equal(errors.New("cbor: Duplicate compressed and uncompressed common header 1 found in headers"), err)
 
 	// compressed and uncompressed both in Unprotected
 	msg.Headers = &Headers{
-		Protected: map[interface{}]interface{}{
-		},
+		Protected: map[interface{}]interface{}{},
 		Unprotected: map[interface{}]interface{}{
 			"alg": "ES256",
-			1: -37,
+			1:     -37,
 		},
 	}
 	_, err = Marshal(msg)
-	assert.Equal(errors.New("cbor encode error: Duplicate compressed and uncompressed common header 1 found in headers"), err)
+	assert.Equal(errors.New("cbor: Duplicate compressed and uncompressed common header 1 found in headers"), err)
 
 	// compressed and uncompressed one in each
 	msg.Headers = &Headers{
@@ -218,7 +217,7 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 		},
 	}
 	_, err = Marshal(msg)
-	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+	assert.Equal(errors.New("cbor: Duplicate header 1 found"), err)
 
 	msg.Headers = &Headers{
 		Protected: map[interface{}]interface{}{
@@ -229,11 +228,11 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 		},
 	}
 	_, err = Marshal(msg)
-	assert.Equal(errors.New("cbor encode error: Duplicate header 1 found"), err)
+	assert.Equal(errors.New("cbor: Duplicate header 1 found"), err)
 
 	// duplicate headers in a SignMessage Signature
 	msg.Headers = &Headers{
-		Protected: map[interface{}]interface{}{},
+		Protected:   map[interface{}]interface{}{},
 		Unprotected: map[interface{}]interface{}{},
 	}
 	msg.AddSignature(&Signature{
@@ -248,7 +247,7 @@ func TestCBORMarshalDuplicateKeysErrs(t *testing.T) {
 		SignatureBytes: []byte(""),
 	})
 	_, err = Marshal(msg)
-	assert.Equal("cbor encode error: Duplicate signature header 1 found", err.Error())
+	assert.Equal("cbor: Duplicate signature header 1 found", err.Error())
 }
 
 func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
@@ -258,7 +257,7 @@ func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
 	msg.Payload = nil
 
 	// tag(98) + array(4) [ bytes(0), map(0), nil/null, array(0) ]
-	b := HexToBytesOrDie("D862" + "84" + "40" + "A0" + "F6" + "80" )
+	b := HexToBytesOrDie("D862" + "84" + "40" + "A0" + "F6" + "80")
 
 	result, err := Unmarshal(b)
 	assert.Nil(err)
@@ -269,33 +268,12 @@ func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
 	assert.Equal(bytes, b)
 }
 
-func TestCBOREncodingErrsOnUnexpectedType(t *testing.T) {
-	assert := assert.New(t)
-
-	type Flub struct {
-		foo string
-	}
-	obj := Flub{
-		foo: "not a SignMessage",
-	}
-
-	h := GetCOSEHandle()
-	var cExt Ext
-	h.SetInterfaceExt(reflect.TypeOf(obj), SignMessageCBORTag, cExt)
-
-	var b []byte
-	var enc *codec.Encoder = codec.NewEncoderBytes(&b, h)
-
-	err := enc.Encode(obj)
-	assert.Equal(errors.New("cbor encode error: unsupported format expecting to encode SignMessage; got *cose.Flub"), err)
-}
-
 func TestCBORDecodingDuplicateKeys(t *testing.T) {
 	assert := assert.New(t)
 
 	type DecodeTestCase struct {
-		bytes        []byte
-		result       SignMessage
+		bytes  []byte
+		result SignMessage
 	}
 	var cases = []DecodeTestCase{
 		{
@@ -405,32 +383,39 @@ func TestCBORDecodingErrors(t *testing.T) {
 	var cases = []DecodeErrorTestCase{
 		{
 			HexToBytesOrDie("D862" + "60"), // tag(98) + text(0)
-			"cbor decode error [pos 3]: unsupported format expecting to decode from []interface{}; got string",
+			"cbor: cannot unmarshal UTF-8 text string into Go value of type cose.signMessage",
 		},
 		{
 			HexToBytesOrDie("D862" + "80"), // tag(98) + array(0)
-			"cbor decode error [pos 3]: can only decode SignMessage with 4 fields; got 0",
+			"cbor: cannot unmarshal array into Go value of type cose.signMessage (cannot decode CBOR array to struct with different number of elements)",
 		},
 		{
 			// tag(98) + array(4) [ 4 * text(0) ]
 			HexToBytesOrDie("D862" + "84" + "60" + "60" + "60" + "60"),
-			"cbor decode error [pos 7]: error decoding header bytes; got error casting protected header bytes; got string",
+			"cbor: cannot unmarshal UTF-8 text string into Go struct field cose.signMessage.Protected of type []uint8",
 		},
 		{
 			// tag(98) + array(4) [ bytes(0), map(0), 2 * text(0) ]
 			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "60" + "60"),
-			"cbor decode error [pos 7]: error decoding msg payload decode from interface{} to []byte or nil; got type string",
+			"cbor: cannot unmarshal UTF-8 text string into Go struct field cose.signMessage.Payload of type []uint8",
 		},
 		{
 			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), text(0) ]
 			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "60"),
-			"cbor decode error [pos 7]: error decoding sigs; got string",
+			"cbor: cannot unmarshal UTF-8 text string into Go struct field cose.signMessage.Signatures of type []cose.signature",
 		},
 		{
 			// wrong # of protected header bytes
 			// tag(98) + array(4) [ bytes(2) (but actually 1), map(0), bytes(0), text(0) ]
 			HexToBytesOrDie("D862" + "84" + "4263" + "A0" + "40" + "60"),
-			"EOF",
+			"unexpected EOF",
+		},
+		{
+			// protected header is serialized array
+			// tag(98) + array(4) [ bytes(3), map(2), bytes(0), array(0) ]
+			// protected header is bytes(3) is [2, -7]
+			HexToBytesOrDie("D862" + "84" + "43820226" + "A10224" + "40" + "80"),
+			"cbor: error casting protected to map; got []interface {}",
 		},
 		{
 			// duplicate compressed key in protected and unprotected
@@ -438,7 +423,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// bytes(3) is protected {2: -7}
 			// map(1) is {2: -5}
 			HexToBytesOrDie("D862" + "84" + "43A10226" + "A10224" + "40" + "80"),
-			"cbor decode error [pos 12]: error decoding header bytes; got Duplicate header 2 found",
+			"cbor: Duplicate header 2 found",
 		},
 		{
 			// duplicate uncompressed key in protected and unprotected
@@ -446,7 +431,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// bytes(11) is protected {"alg": "ES256"}
 			// map(1) is unprotected {"alg": "ES256"}
 			HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
-			"cbor decode error [pos 28]: error decoding header bytes; got Duplicate header 1 found",
+			"cbor: Duplicate header 1 found",
 		},
 		{
 			// duplicate key compressed in protected and uncompressed in unprotected
@@ -454,7 +439,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// bytes(3) is protected {1: -7}
 			// map(1) is unprotected {"alg": "PS256"}
 			HexToBytesOrDie("D862" + "84" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
-			"cbor decode error [pos 20]: error decoding header bytes; got Duplicate header 1 found",
+			"cbor: Duplicate header 1 found",
 		},
 		{
 			// duplicate key uncompressed in protected and compressed in unprotected
@@ -462,35 +447,93 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// bytes(11) is protected {"alg": "ES256"}
 			// map(1) is unprotected {1: -7}
 			HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40" + "80"),
-			"cbor decode error [pos 20]: error decoding header bytes; got Duplicate header 1 found",
+			"cbor: Duplicate header 1 found",
+		},
+		{
+			// Signature's protected header is serialized array
+			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(1) ]
+			// Signature is array(3) [ bytes(3), map(0), bytes(0)]
+			// Signature protected header is bytes(3) is [2, -7]
+			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43820226" + "A0" + "40"),
+			"cbor: error casting protected to map; got []interface {}",
+		},
+		{
+			// Signature duplicate compressed key in protected and unprotected
+			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(1) ]
+			// Signature is array(3) [ bytes(3), map(1), bytes(0)]
+			// Signature bytes(3) is protected {2: -7}
+			// Signature map(1) is {2: -5}
+			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43A10226" + "A10224" + "40"),
+			"cbor: Duplicate header 2 found",
+		},
+		{
+			// Signature duplicate uncompressed key in protected and unprotected
+			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(1) ]
+			// Signature is array(3) [ bytes(11), map(1), bytes(0)]
+			// Signature bytes(11) is protected {"alg": "ES256"}
+			// Signature map(1) is unprotected {"alg": "ES256"}
+			//HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
+			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40"),
+			"cbor: Duplicate header 1 found",
+		},
+		{
+			// Signature duplicate key compressed in protected and uncompressed in unprotected
+			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(1) ]
+			// Signature is array(3) [ bytes(3), map(1), bytes(0)]
+			// Signature bytes(3) is protected {1: -7}
+			// Signature map(1) is unprotected {"alg": "PS256"}
+			//HexToBytesOrDie("D862" + "84" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
+			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40"),
+			"cbor: Duplicate header 1 found",
+		},
+		{
+			// Signature duplicate key uncompressed in protected and compressed in unprotected
+			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(1) ]
+			// Signature is array(3) [ bytes(11), map(1), bytes(0)]
+			// Signature bytes(11) is protected {"alg": "ES256"}
+			// Signature map(1) is unprotected {1: -7}
+			//HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40" + "80"),
+			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40"),
+			"cbor: Duplicate header 1 found",
 		},
 	}
 
 	for _, testCase := range cases {
 		result, err := Unmarshal(testCase.bytes)
 		assert.Nil(result)
-		assert.Equal(errors.New(testCase.errorMessage), err)
+		assert.Equal(testCase.errorMessage, err.Error())
 	}
-
-	// test decoding into the wrong dest type
-	type Flub struct {
-		foo string
-	}
-	obj := Flub{
-		foo: "not a SignMessage",
-	}
-
-	h := GetCOSEHandle()
-	var cExt Ext
-	h.SetInterfaceExt(reflect.TypeOf(obj), SignMessageCBORTag, cExt)
-
-	// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(0) ]
-	var dec *codec.Decoder = codec.NewDecoderBytes(HexToBytesOrDie("D862"+"84"+"40"+"A0"+"40"+"80"), h)
-
-	err := dec.Decode(&obj)
-	assert.Equal(errors.New("cbor decode error [pos 7]: unsupported format expecting to decode into *SignMessage; got *cose.Flub"), err)
 }
 
+// TestCBORDecodingToSignMessageErrors tests unmarshaling COSE data to SignMessage,
+// while TestCBORDecodingErrors tests unmarshaling COSE data to interface{}.
+func TestCBORDecodingToSignMessageErrors(t *testing.T) {
+	assert := assert.New(t)
+
+	type DecodeErrorTestCase struct {
+		name         string
+		bytes        []byte
+		errorMessage string
+	}
+	var cases = []DecodeErrorTestCase{
+		{
+			"missing tag number",
+			HexToBytesOrDie("8440A0F680"), // array(4) [ bytes(0), map(0), nil, array(0)]
+			"cbor: cannot unmarshal array into Go value of type cbor.RawTag",
+		},
+		{
+			"wrong tag number",
+			HexToBytesOrDie("D8638440A0F680"), // tag(99) + array(4) [ bytes(0), map(0), nil, array(0)]
+			"cbor: wrong tag number 99",
+		},
+	}
+
+	for _, testCase := range cases {
+		var msg SignMessage
+		err := cbor.Unmarshal(testCase.bytes, &msg)
+		assert.Equal(testCase.errorMessage, err.Error())
+	}
+}
 
 func TestIsSignMessage(t *testing.T) {
 	assert := assert.New(t)
@@ -500,4 +543,13 @@ func TestIsSignMessage(t *testing.T) {
 	msgBytes, err := Marshal(NewSignMessage())
 	assert.Nil(err)
 	assert.Equal(IsSignMessage(msgBytes), true)
+}
+
+func TestUnmarshalToNilSignMessage(t *testing.T) {
+	assert := assert.New(t)
+
+	b := []byte("\xd8\x62\x84\x40\xa0\xf6\x80")
+	var msg *SignMessage
+	err := msg.UnmarshalCBOR(b)
+	assert.Equal("cbor: UnmarshalCBOR on nil SignMessage pointer", err.Error())
 }
