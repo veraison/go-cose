@@ -1,8 +1,8 @@
 version: 2
 jobs:
-  "golang-1.12":
+  "golang-1.13":
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
     working_directory: /go/src/go.mozilla.org/cose/
     environment:
       - GO111MODULE: "on" # yaml sees an unquoted on value as "true" but go checks for "on"
@@ -27,9 +27,9 @@ jobs:
           command: |
             source $HOME/.cargo/env
             make ci
-  "golang-1.13":
+  "golang-1.14":
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
     working_directory: /go/src/go.mozilla.org/cose/
     environment:
       - GO111MODULE: "on" # yaml sees an unquoted on value as "true" but go checks for "on"
@@ -59,5 +59,5 @@ workflows:
   version: 2
   build:
     jobs:
-      - "golang-1.12"
       - "golang-1.13"
+      - "golang-1.14"
