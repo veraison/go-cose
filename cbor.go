@@ -3,8 +3,10 @@ package cose
 import (
 	"bytes"
 	"fmt"
-	codec "github.com/ugorji/go/codec"
 	"reflect"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/pkg/errors"
 )
 
 // SignMessageCBORTag is the CBOR tag for a COSE SignMessage
@@ -33,82 +35,128 @@ func IsSignMessage(data []byte) bool {
 	return bytes.HasPrefix(data, signMessagePrefix)
 }
 
-// GetCOSEHandle returns a codec.CborHandle with an extension
-// registered for COSE SignMessage as CBOR tag 98
-func GetCOSEHandle() (h *codec.CborHandle) {
-	h = new(codec.CborHandle)
-	h.IndefiniteLength = false // no streaming
-	h.Canonical = true         // sort map keys
-	h.SignedInteger = true
+// Readonly CBOR encoding and decoding modes.
+var (
+	encMode, encModeError = initCBOREncMode()
+	decMode, decModeError = initCBORDecMode()
+)
 
-	var cExt Ext
-	h.SetInterfaceExt(reflect.TypeOf(SignMessage{}), SignMessageCBORTag, cExt)
-	return h
+func initCBOREncMode() (en cbor.EncMode, err error) {
+	encOpt := cbor.EncOptions{
+		IndefLength: cbor.IndefLengthForbidden, // no streaming
+		Sort:        cbor.SortCanonical,        // sort map keys
+	}
+	return encOpt.EncMode()
+}
+
+func initCBORDecMode() (dm cbor.DecMode, err error) {
+	// Create a tag with SignMessage and tag number 98.
+	// When decoding CBOR data with tag number 98 to interface{}, cbor library returns SignMessage.
+	tags := cbor.NewTagSet()
+	err = tags.Add(
+		cbor.TagOptions{EncTag: cbor.EncTagRequired, DecTag: cbor.DecTagRequired},
+		reflect.TypeOf(SignMessage{}),
+		SignMessageCBORTag,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	decOpt := cbor.DecOptions{
+		IndefLength: cbor.IndefLengthForbidden, // no streaming
+		IntDec:      cbor.IntDecConvertSigned,  // decode CBOR uint/int to Go int64
+	}
+	return decOpt.DecModeWithTags(tags)
+}
+
+func init() {
+	if encModeError != nil {
+		panic(encModeError)
+	}
+	if decModeError != nil {
+		panic(decModeError)
+	}
 }
 
 // Marshal returns the CBOR []byte encoding of param o
 func Marshal(o interface{}) (b []byte, err error) {
-	var enc *codec.Encoder = codec.NewEncoderBytes(&b, GetCOSEHandle())
+	defer func() {
+		// Need to recover from panic because Headers.EncodeUnprotected()
+		// and Headers.EncodeProtected() can panic.
+		if r := recover(); r != nil {
+			b = nil
+			switch x := r.(type) {
+			case error:
+				err = fmt.Errorf("cbor: %s", x.Error())
+			default:
+				err = fmt.Errorf("cbor: %v", x)
+			}
+		}
+	}()
 
-	err = enc.Encode(o)
-	return b, err
+	return encMode.Marshal(o)
 }
 
 // Unmarshal returns the CBOR decoding of a []byte into param o
 func Unmarshal(b []byte) (o interface{}, err error) {
-	var dec *codec.Decoder = codec.NewDecoderBytes(b, GetCOSEHandle())
-
-	err = dec.Decode(&o)
+	err = decMode.Unmarshal(b, &o)
 	return o, err
 }
 
-// Ext is a codec.cbor extension to handle custom (de)serialization of
-// types to/from another interface{} value
-//
-// https://godoc.org/github.com/ugorji/go/codec#InterfaceExt
-type Ext struct{}
+type signature struct {
+	_              struct{} `cbor:",toarray"`
+	Protected      []byte
+	Unprotected    map[interface{}]interface{}
+	SignatureBytes []byte
+}
 
-// ConvertExt converts a value into a simpler interface for easier
-// encoding
-func (x Ext) ConvertExt(v interface{}) interface{} {
-	message, ok := v.(*SignMessage)
-	if !ok {
-		panic(fmt.Sprintf("unsupported format expecting to encode SignMessage; got %T", v))
-	}
+type signMessage struct {
+	_           struct{} `cbor:",toarray"`
+	Protected   []byte
+	Unprotected map[interface{}]interface{}
+	Payload     []byte
+	Signatures  []signature
+}
+
+// MarshalCBOR encodes SignMessage.
+func (message *SignMessage) MarshalCBOR() ([]byte, error) {
+	// Verify SignMessage headers.
 	if message.Headers == nil {
-		panic("SignMessage has nil Headers")
+		return nil, errors.New("cbor: SignMessage has nil Headers")
 	}
 	dup := FindDuplicateHeader(message.Headers)
 	if dup != nil {
-		panic(fmt.Sprintf("Duplicate header %+v found", dup))
+		return nil, fmt.Errorf("cbor: Duplicate header %+v found", dup)
 	}
 
-	sigs := make([]interface{}, len(message.Signatures))
+	// Convert Signature to signature.
+	sigs := make([]signature, len(message.Signatures))
 	for i, s := range message.Signatures {
 		dup := FindDuplicateHeader(s.Headers)
 		if dup != nil {
-			panic(fmt.Sprintf("Duplicate signature header %+v found", dup))
+			return nil, fmt.Errorf("cbor: Duplicate signature header %+v found", dup)
 		}
 
-		sigs[i] = []interface{}{
-			s.Headers.EncodeProtected(),
-			s.Headers.EncodeUnprotected(),
-			s.SignatureBytes,
+		sigs[i] = signature{
+			Protected:      s.Headers.EncodeProtected(),
+			Unprotected:    s.Headers.EncodeUnprotected(),
+			SignatureBytes: s.SignatureBytes,
 		}
 	}
 
-	return []interface{}{
-		message.Headers.EncodeProtected(),
-		message.Headers.EncodeUnprotected(),
-		[]byte(message.Payload),
-		sigs,
+	// Convert SignMessage to signMessage.
+	m := signMessage{
+		Protected:   message.Headers.EncodeProtected(),
+		Unprotected: message.Headers.EncodeUnprotected(),
+		Payload:     message.Payload,
+		Signatures:  sigs,
 	}
+
+	// Marshal signMessage with tag number 98.
+	return encMode.Marshal(cbor.Tag{Number: SignMessageCBORTag, Content: m})
 }
 
-// UpdateExt updates a value from a simpler interface for easy
-// decoding dest is always a pointer to a SignMessage
-//
-// Note: dest is always a pointer kind to the registered extension type.
+// UnmarshalCBOR decodes data into SignMessage.
 //
 // Unpacks a SignMessage described by CDDL fragments:
 //
@@ -145,48 +193,56 @@ func (x Ext) ConvertExt(v interface{}) interface{} {
 //        ? 7 => COSE_Signature / [+COSE_Signature] ; Counter signature
 // )
 //
-// Note: the decoder will convert panics to errors
-func (x Ext) UpdateExt(dest interface{}, v interface{}) {
-	message, ok := dest.(*SignMessage)
-	if !ok {
-		panic(fmt.Sprintf("unsupported format expecting to decode into *SignMessage; got %T", dest))
+func (message *SignMessage) UnmarshalCBOR(data []byte) (err error) {
+	if message == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil SignMessage pointer")
 	}
 
-	var src, vok = v.([]interface{})
-	if !vok {
-		panic(fmt.Sprintf("unsupported format expecting to decode from []interface{}; got %T", v))
-	}
-	if len(src) != 4 {
-		panic(fmt.Sprintf("can only decode SignMessage with 4 fields; got %d", len(src)))
-	}
-
-	var msgHeaders = &Headers{
-		Protected:   map[interface{}]interface{}{},
-		Unprotected: map[interface{}]interface{}{},
-	}
-	err := msgHeaders.Decode(src[0:2])
+	// Decode to cbor.RawTag to extract tag number and tag content as []byte.
+	var raw cbor.RawTag
+	err = decMode.Unmarshal(data, &raw)
 	if err != nil {
-		panic(fmt.Sprintf("error decoding header bytes; got %s", err))
+		return err
 	}
 
-	message.Headers = msgHeaders
-
-	switch payload := src[2].(type) {
-	case []byte:
-		message.Payload = payload
-	case nil:
-		message.Payload = nil
-	default:
-		panic(fmt.Sprintf("error decoding msg payload decode from interface{} to []byte or nil; got type %T", src[2]))
+	// Verify tag number.
+	if raw.Number != SignMessageCBORTag {
+		return fmt.Errorf("cbor: wrong tag number %d", raw.Number)
 	}
 
-	var sigs, sok = src[3].([]interface{})
-	if !sok {
-		panic(fmt.Sprintf("error decoding sigs; got %T", src[3]))
+	// Decode tag content to signMessage.
+	var m signMessage
+	err = decMode.Unmarshal(raw.Content, &m)
+	if err != nil {
+		return err
 	}
-	for _, sig := range sigs {
-		sigT := NewSignature()
-		sigT.Decode(sig) // can panic
-		message.AddSignature(sigT)
+
+	// Create Headers from signMessage.
+	msgHeaders := &Headers{}
+	err = msgHeaders.Decode([]interface{}{m.Protected, m.Unprotected})
+	if err != nil {
+		return fmt.Errorf("cbor: %s", err.Error())
 	}
+
+	// Create Signature from signMessage.
+	var sigs []Signature
+	for _, s := range m.Signatures {
+		sh := &Headers{}
+		err = sh.Decode([]interface{}{s.Protected, s.Unprotected})
+		if err != nil {
+			return fmt.Errorf("cbor: %s", err.Error())
+		}
+
+		sigs = append(sigs, Signature{
+			Headers:        sh,
+			SignatureBytes: s.SignatureBytes,
+		})
+	}
+
+	*message = SignMessage{
+		Headers:    msgHeaders,
+		Payload:    m.Payload,
+		Signatures: sigs,
+	}
+	return nil
 }
