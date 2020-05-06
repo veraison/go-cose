@@ -5,10 +5,11 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // signing tests for Firefox Addon COSE Signatures
@@ -58,10 +59,10 @@ func RustCoseVerifiesGoCoseSignatures(t *testing.T, testCase RustTestCase) {
 	if testCase.ModifySignature {
 		// tamper with the COSE signature.
 		sig1 := message.Signatures[0].SignatureBytes
-		sig1[len(sig1)-5] ^= sig1[len(sig1)-5]
+		sig1[len(sig1)-5] ^= 1
 	}
 	if testCase.ModifyPayload {
-		message.Payload[0] ^= message.Payload[0]
+		message.Payload[0] ^= 1
 	}
 
 	message.Payload = nil
