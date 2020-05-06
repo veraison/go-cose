@@ -54,10 +54,35 @@ jobs:
           command: |
             source $HOME/.cargo/env
             make ci
+  "lint":
+    docker:
+      - image: circleci/golang:1.14
+    working_directory: /go/src/go.mozilla.org/cose/
+    environment:
+      - GO111MODULE: "on" # yaml sees an unquoted on value as "true" but go checks for "on"
+    steps:
+      - checkout
+      - run:
+          name: install golangci-lint
+          command: |
+            GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.26.0
+      - run:
+          name: print debugging info about go env
+          command: go env GOPATH
+      - run:
+          name: print debugging info about golangci-lint
+          command: which golangci-lint
+      - run:
+          name: Run required linters in .golangci.yml plus hard-coded ones here
+          command: $(go env GOPATH)/bin/golangci-lint run --timeout=3m
+      - run:
+          name: Run optional linters (not required to pass)
+          command : $(go env GOPATH)/bin/golangci-lint run --timeout=3m --issues-exit-code=0 -E dupl -E gocritic -E gosimple -E lll -E prealloc
 
 workflows:
   version: 2
   build:
     jobs:
+      - "lint"
       - "golang-1.13"
       - "golang-1.14"
