@@ -18,7 +18,7 @@ install-go-fuzz:
 fuzz: install-go-fuzz
 	mkdir -p workdir/corpus
 	cp samples/*.cose workdir/corpus
-	go-fuzz-build go.mozilla.org/cose
+	go-fuzz-build github.com/veraison/go-cose
 	go-fuzz -bin=./cose-fuzz.zip -workdir=workdir
 
 lint:

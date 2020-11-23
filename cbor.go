@@ -9,30 +9,51 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SignMessageCBORTag is the CBOR tag for a COSE SignMessage
-// from https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml#tags
-const SignMessageCBORTag = 98
+const (
+	// SignMessageCBORTag is the CBOR tag for a COSE SignMessage
+	// from https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml#tags
+	SignMessageCBORTag = 98
 
-var signMessagePrefix = []byte{
-	// 0b110_11000 major type 6 (tag) with additional information
-	// length 24 bits / 3 bytes (since tags are always uints)
-	//
-	// per https://tools.ietf.org/html/rfc7049#section-2.4
-	'\xd8',
+	// Sign1MessageCBORTag is the CBOR tag for COSE Single Signer Data Object
+	Sign1MessageCBORTag = 18
+)
 
-	// uint8_t with the tag value
-	SignMessageCBORTag,
+var (
+	signMessagePrefix = []byte{
+		// 0b110_11000 major type 6 (tag) with additional information
+		// length 24 bits / 3 bytes (since tags are always uints)
+		//
+		// per https://tools.ietf.org/html/rfc7049#section-2.4
+		'\xd8',
 
-	// 0b100_00100 major type 4 (array) with additional
-	// information 4 for a 4-item array representing a COSE_Sign
-	// message
-	'\x84',
-}
+		// uint8_t with the tag value
+		SignMessageCBORTag,
+
+		// 0b100_00100 major type 4 (array) with additional
+		// information 4 for a 4-item array representing a COSE_Sign
+		// message
+		'\x84',
+	}
+
+	sign1MessagePrefix = []byte{
+		// tag(18)
+		'\xd2',
+
+		// array(4)
+		'\x84',
+	}
+)
 
 // IsSignMessage checks whether the prefix is 0xd8 0x62 for a COSE
 // SignMessage
 func IsSignMessage(data []byte) bool {
 	return bytes.HasPrefix(data, signMessagePrefix)
+}
+
+// IsSign1Message checks whether the prefix is 0xd2 0x84 for a COSE
+// Sign1Message
+func IsSign1Message(data []byte) bool {
+	return bytes.HasPrefix(data, sign1MessagePrefix)
 }
 
 // Readonly CBOR encoding and decoding modes.
@@ -244,5 +265,77 @@ func (message *SignMessage) UnmarshalCBOR(data []byte) (err error) {
 		Payload:    m.Payload,
 		Signatures: sigs,
 	}
+	return nil
+}
+
+type sign1Message struct {
+	_           struct{} `cbor:",toarray"`
+	Protected   []byte
+	Unprotected map[interface{}]interface{}
+	Payload     []byte
+	Signature   []byte
+}
+
+// MarshalCBOR encodes Sign1Message.
+func (message *Sign1Message) MarshalCBOR() ([]byte, error) {
+	// Verify Sign1Message headers.
+	if message.Headers == nil {
+		return nil, errors.New("cbor: Sign1Message has nil Headers")
+	}
+	dup := FindDuplicateHeader(message.Headers)
+	if dup != nil {
+		return nil, fmt.Errorf("cbor: Duplicate header %+v found", dup)
+	}
+
+	// Convert Sign1Message to sign1Message.
+	m := sign1Message{
+		Protected:   message.Headers.EncodeProtected(),
+		Unprotected: message.Headers.EncodeUnprotected(),
+		Payload:     message.Payload,
+		Signature:   message.Signature,
+	}
+
+	// Marshal sign1Message with tag number 18.
+	return encMode.Marshal(cbor.Tag{Number: Sign1MessageCBORTag, Content: m})
+}
+
+// UnmarshalCBOR decodes data into Sign1Message.
+func (message *Sign1Message) UnmarshalCBOR(data []byte) (err error) {
+	if message == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil Sign1Message pointer")
+	}
+
+	// Decode to cbor.RawTag to extract tag number and tag content as []byte.
+	var raw cbor.RawTag
+	err = decMode.Unmarshal(data, &raw)
+	if err != nil {
+		return err
+	}
+
+	// Verify tag number.
+	if raw.Number != Sign1MessageCBORTag {
+		return fmt.Errorf("cbor: wrong tag number %d", raw.Number)
+	}
+
+	// Decode tag content to sign1Message.
+	var m sign1Message
+	err = decMode.Unmarshal(raw.Content, &m)
+	if err != nil {
+		return err
+	}
+
+	// Create Headers from sign1Message.
+	msgHeaders := &Headers{}
+	err = msgHeaders.Decode([]interface{}{m.Protected, m.Unprotected})
+	if err != nil {
+		return fmt.Errorf("cbor: %s", err.Error())
+	}
+
+	*message = Sign1Message{
+		Headers:   msgHeaders,
+		Payload:   m.Payload,
+		Signature: m.Signature,
+	}
+
 	return nil
 }
