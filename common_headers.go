@@ -2,6 +2,7 @@ package cose
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -299,13 +300,18 @@ func FindDuplicateHeader(headers *Headers) interface{} {
 	}
 	headers.Protected = CompressHeaders(headers.Protected)
 	headers.Unprotected = CompressHeaders(headers.Unprotected)
-	for k, _ := range headers.Protected {
+	for k := range headers.Protected {
 		_, ok := headers.Unprotected[k]
 		if ok {
 			return k
 		}
 	}
 	return nil
+}
+
+// GetAlg returns the algorithm by label or int from the protected headers
+func GetAlg(h *Headers) (alg *Algorithm, err error) {
+	return getAlg(h)
 }
 
 // getAlg returns the alg by label or int

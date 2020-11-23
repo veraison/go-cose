@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"fmt"
 	"io"
+
 	"github.com/pkg/errors"
 )
 
@@ -110,6 +111,7 @@ func (m *SignMessage) SigStructure(external []byte, signature *Signature) (ToBeS
 	// 2.  Create the value ToBeSigned by encoding the Sig_structure to a
 	//     byte string, using the encoding described in Section 14.
 	ToBeSigned, err = buildAndMarshalSigStructure(
+		ContextSignature,
 		m.Headers.EncodeProtected(),
 		signature.Headers.EncodeProtected(),
 		external,

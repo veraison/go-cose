@@ -3,7 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	cose "go.mozilla.org/cose"
+
+	cose "github.com/veraison/go-cose"
 )
 
 func main() {
