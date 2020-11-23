@@ -1,7 +1,8 @@
 # go-cose
 
-[![CircleCI](https://circleci.com/gh/mozilla-services/go-cose.svg?style=svg)](https://circleci.com/gh/mozilla-services/go-cose) 
-[![Coverage Status](https://coveralls.io/repos/github/mozilla-services/go-cose/badge.svg)](https://coveralls.io/github/mozilla-services/go-cose)
+[![GitHub CI](https://github.com/veraison/go-cose/workflows/ci/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3Aci)
+
+[![Coverage Status](https://github.com/veraison/go-cose/workflows/cover%20%E2%89%A589%25/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3A%22cover%20%E2%89%A589%25%22)
 
 A [COSE](https://tools.ietf.org/html/rfc8152) library for go.
 
