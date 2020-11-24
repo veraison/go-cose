@@ -51,13 +51,13 @@ func TestSign1_SignErrors(t *testing.T) {
 	invalid := &Sign1Message{}
 
 	err = invalid.Sign(rand.Reader, external, *signer)
-	assert.EqualError(err, "Sign1Message has no headers")
+	assert.Equal(err, ErrNilSign1Headers)
 
 	// empty Headers structure has nil ProtectedHeaders
 	invalid.Headers = &Headers{}
 
 	err = invalid.Sign(rand.Reader, external, *signer)
-	assert.EqualError(err, "Sign1Message has no protected headers")
+	assert.Equal(err, ErrNilSign1ProtectedHeaders)
 
 	// signature should be empty before signature is applied
 	invalid.Signature = []byte("fake signature")
@@ -118,12 +118,12 @@ func TestSign1_VerifyErrors(t *testing.T) {
 	invalid.Headers = nil
 
 	err = invalid.Verify(external, *verifier)
-	assert.EqualError(err, "Sign1Message has no headers")
+	assert.Equal(err, ErrNilSign1Headers)
 
 	invalid.Headers = &Headers{}
 
 	err = invalid.Verify(external, *verifier)
-	assert.EqualError(err, "Sign1Message has no protected headers")
+	assert.Equal(err, ErrNilSign1ProtectedHeaders)
 
 	invalid.Headers.Protected = map[interface{}]interface{}{}
 

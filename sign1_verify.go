@@ -42,11 +42,11 @@ func (m Sign1Message) Verify(external []byte, verifier Verifier) (err error) {
 	}
 
 	if m.Headers == nil {
-		return errors.New("Sign1Message has no headers") // TODO(tho) make error
+		return ErrNilSign1Headers
 	}
 
 	if m.Headers.Protected == nil {
-		return errors.New("Sign1Message has no protected headers")
+		return ErrNilSign1ProtectedHeaders
 	}
 
 	alg, err := getAlg(m.Headers)
@@ -77,11 +77,11 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) (err
 	}
 
 	if m.Headers == nil {
-		return errors.New("Sign1Message has no headers") // TODO(tho) make error
+		return ErrNilSign1Headers
 	}
 
 	if m.Headers.Protected == nil {
-		return errors.New("Sign1Message has no protected headers") // TODO(tho) make error
+		return ErrNilSign1ProtectedHeaders
 	}
 
 	alg, err := getAlg(m.Headers)
