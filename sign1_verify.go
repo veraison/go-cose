@@ -36,8 +36,18 @@ func NewSign1Message() *Sign1Message {
 
 // Verify verifies the signature on the Sign1Message returning nil on
 // success or a suitable error if verification fails.
-func (m *Sign1Message) Verify(external []byte, verifier Verifier) (err error) {
-	// TODO(tho) check preconditions
+func (m Sign1Message) Verify(external []byte, verifier Verifier) (err error) {
+	if m.Signature == nil || len(m.Signature) == 0 {
+		return errors.New("Sign1Message has no signature to verify")
+	}
+
+	if m.Headers == nil {
+		return errors.New("Sign1Message has no headers") // TODO(tho) make error
+	}
+
+	if m.Headers.Protected == nil {
+		return errors.New("Sign1Message has no protected headers")
+	}
 
 	alg, err := getAlg(m.Headers)
 	if err != nil {
@@ -62,7 +72,17 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) (err error) {
 
 // Sign signs a Sign1Message using the provided Signer
 func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) (err error) {
-	// TODO(tho) check preconditions
+	if m.Signature != nil || len(m.Signature) > 0 {
+		return errors.New("Sign1Message signature already has signature bytes")
+	}
+
+	if m.Headers == nil {
+		return errors.New("Sign1Message has no headers") // TODO(tho) make error
+	}
+
+	if m.Headers.Protected == nil {
+		return errors.New("Sign1Message has no protected headers") // TODO(tho) make error
+	}
 
 	alg, err := getAlg(m.Headers)
 	if err != nil {
