@@ -42,6 +42,7 @@ goveralls:
 smoketest-examples:
 	go run example/sign.go
 	go run example/verify.go
+	go run example/sign1.go
 
 ci: install-golint goveralls install coverage lint vet
 	goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=$(COVERALLS_TOKEN)

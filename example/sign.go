@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	_ "crypto/sha256"
 	"fmt"
 
 	cose "github.com/veraison/go-cose"
