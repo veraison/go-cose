@@ -46,3 +46,6 @@ smoketest-examples:
 
 ci: install-golint goveralls install coverage lint vet
 	goveralls -coverprofile=coverage.out -service=circle-ci -repotoken=$(COVERALLS_TOKEN)
+
+.PHONY: licenses
+licenses: ; @./scripts/licenses.sh
