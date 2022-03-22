@@ -234,7 +234,7 @@ type Signer interface {
     Algorithm() *Algorithm
     Sign(ctx context.Context, digest []byte) ([]byte, error)
 }
-    func NewSigner(alg *Algorithm, key crypto.PrivateKey) (Signer, error)
+    func NewSigner(alg *Algorithm, key crypto.Signer) (Signer, error)
     func NewSignerWithEphemeralKey(alg *Algorithm) (Signer, crypto.PrivateKey, error)
 
 type Verifier interface {
@@ -250,6 +250,8 @@ Key changes:
   - String header labels are not registered in [IANA "COSE Header Parameters" Registry](https://www.iana.org/assignments/cose/cose.xhtml#header-parameters), and thus are cleaned.
 - `Signer` is now an interface.
   - `Sign` takes `context.Context` as input with `rand io.Reader` removed since it is potentially a RPC call.
+  - `NewSigner` takes `crypto.Signer` where `Public()` must output a public key of type `*rsa.PublicKey`, `*ecdsa.PublicKey`, or `ed25519.PublicKey`.
+    - Note: `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and `ed25519.PrivateKey` implement `crypto.Signer`.
   - `NewSignerWithEphemeralKey` is added mainly for testing or example purposes, and can be moved in the final version.
     - `crypto.PublicKey` can be obtained from `crypto.PrivateKey` by casting
       ```go
