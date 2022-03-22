@@ -176,9 +176,9 @@ var (
 )
 
 type Algorithm struct {
-	Name     string
-	Value    int
-	HashFunc crypto.Hash
+    Name     string
+    Value    int
+    HashFunc crypto.Hash
 }
 
 func I2OSP(x *big.Int, n int) ([]byte, error)
@@ -194,13 +194,13 @@ type UnprotectedHeader map[interface{}]interface{}
 type Headers struct {
     RawProtected   []byte
     RawUnprotected []byte
-	Protected      ProtectedHeader
-	Unprotected    UnprotectedHeader
+    Protected      ProtectedHeader
+    Unprotected    UnprotectedHeader
 }
 
 type Signature struct {
-	Headers   Headers
-	Signature []byte
+    Headers   Headers
+    Signature []byte
 }
     func NewSignature() *Signature
     func (s *Signature) MarshalCBOR() ([]byte, error)
@@ -239,7 +239,7 @@ type Signer interface {
 
 type Verifier interface {
     Algorithm() *Algorithm
-	Verify(ctx context.Context, digest, signature []byte) error
+    Verify(ctx context.Context, digest, signature []byte) error
 }
     func NewVerifier(alg *Algorithm, key crypto.PublicKey) (Verifier, error)
 ```
