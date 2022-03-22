@@ -215,8 +215,8 @@ type SignMessage struct {
     func ParseSignMessage(data []byte) (*SignMessage, error)
     func (m *SignMessage) MarshalCBOR() ([]byte, error)
     func (m *SignMessage) UnmarshalCBOR(data []byte) error
-    func (m *SignMessage) Sign(ctx context.Context, external []byte, signers []Signer) error
-    func (m *SignMessage) Verify(ctx context.Context, external []byte, verifier []Verifier) error
+    func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) error
+    func (m *SignMessage) Verify(external []byte, verifier []Verifier) error
 
 type Sign1Message struct {
     Headers   Headers
@@ -227,19 +227,19 @@ type Sign1Message struct {
     func ParseSign1Message(data []byte) (*Sign1Message, error)
     func (m *Sign1Message) MarshalCBOR() ([]byte, error)
     func (m *Sign1Message) UnmarshalCBOR(data []byte) error
-    func (m *Sign1Message) Sign(ctx context.Context, external []byte, signer Signer) error
-    func (m *Sign1Message) Verify(ctx context.Context, external []byte, verifier Verifier) error
+    func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error
+    func (m *Sign1Message) Verify(external []byte, verifier Verifier) error
 
 type Signer interface {
     Algorithm() *Algorithm
-    Sign(ctx context.Context, digest []byte) ([]byte, error)
+    Sign(rand io.Reader, digest []byte) ([]byte, error)
 }
     func NewSigner(alg *Algorithm, key crypto.Signer) (Signer, error)
     func NewSignerWithEphemeralKey(alg *Algorithm) (Signer, crypto.PrivateKey, error)
 
 type Verifier interface {
     Algorithm() *Algorithm
-    Verify(ctx context.Context, digest, signature []byte) error
+    Verify(digest, signature []byte) error
 }
     func NewVerifier(alg *Algorithm, key crypto.PublicKey) (Verifier, error)
 ```
@@ -249,7 +249,6 @@ Key changes:
 - Header related functions are cleaned up.
   - String header labels are not registered in [IANA "COSE Header Parameters" Registry](https://www.iana.org/assignments/cose/cose.xhtml#header-parameters), and thus are cleaned.
 - `Signer` is now an interface.
-  - `Sign` takes `context.Context` as input with `rand io.Reader` removed since it is potentially a RPC call.
   - `NewSigner` takes `crypto.Signer` where `Public()` must output a public key of type `*rsa.PublicKey`, `*ecdsa.PublicKey`, or `ed25519.PublicKey`.
     - Note: `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and `ed25519.PrivateKey` implement `crypto.Signer`.
   - `NewSignerWithEphemeralKey` is added mainly for testing or example purposes, and can be moved in the final version.
@@ -262,8 +261,9 @@ Key changes:
           publicKey = key.Public()
       }
       ```
+  - In case of remote signing implementation, the same model of [http.Request](https://pkg.go.dev/net/http#Request.WithContext) can be applied.
 - `Verifier` is now an interface.
-  - `Verify` takes `context.Context` as input since it is potentially a RPC call.
+  - In case of remote verification implementation, the same model of [http.Request](https://pkg.go.dev/net/http#Request.WithContext) can be applied.
 - Primitive signature service providers can have their own implementation implementing `Signer` and / or `Verifier`.
   - Remote signing a.k.a. KMS is one kind of primitive signature service providers.
 - `Headers` now stores raw CBOR object to avoid re-serialization in verification.
@@ -305,10 +305,25 @@ msg = &cose.Sign1Message{
 // sign message
 signer, _, err := cose.NewSignerWithEphemeralKey(cose.AlgorithmES256)
 check(err)
-ctx := context.Background()
-err = msg.Sign(ctx, nil, signer)
+err = msg.Sign(rand.Reader, nil, signer)
 check(err)
 sig, err := msg.MarshalCBOR()
+check(err)
+
+// remote signing scenario 1
+ctx := context.Background()
+signer = getRemoteSigner()
+signer = signer.WithContext(ctx)
+err = msg.Sign(rand.Reader, nil, signer)
+check(err)
+sig, err = msg.MarshalCBOR()
+check(err)
+
+// remote signing scenario 2
+signer = getRemoteSignerWithContext(ctx)
+err = msg.Sign(rand.Reader, nil, signer)
+check(err)
+sig, err = msg.MarshalCBOR()
 check(err)
 ```
 
@@ -322,11 +337,9 @@ verifier, err := cose.NewVerifier(cose.AlgorithmES256, key)
 check(err)
 sig, err := cose.ParseSign1Message(rawSig)
 check(err)
-ctx := context.Background()
-err = msg.Verify(ctx, nil, verifier)
-check(err)
+err = msg.Verify(nil, verifier)
+check(err) 
 ```
-
 
 #### COSE_Sign
 
@@ -366,8 +379,7 @@ msg = &cose.SignMessage{
 // sign message
 signer, _, err := cose.NewSignerWithEphemeralKey(cose.AlgorithmES256)
 check(err)
-ctx := context.Background()
-err = msg.Sign(ctx, nil, []cose.Signer{signer})
+err = msg.Sign(rand.Reader, nil, []cose.Signer{signer})
 check(err)
 finalSig, err := msg.MarshalCBOR()
 check(err)
@@ -383,7 +395,6 @@ verifier, err := cose.NewVerifier(cose.AlgorithmES256, key)
 check(err)
 sig, err := cose.ParseSignMessage(rawSig)
 check(err)
-ctx := context.Background()
-err = msg.Verify(ctx, nil, []cose.Verifier{verifier})
+err = msg.Verify(nil, []cose.Verifier{verifier})
 check(err)
 ```
