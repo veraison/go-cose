@@ -212,11 +212,10 @@ type SignMessage struct {
     Signatures []*Signature
 }
     func NewSignMessage() *SignMessage
-    func ParseSignMessage(data []byte) (*SignMessage, error)
     func (m *SignMessage) MarshalCBOR() ([]byte, error)
     func (m *SignMessage) UnmarshalCBOR(data []byte) error
-    func (m *SignMessage) Sign(rand io.Reader, external []byte, signers []Signer) error
-    func (m *SignMessage) Verify(external []byte, verifier []Verifier) error
+    func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error
+    func (m *SignMessage) Verify(external []byte, verifier ...Verifier) error
 
 type Sign1Message struct {
     Headers   Headers
@@ -224,7 +223,6 @@ type Sign1Message struct {
     Signature []byte
 }
     func NewSign1Message() *Sign1Message
-    func ParseSign1Message(data []byte) (*Sign1Message, error)
     func (m *Sign1Message) MarshalCBOR() ([]byte, error)
     func (m *Sign1Message) UnmarshalCBOR(data []byte) error
     func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error
@@ -292,10 +290,10 @@ msg.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 // more efficient alternative
 msg = &cose.Sign1Message{
     Headers: cose.Headers{
-        Protected: map[interface{}]interface{}{
+        Protected: cose.ProtectedHeader{
             cose.HeaderLabelAlgorithm: cose.AlgorithmES256.Value,
         },
-        Unprotected: map[interface{}]interface{}{
+        Unprotected: cose.UnprotectedHeader{
             cose.HeaderLabelKeyID: 1,
         },
     },
@@ -335,7 +333,8 @@ key := getPublicKey()
 
 verifier, err := cose.NewVerifier(cose.AlgorithmES256, key)
 check(err)
-sig, err := cose.ParseSign1Message(rawSig)
+var msg cose.Sign1Message
+err = msg.UnmarshalCBOR(rawSig)
 check(err)
 err = msg.Verify(nil, verifier)
 check(err) 
@@ -354,10 +353,10 @@ sig.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 // more efficient alternative
 sig = &cose.Signature{
     Headers: cose.Headers{
-        Protected: map[interface{}]interface{}{
+        Protected: cose.ProtectedHeader{
             cose.HeaderLabelAlgorithm: cose.AlgorithmES256.Value,
         },
-        Unprotected: map[interface{}]interface{}{
+        Unprotected: cose.UnprotectedHeader{
             cose.HeaderLabelKeyID: 1,
         },
     },
@@ -379,7 +378,7 @@ msg = &cose.SignMessage{
 // sign message
 signer, _, err := cose.NewSignerWithEphemeralKey(cose.AlgorithmES256)
 check(err)
-err = msg.Sign(rand.Reader, nil, []cose.Signer{signer})
+err = msg.Sign(rand.Reader, nil, signer)
 check(err)
 finalSig, err := msg.MarshalCBOR()
 check(err)
@@ -393,8 +392,9 @@ key := getPublicKey()
 
 verifier, err := cose.NewVerifier(cose.AlgorithmES256, key)
 check(err)
-sig, err := cose.ParseSignMessage(rawSig)
+var msg cose.SignMessage
+err = msg.UnmarshalCBOR(rawSig)
 check(err)
-err = msg.Verify(nil, []cose.Verifier{verifier})
+err = msg.Verify(nil, verifier)
 check(err)
 ```
