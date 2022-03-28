@@ -17,9 +17,14 @@ var (
 	ErrNoSignatures             = errors.New("No signatures to sign the message. Use AddSignature to add them")
 	ErrNoSignerFound            = errors.New("No signer found")
 	ErrNoVerifierFound          = errors.New("No verifier found")
-	ErrUnavailableHashFunc      = errors.New("hash function is not available")
 	ErrUnknownPrivateKeyType    = errors.New("Unrecognized private key type")
 	ErrUnknownPublicKeyType     = errors.New("Unrecognized public key type")
 	ErrNilSign1Headers          = errors.New("Sign1Message.headers is nil")
 	ErrNilSign1ProtectedHeaders = errors.New("Sign1Message.headers.protected is nil")
+)
+
+var (
+	ErrUnavailableHashFunc = errors.New("hash function is not available")
+	ErrUnknownAlgorithm    = errors.New("unknown algorithm")
+	ErrAlgorithmRegistered = errors.New("algorithm registered")
 )
