@@ -23,8 +23,11 @@ var (
 	ErrNilSign1ProtectedHeaders = errors.New("Sign1Message.headers.protected is nil")
 )
 
+// Common errors
 var (
+	ErrAlgorithmNotFound   = errors.New("algorithm not found")
+	ErrAlgorithmRegistered = errors.New("algorithm registered")
+	ErrInvalidAlgorithm    = errors.New("invalid algorithm")
 	ErrUnavailableHashFunc = errors.New("hash function is not available")
 	ErrUnknownAlgorithm    = errors.New("unknown algorithm")
-	ErrAlgorithmRegistered = errors.New("algorithm registered")
 )

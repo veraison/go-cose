@@ -97,9 +97,9 @@ type Headers struct {
 	RawProtected cbor.RawMessage
 
 	// Protected contains parameters that are to be cryptographically protected.
-	// When encoding or signing, the protected header is encoded and stored in
-	// RawProtected if RawProtected is set to nil. Then RawProtected will be
-	// used for encoding or signing.
+	// When encoding or signing, the protected header is encoded using the
+	// default CBOR encoder if RawProtected is set to nil. Otherwise,
+	// RawProtected will be used with Protected ignored.
 	Protected ProtectedHeader
 
 	// RawUnprotected contains the raw CBOR encoded data for the unprotected
@@ -110,8 +110,8 @@ type Headers struct {
 	RawUnprotected cbor.RawMessage
 
 	// Unprotected contains parameters that are not cryptographically protected.
-	// When encoding, the unprotected header is encoded and stored in
-	// RawUnprotected if RawUnprotected is set to nil. Then RawUnprotected will
-	// be used for further encoding.
+	// When encoding, the unprotected header is encoded using the default CBOR
+	// encoder if RawUnprotected is set to nil. Otherwise, RawUnprotected will
+	// be used with Unprotected ignored.
 	Unprotected UnprotectedHeader
 }
