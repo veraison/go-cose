@@ -52,7 +52,7 @@ type CBOR struct {
 }
 
 // Conformance samples are taken from
-// https://github.com/cose-wg/Examples.
+// https://github.com/gluecose/test-vectors.
 var testCases = []string{
 	"sign1-sign-0000",
 	"sign1-sign-0001",
