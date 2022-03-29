@@ -18,6 +18,7 @@ const (
 )
 
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
+// Algorithms with string values are not supported.
 //
 // See Also
 //

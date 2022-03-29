@@ -111,20 +111,117 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 		return fmt.Errorf("cbor: invalid unprotected header: %w", err)
 	}
 
-	// write out
 	*m = msg
 	return nil
 }
 
 // Sign signs a Sign1Message using the provided Signer.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 	if m.Signature != nil {
 		return errors.New("Sign1Message signature already has signature bytes")
 	}
 
-	panic("not implemented")
+	// check algorithm if present
+	skAlg := signer.Algorithm()
+	if alg, err := m.Headers.Protected.GetAlgorithm(); err != nil {
+		if err != ErrAlgorithmNotFound {
+			return err
+		}
+		// `alg` header not present.
+	} else if alg != skAlg {
+		return fmt.Errorf("mismatch signing algorithm: signer %v: header %v", skAlg, alg)
+	}
+
+	// sign the message
+	digest, err := m.digestToBeSigned(skAlg)
+	if err != nil {
+		return err
+	}
+	sig, err := signer.Sign(rand, digest)
+	if err != nil {
+		return err
+	}
+
+	m.Signature = sig
+	return nil
 }
 
+// Verify verifies the signature on the Sign1Message returning nil on success or
+// a suitable error if verification fails.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
-	panic("not implemented")
+	if len(m.Signature) == 0 {
+		return errors.New("Sign1Message has no signature to verify")
+	}
+
+	// check algorithm if present
+	vkAlg := verifier.Algorithm()
+	if alg, err := m.Headers.Protected.GetAlgorithm(); err != nil {
+		if err != ErrAlgorithmNotFound {
+			return err
+		}
+		// `alg` header not present.
+	} else if alg != vkAlg {
+		return fmt.Errorf("mismatch signing algorithm: verifier %v: header %v", vkAlg, alg)
+	}
+
+	// verify the message
+	digest, err := m.digestToBeSigned(vkAlg)
+	if err != nil {
+		return err
+	}
+	return verifier.Verify(digest, m.Signature)
+}
+
+// digestToBeSigned construsts Sig_structure, computes ToBeSigned, and returns
+// the digest of ToBeSigned.
+// If the signing algorithm does not have a hash algorithm associated,
+// ToBeSigned is returned instead.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
+	// create a Sig_structure and populate it with the appropriate fields.
+	sigStructure := []interface{}{
+		"Signature1",           // context
+		m.Headers.RawProtected, // body_protected
+		m.External,             // external_aad
+		m.Payload,              // payload
+	}
+	if sigStructure[1] == nil {
+		header, err := encMode.Marshal(m.Headers.Protected)
+		if err != nil {
+			return nil, err
+		}
+		sigStructure[1] = header
+	}
+	if sigStructure[2] == nil {
+		sigStructure[2] = []byte{}
+	}
+	if sigStructure[3] == nil {
+		sigStructure[3] = []byte{}
+	}
+
+	// create the value ToBeSigned by encoding the Sig_structure to a byte
+	// string.
+	toBeSigned, err := encMode.Marshal(sigStructure)
+	if err != nil {
+		return nil, err
+	}
+
+	// hash toBeSigned if there is a hash algorithm associated with the signing
+	// algorithm.
+	h, err := alg.NewHash()
+	if err != nil {
+		return nil, err
+	}
+	if h == nil {
+		return toBeSigned, nil
+	}
+	if _, err := h.Write(toBeSigned); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
 }

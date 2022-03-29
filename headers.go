@@ -62,6 +62,19 @@ func (h ProtectedHeader) SetAlgorithm(alg Algorithm) {
 	h[HeaderLabelAlgorithm] = int(alg)
 }
 
+// GetAlgorithm gets the algorithm value from the algorithm header.
+func (h ProtectedHeader) GetAlgorithm() (Algorithm, error) {
+	value, ok := h[HeaderLabelAlgorithm]
+	if !ok {
+		return 0, ErrAlgorithmNotFound
+	}
+	alg, ok := value.(int)
+	if !ok {
+		return 0, ErrInvalidAlgorithm
+	}
+	return Algorithm(alg), nil
+}
+
 // UnprotectedHeader contains parameters that are not cryptographically
 // protected.
 type UnprotectedHeader map[interface{}]interface{}
