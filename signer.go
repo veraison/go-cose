@@ -69,6 +69,13 @@ func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 			key:    vk,
 			signer: key,
 		}, nil
+	case AlgorithmEd25519:
+		if _, ok := key.Public().(ed25519.PublicKey); !ok {
+			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
+		}
+		return &ed25519Signer{
+			key: key,
+		}, nil
 	default:
 		return nil, ErrAlgorithmNotSupported
 	}
