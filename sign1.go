@@ -131,7 +131,7 @@ func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 		}
 		// `alg` header not present.
 	} else if alg != skAlg {
-		return fmt.Errorf("mismatch signing algorithm: signer %v: header %v", skAlg, alg)
+		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
 	}
 
 	// sign the message
@@ -165,7 +165,7 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 		}
 		// `alg` header not present.
 	} else if alg != vkAlg {
-		return fmt.Errorf("mismatch signing algorithm: verifier %v: header %v", vkAlg, alg)
+		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
 	}
 
 	// verify the message

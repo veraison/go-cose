@@ -25,6 +25,7 @@ var (
 
 // Common errors
 var (
+	ErrAlgorithmMismatch     = errors.New("algorithm mismatch")
 	ErrAlgorithmNotFound     = errors.New("algorithm not found")
 	ErrAlgorithmNotSupported = errors.New("algorithm not supported")
 	ErrAlgorithmRegistered   = errors.New("algorithm registered")

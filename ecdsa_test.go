@@ -10,79 +10,85 @@ func TestI2OSP(t *testing.T) {
 	tests := []struct {
 		name    string
 		x       *big.Int
-		xLen    int
+		buf     []byte
 		want    []byte
 		wantErr bool
 	}{
 		{
 			name:    "negative int",
 			x:       big.NewInt(-1),
-			xLen:    2,
+			buf:     make([]byte, 2),
 			wantErr: true,
 		},
 		{
 			name:    "integer too large #1",
 			x:       big.NewInt(1),
-			xLen:    0,
+			buf:     make([]byte, 0),
 			wantErr: true,
 		},
 		{
 			name:    "integer too large #2",
 			x:       big.NewInt(256),
-			xLen:    0,
+			buf:     make([]byte, 0),
 			wantErr: true,
 		},
 		{
 			name: "zero length string",
 			x:    big.NewInt(0),
-			xLen: 0,
+			buf:  make([]byte, 0),
 			want: []byte{},
+		},
+		{
+			name: "zero length string with nil buffer",
+			x:    big.NewInt(0),
+			buf:  nil,
+			want: nil,
 		},
 		{
 			name: "I2OSP(0, 2)",
 			x:    big.NewInt(0),
-			xLen: 2,
+			buf:  make([]byte, 2),
 			want: []byte{0x00, 0x00},
 		},
 		{
 			name: "I2OSP(1, 2)",
 			x:    big.NewInt(1),
-			xLen: 2,
+			buf:  make([]byte, 2),
 			want: []byte{0x00, 0x01},
 		},
 		{
 			name: "I2OSP(255, 2)",
 			x:    big.NewInt(255),
-			xLen: 2,
+			buf:  make([]byte, 2),
 			want: []byte{0x00, 0xff},
 		},
 		{
 			name: "I2OSP(256, 2)",
 			x:    big.NewInt(256),
-			xLen: 2,
+			buf:  make([]byte, 2),
 			want: []byte{0x01, 0x00},
 		},
 		{
 			name: "I2OSP(65535, 2)",
 			x:    big.NewInt(65535),
-			xLen: 2,
+			buf:  make([]byte, 2),
 			want: []byte{0xff, 0xff},
 		},
 		{
 			name: "I2OSP(1234, 5)",
 			x:    big.NewInt(1234),
-			xLen: 5,
+			buf:  make([]byte, 5),
 			want: []byte{0x00, 0x00, 0x00, 0x04, 0xd2},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := I2OSP(tt.x, tt.xLen)
+			err := I2OSP(tt.x, tt.buf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("I2OSP() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if got := tt.buf; !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("I2OSP() = %v, want %v", got, tt.want)
 			}
 		})

@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"fmt"
 	"io"
 )
 
@@ -36,7 +37,26 @@ type Signer interface {
 // Note: `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and `ed25519.PrivateKey`
 // implement `crypto.Signer`.
 func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
-	panic("not implemented")
+	switch alg {
+	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
+		vk, ok := key.Public().(*ecdsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
+		}
+		if sk, ok := key.(*ecdsa.PrivateKey); ok {
+			return &ecdsaKeySigner{
+				alg: alg,
+				key: sk,
+			}, nil
+		}
+		return &ecdsaCryptoSigner{
+			alg:    alg,
+			key:    vk,
+			signer: key,
+		}, nil
+	default:
+		return nil, ErrAlgorithmNotSupported
+	}
 }
 
 // NewSignerWithEphemeralKey returns a Signer with a generated ephemeral key.
