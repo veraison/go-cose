@@ -74,18 +74,6 @@ func (a Algorithm) String() string {
 	return "unknown algorithm value " + strconv.Itoa(int(a))
 }
 
-// HashFunc returns the hash associated with the algorithm to implement
-// crypto.SignerOpts.
-func (a Algorithm) HashFunc() crypto.Hash {
-	if h, ok := a.hashFunc(); ok {
-		return h
-	}
-	if alg, ok := extAlgorithms[a]; ok {
-		return alg.Hash
-	}
-	panic("cose: unknown algorithm value " + strconv.Itoa(int(a)))
-}
-
 // hashFunc returns the hash associated with the algorithm supported by this
 // library.
 func (a Algorithm) hashFunc() (crypto.Hash, bool) {
