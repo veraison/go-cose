@@ -125,7 +125,7 @@ func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 
 	// check algorithm if present
 	skAlg := signer.Algorithm()
-	if alg, err := m.Headers.Protected.GetAlgorithm(); err != nil {
+	if alg, err := m.Headers.Protected.Algorithm(); err != nil {
 		if err != ErrAlgorithmNotFound {
 			return err
 		}
@@ -159,7 +159,7 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 
 	// check algorithm if present
 	vkAlg := verifier.Algorithm()
-	if alg, err := m.Headers.Protected.GetAlgorithm(); err != nil {
+	if alg, err := m.Headers.Protected.Algorithm(); err != nil {
 		if err != ErrAlgorithmNotFound {
 			return err
 		}

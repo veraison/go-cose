@@ -62,8 +62,8 @@ func (h ProtectedHeader) SetAlgorithm(alg Algorithm) {
 	h[HeaderLabelAlgorithm] = int(alg)
 }
 
-// GetAlgorithm gets the algorithm value from the algorithm header.
-func (h ProtectedHeader) GetAlgorithm() (Algorithm, error) {
+// Algorithm gets the algorithm value from the algorithm header.
+func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	value, ok := h[HeaderLabelAlgorithm]
 	if !ok {
 		return 0, ErrAlgorithmNotFound
