@@ -9,12 +9,12 @@ import (
 // Algorithms supported by this library.
 const (
 	AlgorithmPS256   Algorithm = -37 // RSASSA-PSS w/ SHA-256 by RFC 8230
-	AlgorithmPS384             = -38 // RSASSA-PSS w/ SHA-384 by RFC 8230
-	AlgorithmPS512             = -39 // RSASSA-PSS w/ SHA-512 by RFC 8230
-	AlgorithmES256             = -7  // ECDSA w/ SHA-256 by RFC 8152
-	AlgorithmES384             = -35 // ECDSA w/ SHA-384 by RFC 8152
-	AlgorithmES512             = -36 // ECDSA w/ SHA-512 by RFC 8152
-	AlgorithmEd25519           = -8  // PureEdDSA by RFC 8152
+	AlgorithmPS384   Algorithm = -38 // RSASSA-PSS w/ SHA-384 by RFC 8230
+	AlgorithmPS512   Algorithm = -39 // RSASSA-PSS w/ SHA-512 by RFC 8230
+	AlgorithmES256   Algorithm = -7  // ECDSA w/ SHA-256 by RFC 8152
+	AlgorithmES384   Algorithm = -35 // ECDSA w/ SHA-384 by RFC 8152
+	AlgorithmES512   Algorithm = -36 // ECDSA w/ SHA-512 by RFC 8152
+	AlgorithmEd25519 Algorithm = -8  // PureEdDSA by RFC 8152
 )
 
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
