@@ -25,9 +25,10 @@ var (
 
 // Common errors
 var (
-	ErrAlgorithmNotFound   = errors.New("algorithm not found")
-	ErrAlgorithmRegistered = errors.New("algorithm registered")
-	ErrInvalidAlgorithm    = errors.New("invalid algorithm")
-	ErrUnavailableHashFunc = errors.New("hash function is not available")
-	ErrUnknownAlgorithm    = errors.New("unknown algorithm")
+	ErrAlgorithmNotFound     = errors.New("algorithm not found")
+	ErrAlgorithmNotSupported = errors.New("algorithm not supported")
+	ErrAlgorithmRegistered   = errors.New("algorithm registered")
+	ErrInvalidAlgorithm      = errors.New("invalid algorithm")
+	ErrUnavailableHashFunc   = errors.New("hash function is not available")
+	ErrUnknownAlgorithm      = errors.New("unknown algorithm")
 )
