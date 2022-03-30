@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -38,6 +39,20 @@ type Signer interface {
 // implement `crypto.Signer`.
 func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 	switch alg {
+	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512:
+		vk, ok := key.Public().(*rsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
+		}
+		// RFC 8230 6.1 requires RSA keys having a minimun size of 2048 bits.
+		// Reference: https://www.rfc-editor.org/rfc/rfc8230.html#section-6.1
+		if vk.N.BitLen() < 2048 {
+			return nil, errors.New("RSA key must be at least 2048 bits long")
+		}
+		return &rsaSigner{
+			alg: alg,
+			key: key,
+		}, nil
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
 		vk, ok := key.Public().(*ecdsa.PublicKey)
 		if !ok {
