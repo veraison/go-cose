@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -301,7 +302,7 @@ func TestCBORDecodeNilSignMessagePayload(t *testing.T) {
 	msg.Payload = nil
 
 	// tag(98) + array(4) [ bytes(0), map(0), nil/null, array(0) ]
-	b := HexToBytesOrDie("D862" + "84" + "40" + "A0" + "F6" + "80")
+	b := hexToBytesOrDie("D862" + "84" + "40" + "A0" + "F6" + "80")
 
 	result, err := Unmarshal(b)
 	assert.Nil(err)
@@ -332,7 +333,7 @@ func TestCBORDecodingDuplicateKeys(t *testing.T) {
 			//    29 # negative(10)
 			//
 			// and decodes to map[1:-10] so last/rightmost value wins
-			HexToBytesOrDie("D862" + "84" + "45A201260129" + "A0" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "45A201260129" + "A0" + "40" + "80"),
 			SignMessage{
 				Headers: &Headers{
 					Protected:   map[interface{}]interface{}{1: -10},
@@ -353,7 +354,7 @@ func TestCBORDecodingDuplicateKeys(t *testing.T) {
 			//    29 # negative(10)
 			//
 			// and decodes to map[1:-10] so last/rightmost value wins
-			HexToBytesOrDie("D862" + "84" + "40" + "A201260129" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A201260129" + "40" + "80"),
 			SignMessage{
 				Headers: &Headers{
 					Protected:   map[interface{}]interface{}{},
@@ -368,7 +369,7 @@ func TestCBORDecodingDuplicateKeys(t *testing.T) {
 			// tag(98) + array(4) [ bytes(21), map(0), bytes(0), array(0) ]
 			//
 			// see next test for what bytes(21) represents
-			HexToBytesOrDie("D862" + "84" + "55" + "A2" + "63" + "616C67" + "65" + "4553323536" + "63" + "616C67" + "65" + "5053323536" + "A0" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "55" + "A2" + "63" + "616C67" + "65" + "4553323536" + "63" + "616C67" + "65" + "5053323536" + "A0" + "40" + "80"),
 			SignMessage{
 				Headers: &Headers{
 					Protected: map[interface{}]interface{}{
@@ -396,7 +397,7 @@ func TestCBORDecodingDuplicateKeys(t *testing.T) {
 			//    65            # text(5)
 			//       5053323536 # "PS256"
 			//
-			HexToBytesOrDie("D862" + "84" + "40" + "A2" + "63" + "616C67" + "65" + "4553323536" + "63" + "616C67" + "65" + "5053323536" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A2" + "63" + "616C67" + "65" + "4553323536" + "63" + "616C67" + "65" + "5053323536" + "40" + "80"),
 			SignMessage{
 				Headers: &Headers{
 					Protected: map[interface{}]interface{}{},
@@ -426,39 +427,39 @@ func TestCBORDecodingErrors(t *testing.T) {
 	}
 	var cases = []DecodeErrorTestCase{
 		{
-			HexToBytesOrDie("D862" + "60"), // tag(98) + text(0)
+			hexToBytesOrDie("D862" + "60"), // tag(98) + text(0)
 			"cbor: cannot unmarshal UTF-8 text string into Go value of type cose.signMessage",
 		},
 		{
-			HexToBytesOrDie("D862" + "80"), // tag(98) + array(0)
+			hexToBytesOrDie("D862" + "80"), // tag(98) + array(0)
 			"cbor: cannot unmarshal array into Go value of type cose.signMessage (cannot decode CBOR array to struct with different number of elements)",
 		},
 		{
 			// tag(98) + array(4) [ 4 * text(0) ]
-			HexToBytesOrDie("D862" + "84" + "60" + "60" + "60" + "60"),
+			hexToBytesOrDie("D862" + "84" + "60" + "60" + "60" + "60"),
 			"cbor: cannot unmarshal UTF-8 text string into Go struct field cose.signMessage.Protected of type []uint8",
 		},
 		{
 			// tag(98) + array(4) [ bytes(0), map(0), 2 * text(0) ]
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "60" + "60"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "60" + "60"),
 			"cbor: cannot unmarshal UTF-8 text string into Go struct field cose.signMessage.Payload of type []uint8",
 		},
 		{
 			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), text(0) ]
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "60"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "60"),
 			"cbor: cannot unmarshal UTF-8 text string into Go struct field cose.signMessage.Signatures of type []cose.signature",
 		},
 		{
 			// wrong # of protected header bytes
 			// tag(98) + array(4) [ bytes(2) (but actually 1), map(0), bytes(0), text(0) ]
-			HexToBytesOrDie("D862" + "84" + "4263" + "A0" + "40" + "60"),
+			hexToBytesOrDie("D862" + "84" + "4263" + "A0" + "40" + "60"),
 			"unexpected EOF",
 		},
 		{
 			// protected header is serialized array
 			// tag(98) + array(4) [ bytes(3), map(2), bytes(0), array(0) ]
 			// protected header is bytes(3) is [2, -7]
-			HexToBytesOrDie("D862" + "84" + "43820226" + "A10224" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "43820226" + "A10224" + "40" + "80"),
 			"cbor: error casting protected to map; got []interface {}",
 		},
 		{
@@ -466,7 +467,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(3), map(2), bytes(0), array(0) ]
 			// bytes(3) is protected {2: -7}
 			// map(1) is {2: -5}
-			HexToBytesOrDie("D862" + "84" + "43A10226" + "A10224" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "43A10226" + "A10224" + "40" + "80"),
 			"cbor: Duplicate header 2 found",
 		},
 		{
@@ -474,7 +475,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(11), map(1), bytes(0), array(0) ]
 			// bytes(11) is protected {"alg": "ES256"}
 			// map(1) is unprotected {"alg": "ES256"}
-			HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
 			"cbor: Duplicate header 1 found",
 		},
 		{
@@ -482,7 +483,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(3), map(1), bytes(0), array(0) ]
 			// bytes(3) is protected {1: -7}
 			// map(1) is unprotected {"alg": "PS256"}
-			HexToBytesOrDie("D862" + "84" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
 			"cbor: Duplicate header 1 found",
 		},
 		{
@@ -490,7 +491,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(11), map(1), bytes(0), array(0) ]
 			// bytes(11) is protected {"alg": "ES256"}
 			// map(1) is unprotected {1: -7}
-			HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40" + "80"),
+			hexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40" + "80"),
 			"cbor: Duplicate header 1 found",
 		},
 		{
@@ -498,7 +499,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// tag(98) + array(4) [ bytes(0), map(0), bytes(0), array(1) ]
 			// Signature is array(3) [ bytes(3), map(0), bytes(0)]
 			// Signature protected header is bytes(3) is [2, -7]
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43820226" + "A0" + "40"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43820226" + "A0" + "40"),
 			"cbor: error casting protected to map; got []interface {}",
 		},
 		{
@@ -507,7 +508,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// Signature is array(3) [ bytes(3), map(1), bytes(0)]
 			// Signature bytes(3) is protected {2: -7}
 			// Signature map(1) is {2: -5}
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43A10226" + "A10224" + "40"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43A10226" + "A10224" + "40"),
 			"cbor: Duplicate header 2 found",
 		},
 		{
@@ -517,7 +518,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// Signature bytes(11) is protected {"alg": "ES256"}
 			// Signature map(1) is unprotected {"alg": "ES256"}
 			//HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40"),
 			"cbor: Duplicate header 1 found",
 		},
 		{
@@ -527,7 +528,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// Signature bytes(3) is protected {1: -7}
 			// Signature map(1) is unprotected {"alg": "PS256"}
 			//HexToBytesOrDie("D862" + "84" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40" + "80"),
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "43" + "A10126" + "A1" + "63" + "616C67" + "65" + "4553323536" + "40"),
 			"cbor: Duplicate header 1 found",
 		},
 		{
@@ -537,7 +538,7 @@ func TestCBORDecodingErrors(t *testing.T) {
 			// Signature bytes(11) is protected {"alg": "ES256"}
 			// Signature map(1) is unprotected {1: -7}
 			//HexToBytesOrDie("D862" + "84" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40" + "80"),
-			HexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40"),
+			hexToBytesOrDie("D862" + "84" + "40" + "A0" + "40" + "81" + "83" + "4B" + "A1" + "63" + "616C67" + "65" + "4553323536" + "A10126" + "40"),
 			"cbor: Duplicate header 1 found",
 		},
 	}
@@ -562,12 +563,12 @@ func TestCBORDecodingToSignMessageErrors(t *testing.T) {
 	var cases = []DecodeErrorTestCase{
 		{
 			"missing tag number",
-			HexToBytesOrDie("8440A0F680"), // array(4) [ bytes(0), map(0), nil, array(0)]
+			hexToBytesOrDie("8440A0F680"), // array(4) [ bytes(0), map(0), nil, array(0)]
 			"cbor: cannot unmarshal array into Go value of type cbor.RawTag",
 		},
 		{
 			"wrong tag number",
-			HexToBytesOrDie("D8638440A0F680"), // tag(99) + array(4) [ bytes(0), map(0), nil, array(0)]
+			hexToBytesOrDie("D8638440A0F680"), // tag(99) + array(4) [ bytes(0), map(0), nil, array(0)]
 			"cbor: wrong tag number 99",
 		},
 	}
@@ -596,4 +597,12 @@ func TestUnmarshalToNilSignMessage(t *testing.T) {
 	var msg *SignMessage
 	err := msg.UnmarshalCBOR(b)
 	assert.Equal("cbor: UnmarshalCBOR on nil SignMessage pointer", err.Error())
+}
+
+func hexToBytesOrDie(s string) []byte {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(fmt.Sprintf("Error decoding hex string: %s", err))
+	}
+	return b
 }
