@@ -32,4 +32,5 @@ var (
 	ErrInvalidAlgorithm      = errors.New("invalid algorithm")
 	ErrUnavailableHashFunc   = errors.New("hash function is not available")
 	ErrUnknownAlgorithm      = errors.New("unknown algorithm")
+	ErrVerification          = errors.New("verification error")
 )
