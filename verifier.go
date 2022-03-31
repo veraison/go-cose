@@ -2,6 +2,7 @@ package cose
 
 import (
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -35,6 +36,15 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 			return nil, errors.New("RSA key must be at least 2048 bits long")
 		}
 		return &rsaVerifier{
+			alg: alg,
+			key: vk,
+		}, nil
+	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
+		vk, ok := key.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
+		}
+		return &ecdsaVerifier{
 			alg: alg,
 			key: vk,
 		}, nil

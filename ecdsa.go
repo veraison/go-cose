@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 
@@ -115,4 +116,40 @@ func encodeECDSASignature(curve elliptic.Curve, r, s *big.Int) ([]byte, error) {
 		return nil, err
 	}
 	return sig, nil
+}
+
+// decodeECDSASignature decodes (r, s) from a signature binary string using the
+// method specified by RFC 8152 section 8.1.
+func decodeECDSASignature(curve elliptic.Curve, sig []byte) (r, s *big.Int, err error) {
+	n := (curve.Params().BitSize + 7) / 8
+	if len(sig) != n*2 {
+		return nil, nil, fmt.Errorf("invalid signature length: %d", len(sig))
+	}
+	return OS2IP(sig[:n]), OS2IP(sig[n:]), nil
+}
+
+// ecdsaVerifier is a ECDSA based verifier with golang built-in keys.
+type ecdsaVerifier struct {
+	alg Algorithm
+	key *ecdsa.PublicKey
+}
+
+// Algorithm returns the signing algorithm associated with the public key.
+func (ev *ecdsaVerifier) Algorithm() Algorithm {
+	return ev.alg
+}
+
+// Verify verifies digest with the public key, returning nil for success.
+// Otherwise, it returns an error.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
+func (ev *ecdsaVerifier) Verify(digest []byte, signature []byte) error {
+	r, s, err := decodeECDSASignature(ev.key.Curve, signature)
+	if err != nil {
+		return ErrVerification
+	}
+	if verified := ecdsa.Verify(ev.key, digest, r, s); !verified {
+		return ErrVerification
+	}
+	return nil
 }
