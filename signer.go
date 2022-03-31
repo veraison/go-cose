@@ -4,8 +4,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -79,38 +77,4 @@ func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 	default:
 		return nil, ErrAlgorithmNotSupported
 	}
-}
-
-// NewSignerWithEphemeralKey returns a Signer with a generated ephemeral key.
-// The main purpose of this function is for demo and testing.
-// Use `NewSigner` instead if a special key generation method is required.
-func NewSignerWithEphemeralKey(alg Algorithm) (Signer, crypto.PrivateKey, error) {
-	var key crypto.Signer
-	var err error
-	switch alg {
-	case AlgorithmPS256:
-		key, err = rsa.GenerateKey(rand.Reader, 2048)
-	case AlgorithmPS384:
-		key, err = rsa.GenerateKey(rand.Reader, 3072)
-	case AlgorithmPS512:
-		key, err = rsa.GenerateKey(rand.Reader, 4096)
-	case AlgorithmES256:
-		key, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	case AlgorithmES384:
-		key, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	case AlgorithmES512:
-		key, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	case AlgorithmEd25519:
-		_, key, err = ed25519.GenerateKey(rand.Reader)
-	default:
-		return nil, nil, ErrAlgorithmNotSupported
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	signer, err := NewSigner(alg, key)
-	if err != nil {
-		return nil, nil, err
-	}
-	return signer, key, nil
 }

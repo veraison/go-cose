@@ -2,6 +2,7 @@ package cose_test
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
 
@@ -17,7 +18,11 @@ func ExampleSign1Message() {
 	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 
 	// create a signer
-	signer, privateKey, err := cose.NewSignerWithEphemeralKey(cose.AlgorithmES512)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES512, privateKey)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +39,7 @@ func ExampleSign1Message() {
 	fmt.Println("message signed")
 
 	// create a verifier from a trusted public key
-	publicKey := privateKey.(*ecdsa.PrivateKey).Public()
+	publicKey := privateKey.Public()
 	verifier, err := cose.NewVerifier(cose.AlgorithmES512, publicKey)
 	if err != nil {
 		panic(err)
