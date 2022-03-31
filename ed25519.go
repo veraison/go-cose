@@ -2,6 +2,7 @@ package cose
 
 import (
 	"crypto"
+	"crypto/ed25519"
 	"io"
 )
 
@@ -11,7 +12,7 @@ type ed25519Signer struct {
 }
 
 // Algorithm returns the signing algorithm associated with the private key.
-func (rs *ed25519Signer) Algorithm() Algorithm {
+func (es *ed25519Signer) Algorithm() Algorithm {
 	return AlgorithmEd25519
 }
 
@@ -19,8 +20,29 @@ func (rs *ed25519Signer) Algorithm() Algorithm {
 // The resulting signature should follow RFC 8152 section 8.2.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.2
-func (rs *ed25519Signer) Sign(rand io.Reader, digest []byte) ([]byte, error) {
+func (es *ed25519Signer) Sign(rand io.Reader, digest []byte) ([]byte, error) {
 	// crypto.Hash(0) must be passed as an option.
 	// Reference: https://pkg.go.dev/crypto/ed25519#PrivateKey.Sign
-	return rs.key.Sign(rand, digest, crypto.Hash(0))
+	return es.key.Sign(rand, digest, crypto.Hash(0))
+}
+
+// ed25519Verifier is a Pure EdDsA based verifier with golang built-in keys.
+type ed25519Verifier struct {
+	key ed25519.PublicKey
+}
+
+// Algorithm returns the signing algorithm associated with the public key.
+func (ev *ed25519Verifier) Algorithm() Algorithm {
+	return AlgorithmEd25519
+}
+
+// Verify verifies digest with the public key, returning nil for success.
+// Otherwise, it returns an error.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.2
+func (ev *ed25519Verifier) Verify(digest []byte, signature []byte) error {
+	if verified := ed25519.Verify(ev.key, digest, signature); !verified {
+		return ErrVerification
+	}
+	return nil
 }

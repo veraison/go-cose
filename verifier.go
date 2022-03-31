@@ -3,6 +3,7 @@ package cose
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"errors"
 	"fmt"
@@ -46,6 +47,14 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		}
 		return &ecdsaVerifier{
 			alg: alg,
+			key: vk,
+		}, nil
+	case AlgorithmEd25519:
+		vk, ok := key.(ed25519.PublicKey)
+		if !ok {
+			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
+		}
+		return &ed25519Verifier{
 			key: vk,
 		}, nil
 	default:
