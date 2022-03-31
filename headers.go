@@ -6,16 +6,16 @@ import "github.com/fxamacker/cbor/v2"
 //
 // Reference: https://www.iana.org/assignments/cose/cose.xhtml#header-parameters
 const (
-	HeaderLabelAlgorithm         = 1
-	HeaderLabelCritical          = 2
-	HeaderLabelContentType       = 3
-	HeaderLabelKeyID             = 4
-	HeaderLabelCounterSignature  = 7
-	HeaderLabelCounterSignature0 = 9
-	HeaderLabelX5Bag             = 32
-	HeaderLabelX5Chain           = 33
-	HeaderLabelX5T               = 34
-	HeaderLabelX5U               = 35
+	HeaderLabelAlgorithm         int64 = 1
+	HeaderLabelCritical          int64 = 2
+	HeaderLabelContentType       int64 = 3
+	HeaderLabelKeyID             int64 = 4
+	HeaderLabelCounterSignature  int64 = 7
+	HeaderLabelCounterSignature0 int64 = 9
+	HeaderLabelX5Bag             int64 = 32
+	HeaderLabelX5Chain           int64 = 33
+	HeaderLabelX5T               int64 = 34
+	HeaderLabelX5U               int64 = 35
 )
 
 // ProtectedHeader contains parameters that are to be cryptographically
@@ -31,7 +31,7 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		encoded = []byte{}
 	} else {
 		var err error
-		encoded, err = encMode.Marshal(h)
+		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	if len(encoded) == 0 {
 		(*h) = make(ProtectedHeader)
 	} else {
-		var header ProtectedHeader
+		var header map[interface{}]interface{}
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 
 // SetAlgorithm sets the algorithm value to the algorithm header.
 func (h ProtectedHeader) SetAlgorithm(alg Algorithm) {
-	h[HeaderLabelAlgorithm] = int(alg)
+	h[HeaderLabelAlgorithm] = int64(alg)
 }
 
 // Algorithm gets the algorithm value from the algorithm header.
@@ -68,7 +68,7 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	if !ok {
 		return 0, ErrAlgorithmNotFound
 	}
-	alg, ok := value.(int)
+	alg, ok := value.(int64)
 	if !ok {
 		return 0, ErrInvalidAlgorithm
 	}

@@ -25,7 +25,7 @@ const (
 // COSE Algorithms: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
 //
 // RFC 8152 16.4: https://datatracker.ietf.org/doc/html/rfc8152#section-16.4
-type Algorithm int
+type Algorithm int64
 
 // extAlgorithm describes an extended algorithm, which is not implemented this
 // library.

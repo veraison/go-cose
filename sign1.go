@@ -76,7 +76,7 @@ func (m *Sign1Message) MarshalCBOR() ([]byte, error) {
 	}
 	return encMode.Marshal(cbor.Tag{
 		Number:  CBORTagSign1Message,
-		Content: m,
+		Content: content,
 	})
 }
 
@@ -152,7 +152,7 @@ func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 // a suitable error if verification fails.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
+func (m *Sign1Message) Verify(verifier Verifier) error {
 	if len(m.Signature) == 0 {
 		return errors.New("Sign1Message has no signature to verify")
 	}
@@ -184,24 +184,27 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
-	sigStructure := []interface{}{
-		"Signature1",           // context
-		m.Headers.RawProtected, // body_protected
-		m.External,             // external_aad
-		m.Payload,              // payload
-	}
-	if sigStructure[1] == nil {
+	protected := m.Headers.RawProtected
+	if protected == nil {
 		header, err := encMode.Marshal(m.Headers.Protected)
 		if err != nil {
 			return nil, err
 		}
-		sigStructure[1] = header
+		protected = header
 	}
-	if sigStructure[2] == nil {
-		sigStructure[2] = []byte{}
+	external := m.External
+	if external == nil {
+		external = []byte{}
 	}
-	if sigStructure[3] == nil {
-		sigStructure[3] = []byte{}
+	payload := m.Payload
+	if payload == nil {
+		payload = []byte{}
+	}
+	sigStructure := []interface{}{
+		"Signature1", // context
+		protected,    // body_protected
+		external,     // external_aad
+		payload,      // payload
 	}
 
 	// create the value ToBeSigned by encoding the Sig_structure to a byte
