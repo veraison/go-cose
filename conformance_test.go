@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -53,21 +54,26 @@ type CBOR struct {
 
 // Conformance samples are taken from
 // https://github.com/gluecose/test-vectors.
-var testCases = []string{
-	"sign1-sign-0000",
-	"sign1-sign-0001",
-	"sign1-sign-0002",
-	"sign1-sign-0003",
-	"sign1-verify-0000",
-	"sign1-verify-0001",
-	"sign1-verify-0002",
-	"sign1-verify-0003",
+var testCases = []struct {
+	name          string
+	deterministic bool
+}{
+	{"sign1-sign-0000", false},
+	{"sign1-sign-0001", false},
+	{"sign1-sign-0002", false},
+	{"sign1-sign-0003", false},
+	{"sign1-sign-0004", true},
+	{"sign1-verify-0000", false},
+	{"sign1-verify-0001", false},
+	{"sign1-verify-0002", false},
+	{"sign1-verify-0003", false},
+	{"sign1-verify-0004", true},
 }
 
 func TestConformance(t *testing.T) {
-	for _, name := range testCases {
-		t.Run(name, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join("testdata", name+".json"))
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join("testdata", tt.name+".json"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -76,14 +82,14 @@ func TestConformance(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			processTestCase(t, &tc)
+			processTestCase(t, &tc, tt.deterministic)
 		})
 	}
 }
 
-func processTestCase(t *testing.T, tc *TestCase) {
+func processTestCase(t *testing.T, tc *TestCase, deterministic bool) {
 	if tc.Sign1 != nil {
-		testSign1(t, tc)
+		testSign1(t, tc, deterministic)
 	} else if tc.Verify1 != nil {
 		testVerify1(t, tc)
 	} else {
@@ -113,7 +119,7 @@ func testVerify1(t *testing.T, tc *TestCase) {
 	}
 }
 
-func testSign1(t *testing.T, tc *TestCase) {
+func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
 	signer, err := getSigner(tc, true)
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +148,7 @@ func testSign1(t *testing.T, tc *TestCase) {
 		t.Fatal(err)
 	}
 	want := mustHexToBytes(sig.Output.CBORHex)
-	if sig.OutputLength > 0 {
+	if !deterministic {
 		got = got[:sig.OutputLength]
 		want = want[:sig.OutputLength]
 	}
@@ -166,6 +172,24 @@ func getSigner(tc *TestCase, private bool) (*cose.Signer, error) {
 
 func getKey(key Key, private bool) (crypto.PrivateKey, error) {
 	switch key["kty"] {
+	case "RSA":
+		pkey := &rsa.PrivateKey{
+			PublicKey: rsa.PublicKey{
+				N: mustBase64ToBigInt(key["n"]),
+				E: mustBase64ToInt(key["e"]),
+			},
+		}
+		if private {
+			pkey.D = mustBase64ToBigInt(key["d"])
+			pkey.Primes = []*big.Int{mustBase64ToBigInt(key["p"]), mustBase64ToBigInt(key["q"])}
+			pkey.Precomputed = rsa.PrecomputedValues{
+				Dp:        mustBase64ToBigInt(key["dp"]),
+				Dq:        mustBase64ToBigInt(key["dq"]),
+				Qinv:      mustBase64ToBigInt(key["qi"]),
+				CRTValues: make([]rsa.CRTValue, 0),
+			}
+		}
+		return pkey, nil
 	case "EC":
 		var c elliptic.Curve
 		switch key["crv"] {
@@ -243,8 +267,8 @@ func fixHeader(m map[interface{}]interface{}) map[interface{}]interface{} {
 	return ret
 }
 
-func mustHexToInt(s string) int {
-	return int(mustHexToBigInt(s).Int64())
+func mustBase64ToInt(s string) int {
+	return int(mustBase64ToBigInt(s).Int64())
 }
 
 func mustHexToBytes(s string) []byte {
@@ -253,10 +277,6 @@ func mustHexToBytes(s string) []byte {
 		panic(err)
 	}
 	return b
-}
-
-func mustHexToBigInt(s string) *big.Int {
-	return new(big.Int).SetBytes(mustHexToBytes(s))
 }
 
 func mustBase64ToBigInt(s string) *big.Int {
@@ -272,6 +292,8 @@ func mustBase64ToBigInt(s string) *big.Int {
 // but it's what the test cases use to identify algorithms.
 func mustNameToAlg(name string) *cose.Algorithm {
 	switch name {
+	case "PS256":
+		return cose.PS256
 	case "ES256":
 		return cose.ES256
 	case "ES384":
