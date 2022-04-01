@@ -59,7 +59,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 
 // SetAlgorithm sets the algorithm value to the algorithm header.
 func (h ProtectedHeader) SetAlgorithm(alg Algorithm) {
-	h[HeaderLabelAlgorithm] = int64(alg)
+	h[HeaderLabelAlgorithm] = alg
 }
 
 // Algorithm gets the algorithm value from the algorithm header.
@@ -68,11 +68,22 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	if !ok {
 		return 0, ErrAlgorithmNotFound
 	}
-	alg, ok := value.(int64)
-	if !ok {
+	switch alg := value.(type) {
+	case Algorithm:
+		return alg, nil
+	case int:
+		return Algorithm(alg), nil
+	case int8:
+		return Algorithm(alg), nil
+	case int16:
+		return Algorithm(alg), nil
+	case int32:
+		return Algorithm(alg), nil
+	case int64:
+		return Algorithm(alg), nil
+	default:
 		return 0, ErrInvalidAlgorithm
 	}
-	return Algorithm(alg), nil
 }
 
 // UnprotectedHeader contains parameters that are not cryptographically
