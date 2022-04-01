@@ -6,9 +6,13 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+var algTag = GetCommonHeaderTagOrPanic("alg")
+var kidTag = GetCommonHeaderTagOrPanic("kid")
 
 func TestSignErrors(t *testing.T) {
 	assert := assert.New(t)
@@ -120,18 +124,18 @@ func TestSignatureDecodeErrors(t *testing.T) {
 	assert := assert.New(t)
 
 	var (
-		s *Signature = nil
+		s      *Signature = nil
 		result interface{}
 	)
-	assert.Panics(func () { s.Decode(result) })
+	assert.Panics(func() { s.Decode(result) })
 
 	s = &Signature{}
 	result = 5
-	assert.Panics(func () { s.Decode(result) })
+	assert.Panics(func() { s.Decode(result) })
 
 	s = &Signature{}
 	result = []interface{}{1, 2}
-	assert.Panics(func () { s.Decode(result) })
+	assert.Panics(func() { s.Decode(result) })
 
 	s = &Signature{}
 	result = []interface{}{
@@ -139,27 +143,27 @@ func TestSignatureDecodeErrors(t *testing.T) {
 		map[interface{}]interface{}{},
 		[]byte(""),
 	}
-	assert.Panics(func () { s.Decode(result) })
+	assert.Panics(func() { s.Decode(result) })
 
 	s.Headers = &Headers{}
-	result =  []interface{}{
+	result = []interface{}{
 		[]byte("\xA0"),
 		map[interface{}]interface{}{},
 		-1,
 	}
-	assert.Panics(func () { s.Decode(result) })
+	assert.Panics(func() { s.Decode(result) })
 }
 
 func TestSignMessageSignatureDigest(t *testing.T) {
 	assert := assert.New(t)
 
 	var (
-		external = []byte("")
-		hashFunc = crypto.SHA256
-		signature *Signature = nil
-		msg *SignMessage = nil
-		digest []byte
-		err error
+		external               = []byte("")
+		hashFunc               = crypto.SHA256
+		signature *Signature   = nil
+		msg       *SignMessage = nil
+		digest    []byte
+		err       error
 	)
 
 	digest, err = msg.signatureDigest(external, signature, hashFunc)
@@ -172,11 +176,11 @@ func TestSignMessageSignatureDigest(t *testing.T) {
 	assert.Equal(len(digest), 0)
 
 	msg.AddSignature(&Signature{
-		Headers: nil,
+		Headers:        nil,
 		SignatureBytes: []byte("123"),
 	})
 	signature = &Signature{
-		Headers: nil,
+		Headers:        nil,
 		SignatureBytes: nil,
 	}
 	digest, err = msg.signatureDigest(external, signature, hashFunc)
@@ -196,7 +200,6 @@ func TestVerifyErrors(t *testing.T) {
 
 	msg := NewSignMessage()
 	msg.Payload = []byte("payload to sign")
-
 
 	sig := NewSignature()
 	sig.Headers.Protected[algTag] = -41 // RSAES-OAEP w/ SHA-256 from [RFC8230]
@@ -255,7 +258,7 @@ func TestVerifyErrors(t *testing.T) {
 	verifiers = []Verifier{
 		Verifier{
 			PublicKey: ecdsaPrivateKey.Public(),
-			Alg: ES256,
+			Alg:       ES256,
 		},
 	}
 	assert.Equal("invalid signature length: 14", msg.Verify(payload, verifiers).Error())
