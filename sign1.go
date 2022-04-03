@@ -110,7 +110,7 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
-	if m.Signature != nil {
+	if len(m.Signature) > 0 {
 		return errors.New("Sign1Message signature already has signature bytes")
 	}
 
