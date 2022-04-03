@@ -147,19 +147,19 @@ type Headers struct {
 // MarshalProtected encodes the protected header.
 // RawProtected is returned if it is not set to nil.
 func (h *Headers) MarshalProtected() ([]byte, error) {
-	if h.RawProtected == nil {
-		return encMode.Marshal(h.Protected)
+	if len(h.RawProtected) > 0 {
+		return h.RawProtected, nil
 	}
-	return h.RawProtected, nil
+	return encMode.Marshal(h.Protected)
 }
 
 // MarshalUnprotected encodes the unprotected header.
 // RawUnprotected is returned if it is not set to nil.
 func (h *Headers) MarshalUnprotected() ([]byte, error) {
-	if h.RawUnprotected == nil {
-		return encMode.Marshal(h.Unprotected)
+	if len(h.RawUnprotected) > 0 {
+		return h.RawUnprotected, nil
 	}
-	return h.RawUnprotected, nil
+	return encMode.Marshal(h.Unprotected)
 }
 
 // UnmarshalFromRaw decodes Protected from RawProtected and Unprotected from
