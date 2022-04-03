@@ -143,16 +143,16 @@ Here are the proposed APIs:
 
 ```go
 const (
-    HeaderLabelAlgorithm         = 1
-    HeaderLabelCritical          = 2
-    HeaderLabelContentType       = 3
-    HeaderLabelKeyID             = 4
-    HeaderLabelCounterSignature  = 7
-    HeaderLabelCounterSignature0 = 9
-    HeaderLabelX5Bag             = 32
-    HeaderLabelX5Chain           = 33
-    HeaderLabelX5T               = 34
-    HeaderLabelX5U               = 35
+    HeaderLabelAlgorithm         int64 = 1
+    HeaderLabelCritical          int64 = 2
+    HeaderLabelContentType       int64 = 3
+    HeaderLabelKeyID             int64 = 4
+    HeaderLabelCounterSignature  int64 = 7
+    HeaderLabelCounterSignature0 int64 = 9
+    HeaderLabelX5Bag             int64 = 32
+    HeaderLabelX5Chain           int64 = 33
+    HeaderLabelX5T               int64 = 34
+    HeaderLabelX5U               int64 = 35
 )
 
 const (
@@ -161,50 +161,53 @@ const (
 )
 
 const (
-    ContextSignature  = "Signature"
-    ContextSignature1 = "Signature1"
+    AlgorithmPS256   Algorithm = -37 // RSASSA-PSS w/ SHA-256 by RFC 8230
+    AlgorithmPS384   Algorithm = -38 // RSASSA-PSS w/ SHA-384 by RFC 8230
+    AlgorithmPS512   Algorithm = -39 // RSASSA-PSS w/ SHA-512 by RFC 8230
+    AlgorithmES256   Algorithm = -7  // ECDSA w/ SHA-256 by RFC 8152
+    AlgorithmES384   Algorithm = -35 // ECDSA w/ SHA-384 by RFC 8152
+    AlgorithmES512   Algorithm = -36 // ECDSA w/ SHA-512 by RFC 8152
+    AlgorithmEd25519 Algorithm = -8  // PureEdDSA by RFC 8152
 )
 
-var (
-    AlgorithmPS256   *Algorithm
-    AlgorithmPS384   *Algorithm
-    AlgorithmPS512   *Algorithm
-    AlgorithmES256   *Algorithm
-    AlgorithmES384   *Algorithm
-    AlgorithmES512   *Algorithm
-    AlgorithmEd25519 *Algorithm
-)
+type Algorithm int64
+    func (a Algorithm) ComputeHash(data []byte) ([]byte, error)
+    func (a Algorithm) String() string
 
-type Algorithm struct {
-    Name     string
-    Value    int
-    HashFunc crypto.Hash
-}
-
-func I2OSP(x *big.Int, n int) ([]byte, error)
+func I2OSP(x *big.Int, buf []byte) error
 func OS2IP(x []byte) *big.Int
+func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc func() hash.Hash) error
+func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, external, payload []byte) (*Sign1Message, error)
+func Verify1(msg *Sign1Message, verifier Verifier) error
 
 type ProtectedHeader map[interface{}]interface{}
-    func (h *ProtectedHeader) MarshalCBOR() ([]byte, error)
+    func (h ProtectedHeader) Algorithm() (Algorithm, error)
+    func (h ProtectedHeader) SetAlgorithm(alg Algorithm)
+    func (h ProtectedHeader) MarshalCBOR() ([]byte, error)
     func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error
-    func (h *ProtectedHeader) SetAlgorithm(alg *Algorithm)
 
 type UnprotectedHeader map[interface{}]interface{}
 
 type Headers struct {
-    RawProtected   []byte
-    RawUnprotected []byte
+    RawProtected   cbor.RawMessage
     Protected      ProtectedHeader
+    RawUnprotected cbor.RawMessage
     Unprotected    UnprotectedHeader
 }
+    func (h *Headers) MarshalProtected() ([]byte, error)
+    func (h *Headers) MarshalUnprotected() ([]byte, error)
+    func (h *Headers) UnmarshalFromRaw() error
 
 type Signature struct {
     Headers   Headers
+    External  []byte
     Signature []byte
 }
     func NewSignature() *Signature
     func (s *Signature) MarshalCBOR() ([]byte, error)
     func (s *Signature) UnmarshalCBOR(data []byte) error
+    func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload []byte) error
+    func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload []byte) error
 
 type SignMessage struct {
     Headers    Headers
@@ -214,32 +217,32 @@ type SignMessage struct {
     func NewSignMessage() *SignMessage
     func (m *SignMessage) MarshalCBOR() ([]byte, error)
     func (m *SignMessage) UnmarshalCBOR(data []byte) error
-    func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error
-    func (m *SignMessage) Verify(external []byte, verifier ...Verifier) error
+    func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error
+    func (m *SignMessage) Verify(verifiers ...Verifier) error
 
 type Sign1Message struct {
     Headers   Headers
+    External  []byte
     Payload   []byte
     Signature []byte
 }
     func NewSign1Message() *Sign1Message
     func (m *Sign1Message) MarshalCBOR() ([]byte, error)
     func (m *Sign1Message) UnmarshalCBOR(data []byte) error
-    func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error
-    func (m *Sign1Message) Verify(external []byte, verifier Verifier) error
+    func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error
+    func (m *Sign1Message) Verify(verifier Verifier) error
 
 type Signer interface {
-    Algorithm() *Algorithm
+    Algorithm() Algorithm
     Sign(rand io.Reader, digest []byte) ([]byte, error)
 }
-    func NewSigner(alg *Algorithm, key crypto.Signer) (Signer, error)
-    func NewSignerWithEphemeralKey(alg *Algorithm) (Signer, crypto.PrivateKey, error)
+    func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error)
 
 type Verifier interface {
-    Algorithm() *Algorithm
+    Algorithm() Algorithm
     Verify(digest, signature []byte) error
 }
-    func NewVerifier(alg *Algorithm, key crypto.PublicKey) (Verifier, error)
+    func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error)
 ```
 
 Key changes:
@@ -249,16 +252,6 @@ Key changes:
 - `Signer` is now an interface.
   - `NewSigner` takes `crypto.Signer` where `Public()` must output a public key of type `*rsa.PublicKey`, `*ecdsa.PublicKey`, or `ed25519.PublicKey`.
     - Note: `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and `ed25519.PrivateKey` implement `crypto.Signer`.
-  - `NewSignerWithEphemeralKey` is added mainly for testing or example purposes, and can be moved in the final version.
-    - `crypto.PublicKey` can be obtained from `crypto.PrivateKey` by casting
-      ```go
-      var publicKey crypto.PublicKey
-      if key, ok := privateKey.(interface{
-          Public() crypto.PublicKey
-      }); ok {
-          publicKey = key.Public()
-      }
-      ```
   - In case of remote signing implementation, the same model of [http.Request](https://pkg.go.dev/net/http#Request.WithContext) can be applied.
 - `Verifier` is now an interface.
   - In case of remote verification implementation, the same model of [http.Request](https://pkg.go.dev/net/http#Request.WithContext) can be applied.
@@ -291,7 +284,7 @@ msg.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 msg = &cose.Sign1Message{
     Headers: cose.Headers{
         Protected: cose.ProtectedHeader{
-            cose.HeaderLabelAlgorithm: cose.AlgorithmES256.Value,
+            cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
         },
         Unprotected: cose.UnprotectedHeader{
             cose.HeaderLabelKeyID: 1,
@@ -301,9 +294,11 @@ msg = &cose.Sign1Message{
 }
 
 // sign message
-signer, _, err := cose.NewSignerWithEphemeralKey(cose.AlgorithmES256)
+privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 check(err)
-err = msg.Sign(rand.Reader, nil, signer)
+signer, err := cose.NewSigner(cose.AlgorithmES256, privateKey)
+check(err)
+err = msg.Sign(rand.Reader, signer)
 check(err)
 sig, err := msg.MarshalCBOR()
 check(err)
@@ -312,15 +307,25 @@ check(err)
 ctx := context.Background()
 signer = getRemoteSigner()
 signer = signer.WithContext(ctx)
-err = msg.Sign(rand.Reader, nil, signer)
+err = msg.Sign(rand.Reader, signer)
 check(err)
 sig, err = msg.MarshalCBOR()
 check(err)
 
 // remote signing scenario 2
 signer = getRemoteSignerWithContext(ctx)
-err = msg.Sign(rand.Reader, nil, signer)
+err = msg.Sign(rand.Reader, signer)
 check(err)
+sig, err = msg.MarshalCBOR()
+check(err)
+
+// alternative signing method using cose.Sign1()
+protected := cose.ProtectedHeader{
+    cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
+}
+msg, err := cose.Sign1(rand.Reader, signer, protected, nil, []byte("hello world"))
+check(err)
+msg.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 sig, err = msg.MarshalCBOR()
 check(err)
 ```
@@ -336,8 +341,14 @@ check(err)
 var msg cose.Sign1Message
 err = msg.UnmarshalCBOR(rawSig)
 check(err)
-err = msg.Verify(nil, verifier)
-check(err) 
+
+// verify message
+err = msg.Verify(verifier)
+check(err)
+
+// alternative message verification using cose.Verify1(()
+err = cose.Verify1(&msg, verifier)
+check(err)
 ```
 
 #### COSE_Sign
@@ -354,7 +365,7 @@ sig.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 sig = &cose.Signature{
     Headers: cose.Headers{
         Protected: cose.ProtectedHeader{
-            cose.HeaderLabelAlgorithm: cose.AlgorithmES256.Value,
+            cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
         },
         Unprotected: cose.UnprotectedHeader{
             cose.HeaderLabelKeyID: 1,
@@ -376,9 +387,11 @@ msg = &cose.SignMessage{
 }
 
 // sign message
-signer, _, err := cose.NewSignerWithEphemeralKey(cose.AlgorithmES256)
+privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 check(err)
-err = msg.Sign(rand.Reader, nil, signer)
+signer, err := cose.NewSigner(cose.AlgorithmES256, privateKey)
+check(err)
+err = msg.Sign(rand.Reader, signer)
 check(err)
 finalSig, err := msg.MarshalCBOR()
 check(err)
