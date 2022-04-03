@@ -54,25 +54,19 @@ func NewSign1Message() *Sign1Message {
 
 // MarshalCBOR encodes Sign1Message into a COSE_Sign1_Tagged object.
 func (m *Sign1Message) MarshalCBOR() ([]byte, error) {
+	protected, err := m.Headers.MarshalProtected()
+	if err != nil {
+		return nil, err
+	}
+	unprotected, err := m.Headers.MarshalUnprotected()
+	if err != nil {
+		return nil, err
+	}
 	content := sign1Message{
-		Protected:   m.Headers.RawProtected,
-		Unprotected: m.Headers.RawUnprotected,
+		Protected:   protected,
+		Unprotected: unprotected,
 		Payload:     m.Payload,
 		Signature:   m.Signature,
-	}
-	if content.Protected == nil {
-		header, err := encMode.Marshal(m.Headers.Protected)
-		if err != nil {
-			return nil, err
-		}
-		content.Protected = header
-	}
-	if content.Unprotected == nil {
-		header, err := encMode.Marshal(m.Headers.Unprotected)
-		if err != nil {
-			return nil, err
-		}
-		content.Unprotected = header
 	}
 	return encMode.Marshal(cbor.Tag{
 		Number:  CBORTagSign1Message,
@@ -104,11 +98,8 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 		Payload:   raw.Payload,
 		Signature: raw.Signature,
 	}
-	if err := decMode.Unmarshal(msg.Headers.RawProtected, &msg.Headers.Protected); err != nil {
-		return fmt.Errorf("cbor: invalid protected header: %w", err)
-	}
-	if err := decMode.Unmarshal(msg.Headers.RawUnprotected, &msg.Headers.Unprotected); err != nil {
-		return fmt.Errorf("cbor: invalid unprotected header: %w", err)
+	if err := msg.Headers.UnmarshalFromRaw(); err != nil {
+		return err
 	}
 
 	*m = msg
@@ -184,13 +175,9 @@ func (m *Sign1Message) Verify(verifier Verifier) error {
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
-	protected := m.Headers.RawProtected
-	if protected == nil {
-		header, err := encMode.Marshal(m.Headers.Protected)
-		if err != nil {
-			return nil, err
-		}
-		protected = header
+	protected, err := m.Headers.MarshalProtected()
+	if err != nil {
+		return nil, err
 	}
 	external := m.External
 	if external == nil {

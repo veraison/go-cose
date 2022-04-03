@@ -1,6 +1,10 @@
 package cose
 
-import "github.com/fxamacker/cbor/v2"
+import (
+	"fmt"
+
+	"github.com/fxamacker/cbor/v2"
+)
 
 // COSE Header labels registered in the IANA "COSE Header Parameters" registry.
 //
@@ -138,4 +142,34 @@ type Headers struct {
 	// encoder if RawUnprotected is set to nil. Otherwise, RawUnprotected will
 	// be used with Unprotected ignored.
 	Unprotected UnprotectedHeader
+}
+
+// MarshalProtected encodes the protected header.
+// RawProtected is returned if it is not set to nil.
+func (h *Headers) MarshalProtected() ([]byte, error) {
+	if h.RawProtected == nil {
+		return encMode.Marshal(h.Protected)
+	}
+	return h.RawProtected, nil
+}
+
+// MarshalUnprotected encodes the unprotected header.
+// RawUnprotected is returned if it is not set to nil.
+func (h *Headers) MarshalUnprotected() ([]byte, error) {
+	if h.RawUnprotected == nil {
+		return encMode.Marshal(h.Unprotected)
+	}
+	return h.RawUnprotected, nil
+}
+
+// UnmarshalFromRaw decodes Protected from RawProtected and Unprotected from
+// RawUnprotected.
+func (h *Headers) UnmarshalFromRaw() error {
+	if err := decMode.Unmarshal(h.RawProtected, &h.Protected); err != nil {
+		return fmt.Errorf("cbor: invalid protected header: %w", err)
+	}
+	if err := decMode.Unmarshal(h.RawUnprotected, &h.Unprotected); err != nil {
+		return fmt.Errorf("cbor: invalid unprotected header: %w", err)
+	}
+	return nil
 }
