@@ -1,6 +1,7 @@
 package cose_test
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -133,4 +134,94 @@ func ExampleSign1Message() {
 	// message signed
 	// message verified
 	// verification error as expected
+}
+
+// This example demonstrates signing COSE_Sign1 signatures using Sign1().
+func ExampleSign1() {
+	// create a signer
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES512, privateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// sign message
+	protected := cose.ProtectedHeader{}
+	protected.SetAlgorithm(cose.AlgorithmES512)
+	msg, err := cose.Sign1(rand.Reader, signer, protected, nil, []byte("hello world"))
+	if err != nil {
+		panic(err)
+	}
+
+	// update unprotected headers
+	msg.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
+
+	// encode message
+	sig, err := msg.MarshalCBOR()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("message signed")
+	_ = sig // futher process on sig
+	// Output:
+	// message signed
+}
+
+// This example demonstrates verifying COSE_Sign1 signatures using Verify1().
+func ExampleVerify1() {
+	// get a signed message and a trusted public key
+	sig, publicKey := getSignatureAndPublicKey()
+
+	// create a verifier from a trusted public key
+	verifier, err := cose.NewVerifier(cose.AlgorithmES512, publicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// verify message
+	var msg cose.Sign1Message
+	err = msg.UnmarshalCBOR(sig)
+	if err != nil {
+		panic(err)
+	}
+	err = cose.Verify1(&msg, verifier)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("message verified")
+
+	// tamper the message and verification should fail
+	msg.Payload = []byte("foobar")
+	err = cose.Verify1(&msg, verifier)
+	if err != cose.ErrVerification {
+		panic(err)
+	}
+	fmt.Println("verification error as expected")
+	// Output:
+	// message verified
+	// verification error as expected
+}
+
+// getSignatureAndPublicKey is a helping function for ExampleVerify1().
+func getSignatureAndPublicKey() ([]byte, crypto.PublicKey) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES512, privateKey)
+	if err != nil {
+		panic(err)
+	}
+	msgToSign, err := cose.Sign1(rand.Reader, signer, nil, nil, []byte("hello world"))
+	if err != nil {
+		panic(err)
+	}
+	sig, err := msgToSign.MarshalCBOR()
+	if err != nil {
+		panic(err)
+	}
+	return sig, privateKey.Public()
 }

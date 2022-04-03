@@ -206,3 +206,40 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 	// algorithm.
 	return alg.ComputeHash(toBeSigned)
 }
+
+// Sign1 signs a Sign1Message using the provided Signer.
+//
+// This method is a wrapper of `Sign1Message.Sign()`.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, external, payload []byte) (*Sign1Message, error) {
+	if protected == nil {
+		protected = ProtectedHeader{}
+	}
+	msg := &Sign1Message{
+		Headers: Headers{
+			Protected:   protected,
+			Unprotected: UnprotectedHeader{},
+		},
+		External: external,
+		Payload:  payload,
+	}
+	err := msg.Sign(rand, signer)
+	if err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+// Verify1 verifies a Sign1Message returning nil on success or a suitable error
+// if verification fails.
+//
+// This method is a wrapper of `Sign1Message.Verify()`.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func Verify1(msg *Sign1Message, verifier Verifier) error {
+	if msg == nil {
+		return errors.New("nil Sign1Message")
+	}
+	return msg.Verify(verifier)
+}
