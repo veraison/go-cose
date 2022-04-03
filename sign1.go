@@ -175,6 +175,7 @@ func (m *Sign1Message) Verify(verifier Verifier) error {
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
+	var protected cbor.RawMessage
 	protected, err := m.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
