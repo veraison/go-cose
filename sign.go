@@ -87,6 +87,114 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
+// Sign signs a Signature using the provided Signer.
+// Signing a COSE_Signature requires the encoded protected header and the
+// payload of its parent message.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload []byte) error {
+	if len(s.Signature) > 0 {
+		return errors.New("Signature already has signature bytes")
+	}
+
+	// check algorithm if present
+	skAlg := signer.Algorithm()
+	if alg, err := s.Headers.Protected.Algorithm(); err != nil {
+		if err != ErrAlgorithmNotFound {
+			return err
+		}
+		// `alg` header not present.
+	} else if alg != skAlg {
+		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
+	}
+
+	// sign the message
+	digest, err := s.digestToBeSigned(skAlg, protected, payload)
+	if err != nil {
+		return err
+	}
+	sig, err := signer.Sign(rand, digest)
+	if err != nil {
+		return err
+	}
+
+	s.Signature = sig
+	return nil
+}
+
+// Verify verifies the signature, returning nil on success or a suitable error
+// if verification fails.
+// Verifying a COSE_Signature requires the encoded protected header and the
+// payload of its parent message.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload []byte) error {
+	if len(s.Signature) == 0 {
+		return errors.New("Signature has no signature bytes to verify")
+	}
+
+	// check algorithm if present
+	vkAlg := verifier.Algorithm()
+	if alg, err := s.Headers.Protected.Algorithm(); err != nil {
+		if err != ErrAlgorithmNotFound {
+			return err
+		}
+		// `alg` header not present.
+	} else if alg != vkAlg {
+		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
+	}
+
+	// verify the message
+	digest, err := s.digestToBeSigned(vkAlg, protected, payload)
+	if err != nil {
+		return err
+	}
+	return verifier.Verify(digest, s.Signature)
+}
+
+// digestToBeSigned construsts Sig_structure, computes ToBeSigned, and returns
+// the digest of ToBeSigned.
+// If the signing algorithm does not have a hash algorithm associated,
+// ToBeSigned is returned instead.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessage, payload []byte) ([]byte, error) {
+	// create a Sig_structure and populate it with the appropriate fields.
+	if len(bodyProtected) == 0 {
+		bodyProtected = []byte{0x40} // empty bstr
+	}
+	var signProtected cbor.RawMessage
+	signProtected, err := s.Headers.MarshalProtected()
+	if err != nil {
+		return nil, err
+	}
+	external := s.External
+	if external == nil {
+		external = []byte{}
+	}
+	if payload == nil {
+		payload = []byte{}
+	}
+	sigStructure := []interface{}{
+		"Signature",   // context
+		bodyProtected, // body_protected
+		signProtected, // sign_protected
+		external,      // external_aad
+		payload,       // payload
+	}
+
+	// create the value ToBeSigned by encoding the Sig_structure to a byte
+	// string.
+	toBeSigned, err := encMode.Marshal(sigStructure)
+	if err != nil {
+		return nil, err
+	}
+
+	// hash toBeSigned if there is a hash algorithm associated with the signing
+	// algorithm.
+	return alg.ComputeHash(toBeSigned)
+}
+
 // signMessage represents a COSE_Sign CBOR object:
 //
 //   COSE_Sign = [
@@ -170,7 +278,7 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 		return errors.New("cbor: invalid COSE_Sign_Tagged object")
 	}
 
-	// decode to sign1Message and parse
+	// decode to signMessage and parse
 	var raw signMessage
 	if err := decMode.Unmarshal(data[2:], &raw); err != nil {
 		return err
@@ -202,6 +310,8 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 // Sign signs a SignMessage using the provided signers corresponding to the
 // signatures.
 //
+// See `Signature.Sign()` for advanced signing scenarios.
+//
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error {
 	switch len(m.Signatures) {
@@ -212,11 +322,29 @@ func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error {
 	default:
 		return fmt.Errorf("%d signers for %d signatures", len(signers), len(m.Signatures))
 	}
-	panic("not implemented")
+
+	// populate common parameters
+	var protected cbor.RawMessage
+	protected, err := m.Headers.MarshalProtected()
+	if err != nil {
+		return err
+	}
+
+	// sign message accordingly
+	for i, signature := range m.Signatures {
+		if err := signature.Sign(rand, signers[i], protected, m.Payload); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Verify verifies the signatures on the SignMessage against the corresponding
 // verifier, returning nil on success or a suitable error if verification fails.
+//
+// See `Signature.Verify()` for advanced verification scenarios like threshold
+// policies.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *SignMessage) Verify(verifiers ...Verifier) error {
@@ -228,5 +356,19 @@ func (m *SignMessage) Verify(verifiers ...Verifier) error {
 	default:
 		return fmt.Errorf("%d verifiers for %d signatures", len(verifiers), len(m.Signatures))
 	}
-	panic("not implemented")
+
+	// populate common parameters
+	var protected cbor.RawMessage
+	protected, err := m.Headers.MarshalProtected()
+	if err != nil {
+		return err
+	}
+
+	// verify message accordingly
+	for i, signature := range m.Signatures {
+		if err := signature.Verify(verifiers[i], protected, m.Payload); err != nil {
+			return err
+		}
+	}
+	return nil
 }
