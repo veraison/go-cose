@@ -203,15 +203,5 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 
 	// hash toBeSigned if there is a hash algorithm associated with the signing
 	// algorithm.
-	h, err := alg.NewHash()
-	if err != nil {
-		return nil, err
-	}
-	if h == nil {
-		return toBeSigned, nil
-	}
-	if _, err := h.Write(toBeSigned); err != nil {
-		return nil, err
-	}
-	return h.Sum(nil), nil
+	return alg.ComputeHash(toBeSigned)
 }

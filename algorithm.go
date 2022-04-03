@@ -90,10 +90,10 @@ func (a Algorithm) hashFunc() (crypto.Hash, bool) {
 	return 0, false
 }
 
-// NewHash returns a new hash instance for computing the digest specified in the
+// newHash returns a new hash instance for computing the digest specified in the
 // algorithm.
 // Returns nil if no hash is required for the message.
-func (a Algorithm) NewHash() (hash.Hash, error) {
+func (a Algorithm) newHash() (hash.Hash, error) {
 	h, ok := a.hashFunc()
 	if !ok {
 		alg, ok := extAlgorithms[a]
@@ -113,6 +113,22 @@ func (a Algorithm) NewHash() (hash.Hash, error) {
 		return h.New(), nil
 	}
 	return nil, ErrUnavailableHashFunc
+}
+
+// ComputeHash computing the digest using the hash specified in the algorithm.
+// Returns the input data if no hash is required for the message.
+func (a Algorithm) ComputeHash(data []byte) ([]byte, error) {
+	h, err := a.newHash()
+	if err != nil {
+		return nil, err
+	}
+	if h == nil {
+		return data, nil
+	}
+	if _, err := h.Write(data); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
 }
 
 // RegisterAlgorithm provides extensibility for the cose library to support
