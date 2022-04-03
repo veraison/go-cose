@@ -6,8 +6,8 @@ import "github.com/fxamacker/cbor/v2"
 //
 // Reference: https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml#tags
 const (
-	CBORTagSignMessage  = 98 // COSE_Sign1
-	CBORTagSign1Message = 18 // COSE_Sign
+	CBORTagSignMessage  = 98
+	CBORTagSign1Message = 18
 )
 
 // Pre-configured modes for CBOR encoding and decoding.
