@@ -146,6 +146,9 @@ func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc fu
 	if _, ok := extAlgorithms[alg]; ok {
 		return ErrAlgorithmRegistered
 	}
+	if extAlgorithms == nil {
+		extAlgorithms = make(map[Algorithm]extAlgorithm)
+	}
 	extAlgorithms[alg] = extAlgorithm{
 		Name:     name,
 		Hash:     hash,
