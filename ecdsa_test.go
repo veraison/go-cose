@@ -96,8 +96,6 @@ func TestI2OSP(t *testing.T) {
 }
 
 func TestOS2IP(t *testing.T) {
-	type args struct {
-	}
 	tests := []struct {
 		name string
 		x    []byte
