@@ -15,6 +15,7 @@ import (
 
 // I2OSP - Integer-to-Octet-String primitive converts a nonnegative integer to
 // an octet string of a specified length `len(buf)`, and stores it in `buf`.
+// I2OSP is used for encoding ECDSA signature (r, s) into byte strings.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8017#section-4.1
 func I2OSP(x *big.Int, buf []byte) error {
@@ -30,6 +31,7 @@ func I2OSP(x *big.Int, buf []byte) error {
 
 // OS2IP - Octet-String-to-Integer primitive converts an octet string to a
 // nonnegative integer.
+// OS2IP is used for decoding ECDSA signature (r, s) from byte strings.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8017#section-4.2
 func OS2IP(x []byte) *big.Int {
