@@ -115,9 +115,9 @@ func (a Algorithm) newHash() (hash.Hash, error) {
 	return nil, ErrUnavailableHashFunc
 }
 
-// ComputeHash computing the digest using the hash specified in the algorithm.
+// computeHash computing the digest using the hash specified in the algorithm.
 // Returns the input data if no hash is required for the message.
-func (a Algorithm) ComputeHash(data []byte) ([]byte, error) {
+func (a Algorithm) computeHash(data []byte) ([]byte, error) {
 	h, err := a.newHash()
 	if err != nil {
 		return nil, err

@@ -204,7 +204,7 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 
 	// hash toBeSigned if there is a hash algorithm associated with the signing
 	// algorithm.
-	return alg.ComputeHash(toBeSigned)
+	return alg.computeHash(toBeSigned)
 }
 
 // Sign1 signs a Sign1Message using the provided Signer.

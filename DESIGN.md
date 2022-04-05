@@ -171,7 +171,6 @@ const (
 )
 
 type Algorithm int64
-    func (a Algorithm) ComputeHash(data []byte) ([]byte, error)
     func (a Algorithm) String() string
 
 func I2OSP(x *big.Int, buf []byte) error

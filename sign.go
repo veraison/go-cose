@@ -192,7 +192,7 @@ func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessag
 
 	// hash toBeSigned if there is a hash algorithm associated with the signing
 	// algorithm.
-	return alg.ComputeHash(toBeSigned)
+	return alg.computeHash(toBeSigned)
 }
 
 // signMessage represents a COSE_Sign CBOR object:
