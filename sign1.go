@@ -167,7 +167,7 @@ func (m *Sign1Message) Verify(verifier Verifier) error {
 	return verifier.Verify(digest, m.Signature)
 }
 
-// digestToBeSigned construsts Sig_structure, computes ToBeSigned, and returns
+// digestToBeSigned constructs Sig_structure, computes ToBeSigned, and returns
 // the digest of ToBeSigned.
 // If the signing algorithm does not have a hash algorithm associated,
 // ToBeSigned is returned instead.

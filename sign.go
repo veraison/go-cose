@@ -152,7 +152,7 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 	return verifier.Verify(digest, s.Signature)
 }
 
-// digestToBeSigned construsts Sig_structure, computes ToBeSigned, and returns
+// digestToBeSigned constructs Sig_structure, computes ToBeSigned, and returns
 // the digest of ToBeSigned.
 // If the signing algorithm does not have a hash algorithm associated,
 // ToBeSigned is returned instead.
