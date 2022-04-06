@@ -4,13 +4,11 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"encoding/asn1"
 	"errors"
 	"fmt"
 	"io"
 	"math/big"
-
-	"golang.org/x/crypto/cryptobyte"
-	"golang.org/x/crypto/cryptobyte/asn1"
 )
 
 // I2OSP - Integer-to-Octet-String primitive converts a nonnegative integer to
@@ -78,32 +76,21 @@ func (es *ecdsaCryptoSigner) Algorithm() Algorithm {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func (es *ecdsaCryptoSigner) Sign(rand io.Reader, digest []byte) ([]byte, error) {
-	sig, err := es.signer.Sign(rand, digest, nil)
+	sigASN1, err := es.signer.Sign(rand, digest, nil)
 	if err != nil {
 		return nil, err
 	}
-	r, s, err := decodeECDSASignatureASN1(sig)
-	if err != nil {
-		return nil, err
-	}
-	return encodeECDSASignature(es.key.Curve, r, s)
-}
 
-// decodeECDSASignatureASN1 decodes (r, s) from ASN.1 encoded signature.
-//
-// Code copied from https://github.com/golang/go/blob/go1.18/src/crypto/ecdsa/ecdsa.go#L338-L354
-func decodeECDSASignatureASN1(sig []byte) (r, s *big.Int, err error) {
-	r, s = &big.Int{}, &big.Int{}
-	var inner cryptobyte.String
-	input := cryptobyte.String(sig)
-	if !input.ReadASN1(&inner, asn1.SEQUENCE) ||
-		!input.Empty() ||
-		!inner.ReadASN1Integer(r) ||
-		!inner.ReadASN1Integer(s) ||
-		!inner.Empty() {
-		return nil, nil, errors.New("ecdsa: invalid signature: invalid ASN.1 encoding")
+	// decode ASN.1 decoded signature
+	var sig struct {
+		R, S *big.Int
 	}
-	return
+	if _, err := asn1.Unmarshal(sigASN1, &sig); err != nil {
+		return nil, err
+	}
+
+	// encode signature in the COSE form
+	return encodeECDSASignature(es.key.Curve, sig.R, sig.S)
 }
 
 // encodeECDSASignature encodes (r, s) into a signature binary string using the
