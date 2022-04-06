@@ -57,6 +57,11 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 			return err
 		}
 		(*h) = header
+
+		// cast to type Algorithm if `alg` presents
+		if alg, err := h.Algorithm(); err == nil {
+			h.SetAlgorithm(alg)
+		}
 	}
 	return nil
 }
