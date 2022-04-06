@@ -20,7 +20,7 @@ func I2OSP(x *big.Int, buf []byte) error {
 	if x.Sign() < 0 {
 		return errors.New("I2OSP: negative integer")
 	}
-	if len(x.Bits()) > len(buf) {
+	if x.BitLen() > len(buf)*8 {
 		return errors.New("I2OSP: integer too large")
 	}
 	x.FillBytes(buf)

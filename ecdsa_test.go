@@ -33,6 +33,12 @@ func TestI2OSP(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "integer too large #3",
+			x:       big.NewInt(1 << 24),
+			buf:     make([]byte, 3),
+			wantErr: true,
+		},
+		{
 			name: "zero length string",
 			x:    big.NewInt(0),
 			buf:  make([]byte, 0),
