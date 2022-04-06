@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/veraison/go-cose"
 )
 
@@ -98,7 +99,7 @@ func processTestCase(t *testing.T, tc *TestCase, deterministic bool) {
 }
 
 func testVerify1(t *testing.T, tc *TestCase) {
-	signer, err := getSigner(tc, false)
+	_, verifier, err := getSigner(tc, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,11 +108,10 @@ func testVerify1(t *testing.T, tc *TestCase) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	external := []byte("")
 	if tc.Verify1.External != "" {
-		external = mustHexToBytes(tc.Verify1.External)
+		sigMsg.External = mustHexToBytes(tc.Verify1.External)
 	}
-	err = sigMsg.Verify(external, *signer.Verifier())
+	err = sigMsg.Verify(verifier)
 	if tc.Verify1.Verify && err != nil {
 		t.Fatal(err)
 	} else if !tc.Verify1.Verify && err == nil {
@@ -120,7 +120,7 @@ func testVerify1(t *testing.T, tc *TestCase) {
 }
 
 func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
-	signer, err := getSigner(tc, true)
+	signer, verifier, err := getSigner(tc, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,15 +131,14 @@ func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	external := []byte("")
 	if sig.External != "" {
-		external = mustHexToBytes(sig.External)
+		sigMsg.External = mustHexToBytes(sig.External)
 	}
-	err = sigMsg.Sign(new(zeroSource), external, *signer)
+	err = sigMsg.Sign(new(zeroSource), signer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = sigMsg.Verify(external, *signer.Verifier())
+	err = sigMsg.Verify(verifier)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,20 +156,24 @@ func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
 	}
 }
 
-func getSigner(tc *TestCase, private bool) (*cose.Signer, error) {
+func getSigner(tc *TestCase, private bool) (cose.Signer, cose.Verifier, error) {
 	pkey, err := getKey(tc.Key, private)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	alg := mustNameToAlg(tc.Alg)
-	signer, err := cose.NewSignerFromKey(alg, pkey)
+	signer, err := cose.NewSigner(alg, pkey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return signer, nil
+	verifier, err := cose.NewVerifier(alg, pkey.Public())
+	if err != nil {
+		return nil, nil, err
+	}
+	return signer, verifier, nil
 }
 
-func getKey(key Key, private bool) (crypto.PrivateKey, error) {
+func getKey(key Key, private bool) (crypto.Signer, error) {
 	switch key["kty"] {
 	case "RSA":
 		pkey := &rsa.PrivateKey{
@@ -230,25 +233,21 @@ func (zeroSource) Read(b []byte) (n int, err error) {
 	return len(b), nil
 }
 
-func decodeHeaders(protected, unprotected []byte) (*cose.Headers, error) {
-	var hdr cose.Headers
-	hdr.Protected = make(map[interface{}]interface{})
-	hdr.Unprotected = make(map[interface{}]interface{})
-	err := hdr.DecodeProtected(protected)
+var encMode, _ = cbor.CanonicalEncOptions().EncMode()
+
+func decodeHeaders(protected, unprotected []byte) (hdr cose.Headers, err error) {
+	// test-vectors encodes the protected header as a map instead of a map wrapped in a bstr.
+	// UnmarshalFromRaw expects the former, so wrap the map here before passing it to UnmarshalFromRaw.
+	// This hack might me removed if https://github.com/gluecose/test-vectors/issues/9 is approved.
+	hdr.RawProtected, err = encMode.Marshal(protected)
 	if err != nil {
-		return nil, err
+		return
 	}
-	b, err := cose.Unmarshal(unprotected)
-	if err != nil {
-		return nil, err
-	}
-	err = hdr.DecodeUnprotected(b)
-	if err != nil {
-		return nil, err
-	}
-	hdr.Protected = fixHeader(hdr.Protected)
-	hdr.Unprotected = fixHeader(hdr.Unprotected)
-	return &hdr, nil
+	hdr.Protected = make(cose.ProtectedHeader)
+	hdr.RawUnprotected = unprotected
+	hdr.Unprotected = make(cose.UnprotectedHeader)
+	err = hdr.UnmarshalFromRaw()
+	return hdr, err
 }
 
 func fixHeader(m map[interface{}]interface{}) map[interface{}]interface{} {
@@ -290,16 +289,16 @@ func mustBase64ToBigInt(s string) *big.Int {
 // mustNameToAlg returns the algorithm associated to name.
 // The content of name is not defined in any RFC,
 // but it's what the test cases use to identify algorithms.
-func mustNameToAlg(name string) *cose.Algorithm {
+func mustNameToAlg(name string) cose.Algorithm {
 	switch name {
 	case "PS256":
-		return cose.PS256
+		return cose.AlgorithmPS256
 	case "ES256":
-		return cose.ES256
+		return cose.AlgorithmES256
 	case "ES384":
-		return cose.ES384
+		return cose.AlgorithmES384
 	case "ES512":
-		return cose.ES512
+		return cose.AlgorithmES512
 	}
 	panic("algorithm name not found: " + name)
 }
