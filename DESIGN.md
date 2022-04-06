@@ -176,7 +176,7 @@ type Algorithm int64
 func I2OSP(x *big.Int, buf []byte) error
 func OS2IP(x []byte) *big.Int
 func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc func() hash.Hash) error
-func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, external, payload []byte) (*Sign1Message, error)
+func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, external []byte) (*Sign1Message, error)
 func Verify1(msg *Sign1Message, verifier Verifier) error
 
 type ProtectedHeader map[interface{}]interface{}
@@ -322,7 +322,7 @@ check(err)
 protected := cose.ProtectedHeader{
     cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
 }
-msg, err := cose.Sign1(rand.Reader, signer, protected, nil, []byte("hello world"))
+msg, err := cose.Sign1(rand.Reader, signer, protected, []byte("hello world"), nil)
 check(err)
 msg.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
 sig, err = msg.MarshalCBOR()

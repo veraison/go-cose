@@ -151,7 +151,7 @@ func ExampleSign1() {
 	// sign message
 	protected := cose.ProtectedHeader{}
 	protected.SetAlgorithm(cose.AlgorithmES512)
-	msg, err := cose.Sign1(rand.Reader, signer, protected, nil, []byte("hello world"))
+	msg, err := cose.Sign1(rand.Reader, signer, protected, []byte("hello world"), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -215,7 +215,7 @@ func getSignatureAndPublicKey() ([]byte, crypto.PublicKey) {
 	if err != nil {
 		panic(err)
 	}
-	msgToSign, err := cose.Sign1(rand.Reader, signer, nil, nil, []byte("hello world"))
+	msgToSign, err := cose.Sign1(rand.Reader, signer, nil, []byte("hello world"), nil)
 	if err != nil {
 		panic(err)
 	}

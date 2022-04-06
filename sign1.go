@@ -212,7 +212,7 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
 // This method is a wrapper of `Sign1Message.Sign()`.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, external, payload []byte) (*Sign1Message, error) {
+func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, external []byte) (*Sign1Message, error) {
 	if protected == nil {
 		protected = ProtectedHeader{}
 	}
