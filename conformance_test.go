@@ -242,9 +242,7 @@ func decodeHeaders(protected, unprotected []byte) (hdr cose.Headers, err error) 
 	if err != nil {
 		return
 	}
-	hdr.Protected = make(cose.ProtectedHeader)
 	hdr.RawUnprotected = unprotected
-	hdr.Unprotected = make(cose.UnprotectedHeader)
 	err = hdr.UnmarshalFromRaw()
 	return hdr, err
 }
