@@ -1,0 +1,19 @@
+{
+  "uuid": "ED24863C-9FF9-4722-8162-AD8C61C409D8",
+  "title": "The shortest encoding is not used",
+  "description": "The alg label does not use the shortest encoding (0x1801 instead of 0x01): the Sign1 parser should reject the message",
+  "key": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"
+  },
+  "alg": "ES256",
+  "sign1::verify": {
+    "taggedCOSESign1": {
+      "cborHex": "d28444a1180126a10442313154546869732069732074686520636f6e74656e742e5840ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "cborDiag": "18([h'A1180126', {4: '11'}, h'546869732069732074686520636F6E74656E742E', h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'])"
+    },
+    "shouldVerify": false
+  }
+}

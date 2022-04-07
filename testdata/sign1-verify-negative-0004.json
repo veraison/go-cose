@@ -1,0 +1,19 @@
+{
+  "uuid": "F31D4133-5B72-445A-8C7F-ABA1BCDF40E3",
+  "title": "Missing in-band alg, assuming no OOB channel exists",
+  "description": "No alg label in headers: the Sign1 parser should not accept the message (assuming no OOB channel is in place)",
+  "key": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"
+  },
+  "alg": "ES256",
+  "sign1::verify": {
+    "taggedCOSESign1": {
+      "cborHex": "d28443a10300a10442313154546869732069732074686520636f6e74656e742e5840ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "cborDiag": "18([h'A10300', {4: '11'}, h'546869732069732074686520636F6E74656E742E', h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'])"
+    },
+    "shouldVerify": false
+  }
+}
