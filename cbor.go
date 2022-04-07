@@ -31,6 +31,7 @@ func init() {
 
 	// init decode mode
 	decOpts := cbor.DecOptions{
+		DupMapKey:   cbor.DupMapKeyEnforcedAPF, // duplicated key not allowed
 		IndefLength: cbor.IndefLengthForbidden, // no streaming
 		IntDec:      cbor.IntDecConvertSigned,  // decode CBOR uint/int to Go int64
 	}
