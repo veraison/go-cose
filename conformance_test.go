@@ -238,7 +238,6 @@ var encMode, _ = cbor.CanonicalEncOptions().EncMode()
 func decodeHeaders(protected, unprotected []byte) (hdr cose.Headers, err error) {
 	// test-vectors encodes the protected header as a map instead of a map wrapped in a bstr.
 	// UnmarshalFromRaw expects the former, so wrap the map here before passing it to UnmarshalFromRaw.
-	// This hack might me removed if https://github.com/gluecose/test-vectors/issues/9 is approved.
 	hdr.RawProtected, err = encMode.Marshal(protected)
 	if err != nil {
 		return
@@ -248,22 +247,6 @@ func decodeHeaders(protected, unprotected []byte) (hdr cose.Headers, err error) 
 	hdr.Unprotected = make(cose.UnprotectedHeader)
 	err = hdr.UnmarshalFromRaw()
 	return hdr, err
-}
-
-func fixHeader(m map[interface{}]interface{}) map[interface{}]interface{} {
-	ret := make(map[interface{}]interface{})
-	for k, v := range m {
-		switch k1 := k.(type) {
-		case int64:
-			k = int(k1)
-		}
-		switch v1 := v.(type) {
-		case int64:
-			v = int(v1)
-		}
-		ret[k] = v
-	}
-	return ret
 }
 
 func mustBase64ToInt(s string) int {
