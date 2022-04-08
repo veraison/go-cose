@@ -2,8 +2,6 @@ package cose
 
 import (
 	"crypto"
-	_ "crypto/sha256"
-	_ "crypto/sha512"
 	"hash"
 	"strconv"
 )
