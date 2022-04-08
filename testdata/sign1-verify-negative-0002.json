@@ -1,0 +1,19 @@
+{
+  "uuid": "A658B110-BEA2-4C6D-A9AA-C10BE3643389",
+  "title": "Protected header map contains duplicate entries",
+  "description": "The protected header map contains a duplicate label (alg), which the Sign1 parser should reject",
+  "key": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"
+  },
+  "alg": "ES256",
+  "sign1::verify": {
+    "taggedCOSESign1": {
+      "cborHex": "d28445a201260126a10442313154546869732069732074686520636f6e74656e742e5840ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "cborDiag": "18([h'A201260126', {4: '11'}, h'546869732069732074686520636F6E74656E742E', h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'])"
+    },
+    "shouldVerify": false
+  }
+}

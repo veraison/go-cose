@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -60,22 +61,31 @@ type CBOR struct {
 var testCases = []struct {
 	name          string
 	deterministic bool
+	err           string
+	skip          bool
 }{
-	{"sign1-sign-0000", false},
-	{"sign1-sign-0001", false},
-	{"sign1-sign-0002", false},
-	{"sign1-sign-0003", false},
-	{"sign1-sign-0004", true},
-	{"sign1-verify-0000", false},
-	{"sign1-verify-0001", false},
-	{"sign1-verify-0002", false},
-	{"sign1-verify-0003", false},
-	{"sign1-verify-0004", true},
+	{name: "sign1-sign-0000"},
+	{name: "sign1-sign-0001"},
+	{name: "sign1-sign-0002"},
+	{name: "sign1-sign-0003"},
+	{name: "sign1-sign-0004", deterministic: true},
+	{name: "sign1-verify-0000"},
+	{name: "sign1-verify-0001"},
+	{name: "sign1-verify-0002"},
+	{name: "sign1-verify-0003"},
+	{name: "sign1-verify-0004"},
+	{name: "sign1-verify-negative-0000", err: "cbor: invalid protected header: cbor: cannot unmarshal map into Go value of type []uint8"},
+	{name: "sign1-verify-negative-0001", err: "cbor: invalid protected header: cbor: protected header: require map type"},
+	{name: "sign1-verify-negative-0002", err: "cbor: invalid protected header: cbor: found duplicate map key \"1\" at map element index 1"},
+	{name: "sign1-verify-negative-0003", err: "cbor: invalid unprotected header: cbor: found duplicate map key \"4\" at map element index 1"},
 }
 
 func TestConformance(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.skip {
+				t.SkipNow()
+			}
 			data, err := os.ReadFile(filepath.Join("testdata", tt.name+".json"))
 			if err != nil {
 				t.Fatal(err)
@@ -85,30 +95,42 @@ func TestConformance(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			processTestCase(t, &tc, tt.deterministic)
+			if tc.Sign1 != nil {
+				testSign1(t, &tc, tt.deterministic)
+			} else if tc.Verify1 != nil {
+				testVerify1(t, &tc, tt.err)
+			} else {
+				t.Fatal("test case not supported")
+			}
 		})
 	}
 }
 
-func processTestCase(t *testing.T, tc *TestCase, deterministic bool) {
-	if tc.Sign1 != nil {
-		testSign1(t, tc, deterministic)
-	} else if tc.Verify1 != nil {
-		testVerify1(t, tc)
-	} else {
-		t.Fatal("test case not supported")
-	}
-}
-
-func testVerify1(t *testing.T, tc *TestCase) {
-	_, verifier, err := getSigner(tc, false)
+func testVerify1(t *testing.T, tc *TestCase, wantErr string) {
+	var err error
+	defer func() {
+		if tc.Verify1.Verify && err != nil {
+			t.Fatal(err)
+		} else if !tc.Verify1.Verify {
+			if err == nil {
+				t.Fatal("Verify1 should have failed")
+			}
+			if wantErr != "" {
+				if got := err.Error(); !strings.Contains(got, wantErr) {
+					t.Fatalf("error mismatch; want %q, got %q", wantErr, got)
+				}
+			}
+		}
+	}()
+	var verifier cose.Verifier
+	_, verifier, err = getSigner(tc, false)
 	if err != nil {
-		t.Fatal(err)
+		return
 	}
 	var sigMsg cose.Sign1Message
 	err = sigMsg.UnmarshalCBOR(mustHexToBytes(tc.Verify1.TaggedCOSESign1.CBORHex))
 	if err != nil {
-		t.Fatal(err)
+		return
 	}
 	var external []byte
 	if tc.Verify1.External != "" {
