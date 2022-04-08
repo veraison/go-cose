@@ -186,6 +186,8 @@ type ProtectedHeader map[interface{}]interface{}
     func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error
 
 type UnprotectedHeader map[interface{}]interface{}
+    func (h UnprotectedHeader) Algorithm() (Algorithm, error)
+    func (h UnprotectedHeader) SetAlgorithm(alg Algorithm)
 
 type Headers struct {
     RawProtected   cbor.RawMessage
