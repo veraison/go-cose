@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
@@ -44,14 +45,23 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a CBOR bstr object into ProtectedHeader.
+//
+// ProtectedHeader is an empty_or_serialized_map where
+// 	 empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
 func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	var encoded []byte
 	if err := decMode.Unmarshal(data, &encoded); err != nil {
 		return err
 	}
+	if encoded == nil {
+		return errors.New("cbor: nil protected header")
+	}
 	if len(encoded) == 0 {
 		(*h) = make(ProtectedHeader)
 	} else {
+		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
+			return errors.New("cbor: protected header: require map type")
+		}
 		var header map[interface{}]interface{}
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
@@ -98,6 +108,36 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 // UnprotectedHeader contains parameters that are not cryptographically
 // protected.
 type UnprotectedHeader map[interface{}]interface{}
+
+// MarshalCBOR encodes the unprotected header into a CBOR map object.
+// A zero-length header is encoded as a zero-length map (encoded as h'a0').
+func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
+	if len(h) == 0 {
+		return []byte{0xa0}, nil
+	}
+	return encMode.Marshal(map[interface{}]interface{}(h))
+}
+
+// UnmarshalCBOR decodes a CBOR map object into UnprotectedHeader.
+//
+// UnprotectedHeader is a header_map.
+func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
+	if data == nil {
+		return errors.New("cbor: nil unprotected header")
+	}
+	if len(data) == 0 {
+		return errors.New("cbor: unprotected header: missing type")
+	}
+	if data[0]&0xe0 != 0xa0 { // major type 5: map
+		return errors.New("cbor: unprotected header: require map type")
+	}
+	var header map[interface{}]interface{}
+	if err := decMode.Unmarshal(data, &header); err != nil {
+		return err
+	}
+	(*h) = header
+	return nil
+}
 
 // Headers represents "two buckets of information that are not
 // considered to be part of the payload itself, but are used for

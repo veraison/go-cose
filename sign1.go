@@ -54,6 +54,9 @@ func NewSign1Message() *Sign1Message {
 
 // MarshalCBOR encodes Sign1Message into a COSE_Sign1_Tagged object.
 func (m *Sign1Message) MarshalCBOR() ([]byte, error) {
+	if len(m.Signature) == 0 {
+		return nil, ErrEmptySignature
+	}
 	protected, err := m.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
@@ -89,6 +92,9 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 	var raw sign1Message
 	if err := decMode.Unmarshal(data[1:], &raw); err != nil {
 		return err
+	}
+	if len(raw.Signature) == 0 {
+		return ErrEmptySignature
 	}
 	msg := Sign1Message{
 		Headers: Headers{
@@ -145,7 +151,7 @@ func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Verify(verifier Verifier) error {
 	if len(m.Signature) == 0 {
-		return errors.New("Sign1Message has no signature to verify")
+		return ErrEmptySignature
 	}
 
 	// check algorithm if present

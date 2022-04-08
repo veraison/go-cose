@@ -8,6 +8,7 @@ var (
 	ErrAlgorithmNotFound     = errors.New("algorithm not found")
 	ErrAlgorithmNotSupported = errors.New("algorithm not supported")
 	ErrAlgorithmRegistered   = errors.New("algorithm registered")
+	ErrEmptySignature        = errors.New("empty signature")
 	ErrInvalidAlgorithm      = errors.New("invalid algorithm")
 	ErrNoSignatures          = errors.New("no signatures attached")
 	ErrUnavailableHashFunc   = errors.New("hash function is not available")
