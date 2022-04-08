@@ -90,6 +90,9 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data[1:], &raw); err != nil {
 		return err
 	}
+	if raw.Signature == nil {
+		return errors.New("cbor: nil signature")
+	}
 	msg := Sign1Message{
 		Headers: Headers{
 			RawProtected:   raw.Protected,
