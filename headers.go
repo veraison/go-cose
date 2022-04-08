@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/fxamacker/cbor/v2"
@@ -44,14 +45,23 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a CBOR bstr object into ProtectedHeader.
+//
+// ProtectedHeader is an empty_or_serialized_map where
+// 	 empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
 func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	var encoded []byte
 	if err := decMode.Unmarshal(data, &encoded); err != nil {
 		return err
 	}
+	if encoded == nil {
+		return errors.New("cbor: nil protected header")
+	}
 	if len(encoded) == 0 {
 		(*h) = make(ProtectedHeader)
 	} else {
+		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
+			return errors.New("cbor: protected header: require map type")
+		}
 		var header map[interface{}]interface{}
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
