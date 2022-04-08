@@ -89,7 +89,7 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 
 	// decode to sign1Message and parse
 	var raw sign1Message
-	if err := decMode.Unmarshal(data[1:], &raw); err != nil {
+	if err := decModeWithTagsForbidden.Unmarshal(data[1:], &raw); err != nil {
 		return err
 	}
 	if len(raw.Signature) == 0 {

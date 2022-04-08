@@ -12,8 +12,9 @@ const (
 
 // Pre-configured modes for CBOR encoding and decoding.
 var (
-	encMode cbor.EncMode
-	decMode cbor.DecMode
+	encMode                  cbor.EncMode
+	decMode                  cbor.DecMode
+	decModeWithTagsForbidden cbor.DecMode
 )
 
 func init() {
@@ -36,6 +37,11 @@ func init() {
 		IntDec:      cbor.IntDecConvertSigned,  // decode CBOR uint/int to Go int64
 	}
 	decMode, err = decOpts.DecMode()
+	if err != nil {
+		panic(err)
+	}
+	decOpts.TagsMd = cbor.TagsForbidden
+	decModeWithTagsForbidden, err = decOpts.DecMode()
 	if err != nil {
 		panic(err)
 	}
