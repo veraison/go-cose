@@ -45,6 +45,9 @@ func NewSignature() *Signature {
 
 // MarshalCBOR encodes Signature into a COSE_Signature object.
 func (s *Signature) MarshalCBOR() ([]byte, error) {
+	if len(s.Signature) == 0 {
+		return nil, ErrEmptySignature
+	}
 	protected, err := s.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
@@ -72,8 +75,8 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data, &raw); err != nil {
 		return err
 	}
-	if raw.Signature == nil {
-		return errors.New("cbor: nil signature")
+	if len(raw.Signature) == 0 {
+		return ErrEmptySignature
 	}
 	sig := Signature{
 		Headers: Headers{
@@ -133,7 +136,7 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload []byte) error {
 	if len(s.Signature) == 0 {
-		return errors.New("Signature has no signature bytes to verify")
+		return ErrEmptySignature
 	}
 
 	// check algorithm if present
