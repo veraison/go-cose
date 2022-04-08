@@ -14,21 +14,27 @@ const (
 	// RSASSA-PSS w/ SHA-256 by RFC 8230.
 	// Requires an available crypto.SHA256.
 	AlgorithmPS256 Algorithm = -37
+
 	// RSASSA-PSS w/ SHA-384 by RFC 8230.
 	// Requires an available crypto.SHA384.
 	AlgorithmPS384 Algorithm = -38
+
 	// RSASSA-PSS w/ SHA-512 by RFC 8230.
 	// Requires an available crypto.SHA512.
 	AlgorithmPS512 Algorithm = -39
+
 	// ECDSA w/ SHA-256 by RFC 8152.
 	// Requires an available crypto.SHA256.
 	AlgorithmES256 Algorithm = -7
+
 	// ECDSA w/ SHA-384 by RFC 8152.
 	// Requires an available crypto.SHA384.
 	AlgorithmES384 Algorithm = -35
+
 	// ECDSA w/ SHA-512 by RFC 8152.
 	// Requires an available crypto.SHA512.
 	AlgorithmES512 Algorithm = -36
+
 	// PureEdDSA by RFC 8152.
 	AlgorithmEd25519 Algorithm = -8
 )
