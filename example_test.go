@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	_ "crypto/sha512"
 	"fmt"
 
 	"github.com/veraison/go-cose"
