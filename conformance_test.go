@@ -76,11 +76,8 @@ var testCases = []struct {
 	{name: "sign1-verify-0004"},
 	{name: "sign1-verify-negative-0000", err: "cbor: invalid protected header: cbor: cannot unmarshal map into Go value of type []uint8"},
 	{name: "sign1-verify-negative-0001", err: "cbor: invalid protected header: cbor: cannot unmarshal array into Go value of type map[interface {}]interface {}"},
-	{skip: true, name: "sign1-verify-negative-0002", err: "cbor: invalid protected header: cbor: found duplicate map key \"1\" at map element index 1"},
-	{skip: true, name: "sign1-verify-negative-0003", err: "cbor: invalid unprotected header: cbor: found duplicate map key \"4\" at map element index 1"},
-	{skip: true, name: "sign1-verify-negative-0004", err: cose.ErrAlgorithmNotFound.Error()},
-	{skip: true, name: "sign1-verify-negative-0005", err: cose.ErrAlgorithmNotFound.Error()},
-	{skip: true, name: "sign1-verify-negative-0006", err: "TODO"},
+	{name: "sign1-verify-negative-0002", err: "cbor: invalid protected header: cbor: found duplicate map key \"1\" at map element index 1"},
+	{name: "sign1-verify-negative-0003", err: "cbor: invalid unprotected header: cbor: found duplicate map key \"4\" at map element index 1"},
 	{name: "sign1-verify-negative-0007", err: "cbor: invalid protected header: cbor: indefinite-length byte string isn't allowed"},
 }
 
