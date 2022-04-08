@@ -177,7 +177,7 @@ func I2OSP(x *big.Int, buf []byte) error
 func OS2IP(x []byte) *big.Int
 func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc func() hash.Hash) error
 func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, external []byte) (*Sign1Message, error)
-func Verify1(msg *Sign1Message, verifier Verifier) error
+func Verify1(msg *Sign1Message, external []byte, verifier Verifier) error
 
 type ProtectedHeader map[interface{}]interface{}
     func (h ProtectedHeader) Algorithm() (Algorithm, error)
@@ -201,14 +201,13 @@ type Headers struct {
 
 type Signature struct {
     Headers   Headers
-    External  []byte
     Signature []byte
 }
     func NewSignature() *Signature
     func (s *Signature) MarshalCBOR() ([]byte, error)
     func (s *Signature) UnmarshalCBOR(data []byte) error
-    func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload []byte) error
-    func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload []byte) error
+    func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload, external []byte) error
+    func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload, external []byte) error
 
 type SignMessage struct {
     Headers    Headers
@@ -218,20 +217,19 @@ type SignMessage struct {
     func NewSignMessage() *SignMessage
     func (m *SignMessage) MarshalCBOR() ([]byte, error)
     func (m *SignMessage) UnmarshalCBOR(data []byte) error
-    func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error
-    func (m *SignMessage) Verify(verifiers ...Verifier) error
+    func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error
+    func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error
 
 type Sign1Message struct {
     Headers   Headers
-    External  []byte
     Payload   []byte
     Signature []byte
 }
     func NewSign1Message() *Sign1Message
     func (m *Sign1Message) MarshalCBOR() ([]byte, error)
     func (m *Sign1Message) UnmarshalCBOR(data []byte) error
-    func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error
-    func (m *Sign1Message) Verify(verifier Verifier) error
+    func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error
+    func (m *Sign1Message) Verify(external []byte, verifier Verifier) error
 
 type Signer interface {
     Algorithm() Algorithm
@@ -299,7 +297,7 @@ privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 check(err)
 signer, err := cose.NewSigner(cose.AlgorithmES256, privateKey)
 check(err)
-err = msg.Sign(rand.Reader, signer)
+err = msg.Sign(rand.Reader, nil, signer)
 check(err)
 sig, err := msg.MarshalCBOR()
 check(err)
@@ -308,14 +306,14 @@ check(err)
 ctx := context.Background()
 signer = getRemoteSigner()
 signer = signer.WithContext(ctx)
-err = msg.Sign(rand.Reader, signer)
+err = msg.Sign(rand.Reader, nil, signer)
 check(err)
 sig, err = msg.MarshalCBOR()
 check(err)
 
 // remote signing scenario 2
 signer = getRemoteSignerWithContext(ctx)
-err = msg.Sign(rand.Reader, signer)
+err = msg.Sign(rand.Reader, nil, signer)
 check(err)
 sig, err = msg.MarshalCBOR()
 check(err)
@@ -344,11 +342,11 @@ err = msg.UnmarshalCBOR(rawSig)
 check(err)
 
 // verify message
-err = msg.Verify(verifier)
+err = msg.Verify(nil, verifier)
 check(err)
 
-// alternative message verification using cose.Verify1(()
-err = cose.Verify1(&msg, verifier)
+// alternative message verification using cose.Verify1()
+err = cose.Verify1(&msg, nil, verifier)
 check(err)
 ```
 
@@ -392,7 +390,7 @@ privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 check(err)
 signer, err := cose.NewSigner(cose.AlgorithmES256, privateKey)
 check(err)
-err = msg.Sign(rand.Reader, signer)
+err = msg.Sign(rand.Reader, nil, signer)
 check(err)
 finalSig, err := msg.MarshalCBOR()
 check(err)

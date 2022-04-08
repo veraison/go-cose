@@ -37,7 +37,6 @@ var sign1MessagePrefix = []byte{
 // Reference: https://tools.ietf.org/html/rfc8152#section-4.2
 type Sign1Message struct {
 	Headers   Headers
-	External  []byte
 	Payload   []byte
 	Signature []byte
 }
@@ -115,7 +114,7 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 // Sign signs a Sign1Message using the provided Signer.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
+func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error {
 	if len(m.Signature) > 0 {
 		return errors.New("Sign1Message signature already has signature bytes")
 	}
@@ -132,7 +131,7 @@ func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 	}
 
 	// sign the message
-	digest, err := m.digestToBeSigned(skAlg)
+	digest, err := m.digestToBeSigned(skAlg, external)
 	if err != nil {
 		return err
 	}
@@ -149,7 +148,7 @@ func (m *Sign1Message) Sign(rand io.Reader, signer Signer) error {
 // a suitable error if verification fails.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *Sign1Message) Verify(verifier Verifier) error {
+func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 	if len(m.Signature) == 0 {
 		return ErrEmptySignature
 	}
@@ -166,7 +165,7 @@ func (m *Sign1Message) Verify(verifier Verifier) error {
 	}
 
 	// verify the message
-	digest, err := m.digestToBeSigned(vkAlg)
+	digest, err := m.digestToBeSigned(vkAlg, external)
 	if err != nil {
 		return err
 	}
@@ -179,14 +178,13 @@ func (m *Sign1Message) Verify(verifier Verifier) error {
 // ToBeSigned is returned instead.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *Sign1Message) digestToBeSigned(alg Algorithm) ([]byte, error) {
+func (m *Sign1Message) digestToBeSigned(alg Algorithm, external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
 	var protected cbor.RawMessage
 	protected, err := m.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
 	}
-	external := m.External
 	if external == nil {
 		external = []byte{}
 	}
@@ -227,10 +225,9 @@ func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, ex
 			Protected:   protected,
 			Unprotected: UnprotectedHeader{},
 		},
-		External: external,
-		Payload:  payload,
+		Payload: payload,
 	}
-	err := msg.Sign(rand, signer)
+	err := msg.Sign(rand, external, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +240,9 @@ func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, ex
 // This method is a wrapper of `Sign1Message.Verify()`.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func Verify1(msg *Sign1Message, verifier Verifier) error {
+func Verify1(msg *Sign1Message, external []byte, verifier Verifier) error {
 	if msg == nil {
 		return errors.New("nil Sign1Message")
 	}
-	return msg.Verify(verifier)
+	return msg.Verify(external, verifier)
 }

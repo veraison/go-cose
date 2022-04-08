@@ -34,7 +34,7 @@ func ExampleSignMessage() {
 	}
 
 	// sign message
-	err = msgToSign.Sign(rand.Reader, signer)
+	err = msgToSign.Sign(rand.Reader, nil, signer)
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +57,7 @@ func ExampleSignMessage() {
 	if err != nil {
 		panic(err)
 	}
-	err = msgToVerify.Verify(verifier)
+	err = msgToVerify.Verify(nil, verifier)
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +65,7 @@ func ExampleSignMessage() {
 
 	// tamper the message and verification should fail
 	msgToVerify.Payload = []byte("foobar")
-	err = msgToVerify.Verify(verifier)
+	err = msgToVerify.Verify(nil, verifier)
 	if err != cose.ErrVerification {
 		panic(err)
 	}
@@ -95,7 +95,7 @@ func ExampleSign1Message() {
 	}
 
 	// sign message
-	err = msgToSign.Sign(rand.Reader, signer)
+	err = msgToSign.Sign(rand.Reader, nil, signer)
 	if err != nil {
 		panic(err)
 	}
@@ -118,7 +118,7 @@ func ExampleSign1Message() {
 	if err != nil {
 		panic(err)
 	}
-	err = msgToVerify.Verify(verifier)
+	err = msgToVerify.Verify(nil, verifier)
 	if err != nil {
 		panic(err)
 	}
@@ -126,7 +126,7 @@ func ExampleSign1Message() {
 
 	// tamper the message and verification should fail
 	msgToVerify.Payload = []byte("foobar")
-	err = msgToVerify.Verify(verifier)
+	err = msgToVerify.Verify(nil, verifier)
 	if err != cose.ErrVerification {
 		panic(err)
 	}
@@ -188,7 +188,7 @@ func ExampleVerify1() {
 	if err != nil {
 		panic(err)
 	}
-	err = cose.Verify1(&msg, verifier)
+	err = cose.Verify1(&msg, nil, verifier)
 	if err != nil {
 		panic(err)
 	}
@@ -196,7 +196,7 @@ func ExampleVerify1() {
 
 	// tamper the message and verification should fail
 	msg.Payload = []byte("foobar")
-	err = cose.Verify1(&msg, verifier)
+	err = cose.Verify1(&msg, nil, verifier)
 	if err != cose.ErrVerification {
 		panic(err)
 	}
