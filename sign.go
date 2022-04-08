@@ -72,6 +72,9 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data, &raw); err != nil {
 		return err
 	}
+	if raw.Signature == nil {
+		return errors.New("cbor: nil signature")
+	}
 	sig := Signature{
 		Headers: Headers{
 			RawProtected:   raw.Protected,
