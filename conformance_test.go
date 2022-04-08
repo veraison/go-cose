@@ -78,7 +78,6 @@ var testCases = []struct {
 	{name: "sign1-verify-negative-0001", err: "cbor: invalid protected header: cbor: cannot unmarshal array into Go value of type map[interface {}]interface {}"},
 	{name: "sign1-verify-negative-0002", err: "cbor: invalid protected header: cbor: found duplicate map key \"1\" at map element index 1"},
 	{name: "sign1-verify-negative-0003", err: "cbor: invalid unprotected header: cbor: found duplicate map key \"4\" at map element index 1"},
-	{name: "sign1-verify-negative-0007", err: "cbor: invalid protected header: cbor: indefinite-length byte string isn't allowed"},
 }
 
 func TestConformance(t *testing.T) {
