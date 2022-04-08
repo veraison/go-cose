@@ -132,10 +132,16 @@ func testVerify1(t *testing.T, tc *TestCase, wantErr string) {
 	if err != nil {
 		return
 	}
+	var external []byte
 	if tc.Verify1.External != "" {
-		sigMsg.External = mustHexToBytes(tc.Verify1.External)
+		external = mustHexToBytes(tc.Verify1.External)
 	}
-	err = sigMsg.Verify(verifier)
+	err = sigMsg.Verify(external, verifier)
+	if tc.Verify1.Verify && err != nil {
+		t.Fatal(err)
+	} else if !tc.Verify1.Verify && err == nil {
+		t.Fatal("Verify1 should have failed")
+	}
 }
 
 func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
@@ -150,14 +156,15 @@ func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var external []byte
 	if sig.External != "" {
-		sigMsg.External = mustHexToBytes(sig.External)
+		external = mustHexToBytes(sig.External)
 	}
-	err = sigMsg.Sign(new(zeroSource), signer)
+	err = sigMsg.Sign(new(zeroSource), external, signer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = sigMsg.Verify(verifier)
+	err = sigMsg.Verify(external, verifier)
 	if err != nil {
 		t.Fatal(err)
 	}

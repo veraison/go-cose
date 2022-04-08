@@ -29,7 +29,6 @@ type signature struct {
 // Reference: https://tools.ietf.org/html/rfc8152#section-4.1
 type Signature struct {
 	Headers   Headers
-	External  []byte
 	Signature []byte
 }
 
@@ -45,6 +44,9 @@ func NewSignature() *Signature {
 
 // MarshalCBOR encodes Signature into a COSE_Signature object.
 func (s *Signature) MarshalCBOR() ([]byte, error) {
+	if len(s.Signature) == 0 {
+		return nil, ErrEmptySignature
+	}
 	protected, err := s.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
@@ -72,6 +74,9 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Signature) == 0 {
+		return ErrEmptySignature
+	}
 	sig := Signature{
 		Headers: Headers{
 			RawProtected:   raw.Protected,
@@ -92,7 +97,7 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 // payload of its parent message.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload []byte) error {
+func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload, external []byte) error {
 	if len(s.Signature) > 0 {
 		return errors.New("Signature already has signature bytes")
 	}
@@ -109,7 +114,7 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 	}
 
 	// sign the message
-	digest, err := s.digestToBeSigned(skAlg, protected, payload)
+	digest, err := s.digestToBeSigned(skAlg, protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -128,9 +133,9 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 // payload of its parent message.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload []byte) error {
+func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload, external []byte) error {
 	if len(s.Signature) == 0 {
-		return errors.New("Signature has no signature bytes to verify")
+		return ErrEmptySignature
 	}
 
 	// check algorithm if present
@@ -145,7 +150,7 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 	}
 
 	// verify the message
-	digest, err := s.digestToBeSigned(vkAlg, protected, payload)
+	digest, err := s.digestToBeSigned(vkAlg, protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -158,7 +163,7 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 // ToBeSigned is returned instead.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessage, payload []byte) ([]byte, error) {
+func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessage, payload, external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
 	if len(bodyProtected) == 0 {
 		bodyProtected = []byte{0x40} // empty bstr
@@ -168,7 +173,6 @@ func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessag
 	if err != nil {
 		return nil, err
 	}
-	external := s.External
 	if external == nil {
 		external = []byte{}
 	}
@@ -239,6 +243,9 @@ func NewSignMessage() *SignMessage {
 
 // MarshalCBOR encodes SignMessage into a COSE_Sign_Tagged object.
 func (m *SignMessage) MarshalCBOR() ([]byte, error) {
+	if len(m.Signatures) == 0 {
+		return nil, ErrNoSignatures
+	}
 	protected, err := m.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
@@ -283,6 +290,9 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data[2:], &raw); err != nil {
 		return err
 	}
+	if len(raw.Signatures) == 0 {
+		return ErrNoSignatures
+	}
 	signatures := make([]*Signature, 0, len(raw.Signatures))
 	for _, sigCBOR := range raw.Signatures {
 		sig := &Signature{}
@@ -313,7 +323,7 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 // See `Signature.Sign()` for advanced signing scenarios.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error {
+func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error {
 	switch len(m.Signatures) {
 	case 0:
 		return ErrNoSignatures
@@ -332,7 +342,7 @@ func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error {
 
 	// sign message accordingly
 	for i, signature := range m.Signatures {
-		if err := signature.Sign(rand, signers[i], protected, m.Payload); err != nil {
+		if err := signature.Sign(rand, signers[i], protected, m.Payload, external); err != nil {
 			return err
 		}
 	}
@@ -347,7 +357,7 @@ func (m *SignMessage) Sign(rand io.Reader, signers ...Signer) error {
 // policies.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *SignMessage) Verify(verifiers ...Verifier) error {
+func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error {
 	switch len(m.Signatures) {
 	case 0:
 		return ErrNoSignatures
@@ -366,7 +376,7 @@ func (m *SignMessage) Verify(verifiers ...Verifier) error {
 
 	// verify message accordingly
 	for i, signature := range m.Signatures {
-		if err := signature.Verify(verifiers[i], protected, m.Payload); err != nil {
+		if err := signature.Verify(verifiers[i], protected, m.Payload, external); err != nil {
 			return err
 		}
 	}
