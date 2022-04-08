@@ -242,6 +242,9 @@ func NewSignMessage() *SignMessage {
 
 // MarshalCBOR encodes SignMessage into a COSE_Sign_Tagged object.
 func (m *SignMessage) MarshalCBOR() ([]byte, error) {
+	if len(m.Signatures) == 0 {
+		return nil, ErrNoSignatures
+	}
 	protected, err := m.Headers.MarshalProtected()
 	if err != nil {
 		return nil, err
@@ -285,6 +288,9 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 	var raw signMessage
 	if err := decMode.Unmarshal(data[2:], &raw); err != nil {
 		return err
+	}
+	if len(raw.Signatures) == 0 {
+		return ErrNoSignatures
 	}
 	signatures := make([]*Signature, 0, len(raw.Signatures))
 	for _, sigCBOR := range raw.Signatures {
