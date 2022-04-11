@@ -65,6 +65,9 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
 			return errors.New("cbor: protected header: require map type")
 		}
+		if err := validateHeaderLabelCBOR(encoded); err != nil {
+			return err
+		}
 		var header map[interface{}]interface{}
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
@@ -136,6 +139,9 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	}
 	if data[0]&0xe0 != 0xa0 { // major type 5: map
 		return errors.New("cbor: unprotected header: require map type")
+	}
+	if err := validateHeaderLabelCBOR(data); err != nil {
+		return err
 	}
 	var header map[interface{}]interface{}
 	if err := decMode.Unmarshal(data, &header); err != nil {
@@ -228,7 +234,7 @@ func (h *Headers) UnmarshalFromRaw() error {
 	return nil
 }
 
-// validateHeaderLabel validates if all header labels are integers or strings
+// validateHeaderLabel validates if all header labels are integers or strings.
 //
 //   label = int / tstr
 //
@@ -245,4 +251,41 @@ func validateHeaderLabel(h map[interface{}]interface{}) error {
 		}
 	}
 	return nil
+}
+
+// headerLabelValidator is used to validate the header label of a COSE header.
+type headerLabelValidator struct {
+	value interface{}
+}
+
+// UnmarshalCBOR decodes the label value of a COSE header, and returns error if
+// label is not a int (major type 0, 1) or string (major type 3).
+func (hl *headerLabelValidator) UnmarshalCBOR(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("cbor: header label: missing type")
+	}
+	switch data[0] & 0xe0 >> 5 {
+	case 0, 1, 3:
+		return decMode.Unmarshal(data, &hl.value)
+	}
+	return errors.New("cbor: header label: require int / tstr type")
+}
+
+// discardedCBORMessage is used to read CBOR message and discard it.
+type discardedCBORMessage struct{}
+
+// UnmarshalCBOR discards the read CBOR object.
+func (discardedCBORMessage) UnmarshalCBOR(data []byte) error {
+	return nil
+}
+
+// validateHeaderLabelCBOR validates if all header labels are integers or
+// strings of a CBOR map object.
+//
+//   label = int / tstr
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
+func validateHeaderLabelCBOR(data []byte) error {
+	var header map[headerLabelValidator]discardedCBORMessage
+	return decMode.Unmarshal(data, &header)
 }
