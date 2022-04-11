@@ -258,6 +258,11 @@ type headerLabelValidator struct {
 	value interface{}
 }
 
+// String prints the value without brackets `{}`. Useful in error printing.
+func (hl headerLabelValidator) String() string {
+	return fmt.Sprint(hl.value)
+}
+
 // UnmarshalCBOR decodes the label value of a COSE header, and returns error if
 // label is not a int (major type 0, 1) or string (major type 3).
 func (hl *headerLabelValidator) UnmarshalCBOR(data []byte) error {
