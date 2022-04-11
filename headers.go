@@ -259,19 +259,19 @@ type headerLabelValidator struct {
 }
 
 // String prints the value without brackets `{}`. Useful in error printing.
-func (hl headerLabelValidator) String() string {
-	return fmt.Sprint(hl.value)
+func (hlv headerLabelValidator) String() string {
+	return fmt.Sprint(hlv.value)
 }
 
 // UnmarshalCBOR decodes the label value of a COSE header, and returns error if
 // label is not a int (major type 0, 1) or string (major type 3).
-func (hl *headerLabelValidator) UnmarshalCBOR(data []byte) error {
+func (hlv *headerLabelValidator) UnmarshalCBOR(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("cbor: header label: missing type")
 	}
 	switch data[0] & 0xe0 >> 5 {
 	case 0, 1, 3:
-		return decMode.Unmarshal(data, &hl.value)
+		return decMode.Unmarshal(data, &hlv.value)
 	}
 	return errors.New("cbor: header label: require int / tstr type")
 }
