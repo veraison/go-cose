@@ -131,6 +131,20 @@ func (h ProtectedHeader) Critical() ([]interface{}, error) {
 	return criticalLabels, nil
 }
 
+// EnsureCritical ensures all critical headers presents in the protected bucket.
+func (h ProtectedHeader) EnsureCritical() error {
+	labels, err := h.Critical()
+	if err != nil {
+		return err
+	}
+	for _, label := range labels {
+		if _, ok := h[label]; !ok {
+			return fmt.Errorf("missing critical header: %v", label)
+		}
+	}
+	return nil
+}
+
 // UnprotectedHeader contains parameters that are not cryptographically
 // protected.
 type UnprotectedHeader map[interface{}]interface{}
