@@ -111,6 +111,26 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	}
 }
 
+// Critical indicates which protected header labels an application that is
+// processing a message is required to understand.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func (h ProtectedHeader) Critical() ([]interface{}, error) {
+	value, ok := h[HeaderLabelCritical]
+	if !ok {
+		return nil, nil
+	}
+	criticalLabels, ok := value.([]interface{})
+	if !ok {
+		return nil, errors.New("invalid crit header")
+	}
+	// if present, the array MUST have at least one value in it.
+	if len(criticalLabels) == 0 {
+		return nil, errors.New("empty crit header")
+	}
+	return criticalLabels, nil
+}
+
 // UnprotectedHeader contains parameters that are not cryptographically
 // protected.
 type UnprotectedHeader map[interface{}]interface{}
