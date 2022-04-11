@@ -39,6 +39,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		if err = h.EnsureCritical(); err != nil {
+			return nil, err
+		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
 		if err != nil {
 			return nil, err
@@ -72,12 +75,17 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
 		}
-		(*h) = header
+		candidate := ProtectedHeader(header)
+		if err := candidate.EnsureCritical(); err != nil {
+			return err
+		}
 
 		// cast to type Algorithm if `alg` presents
 		if alg, err := h.Algorithm(); err == nil {
 			h.SetAlgorithm(alg)
 		}
+
+		(*h) = candidate
 	}
 	return nil
 }
