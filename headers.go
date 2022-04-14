@@ -35,7 +35,10 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 	if len(h) == 0 {
 		encoded = []byte{}
 	} else {
-		var err error
+		err := validateHeaderLabel(h)
+		if err != nil {
+			return nil, err
+		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
 		if err != nil {
 			return nil, err
@@ -61,6 +64,9 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	} else {
 		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
 			return errors.New("cbor: protected header: require map type")
+		}
+		if err := validateHeaderLabelCBOR(encoded); err != nil {
+			return err
 		}
 		var header map[interface{}]interface{}
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
@@ -115,6 +121,9 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 	if len(h) == 0 {
 		return []byte{0xa0}, nil
 	}
+	if err := validateHeaderLabel(h); err != nil {
+		return nil, err
+	}
 	return encMode.Marshal(map[interface{}]interface{}(h))
 }
 
@@ -130,6 +139,9 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	}
 	if data[0]&0xe0 != 0xa0 { // major type 5: map
 		return errors.New("cbor: unprotected header: require map type")
+	}
+	if err := validateHeaderLabelCBOR(data); err != nil {
+		return err
 	}
 	var header map[interface{}]interface{}
 	if err := decMode.Unmarshal(data, &header); err != nil {
@@ -155,6 +167,9 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 //       Generic_Headers,
 //       * label => values
 //   }
+//
+//   label  = int / tstr
+//   values = any
 //
 //   empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
 //
@@ -217,4 +232,65 @@ func (h *Headers) UnmarshalFromRaw() error {
 		return fmt.Errorf("cbor: invalid unprotected header: %w", err)
 	}
 	return nil
+}
+
+// validateHeaderLabel validates if all header labels are integers or strings.
+//
+//   label = int / tstr
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
+func validateHeaderLabel(h map[interface{}]interface{}) error {
+	for label := range h {
+		switch label.(type) {
+		case int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64,
+			string:
+			continue
+		default:
+			return errors.New("cbor: header label: require int / tstr type")
+		}
+	}
+	return nil
+}
+
+// headerLabelValidator is used to validate the header label of a COSE header.
+type headerLabelValidator struct {
+	value interface{}
+}
+
+// String prints the value without brackets `{}`. Useful in error printing.
+func (hlv headerLabelValidator) String() string {
+	return fmt.Sprint(hlv.value)
+}
+
+// UnmarshalCBOR decodes the label value of a COSE header, and returns error if
+// label is not a int (major type 0, 1) or string (major type 3).
+func (hlv *headerLabelValidator) UnmarshalCBOR(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("cbor: header label: missing type")
+	}
+	switch data[0] & 0xe0 >> 5 {
+	case 0, 1, 3:
+		return decMode.Unmarshal(data, &hlv.value)
+	}
+	return errors.New("cbor: header label: require int / tstr type")
+}
+
+// discardedCBORMessage is used to read CBOR message and discard it.
+type discardedCBORMessage struct{}
+
+// UnmarshalCBOR discards the read CBOR object.
+func (discardedCBORMessage) UnmarshalCBOR(data []byte) error {
+	return nil
+}
+
+// validateHeaderLabelCBOR validates if all header labels are integers or
+// strings of a CBOR map object.
+//
+//   label = int / tstr
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
+func validateHeaderLabelCBOR(data []byte) error {
+	var header map[headerLabelValidator]discardedCBORMessage
+	return decMode.Unmarshal(data, &header)
 }
