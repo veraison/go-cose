@@ -108,7 +108,10 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 		if err != ErrAlgorithmNotFound {
 			return err
 		}
-		// `alg` header not present.
+		// `alg` header MUST present if there is no externally supplied data.
+		if len(external) == 0 {
+			s.Headers.Protected.SetAlgorithm(skAlg)
+		}
 	} else if alg != skAlg {
 		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
 	}
@@ -144,7 +147,10 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 		if err != ErrAlgorithmNotFound {
 			return err
 		}
-		// `alg` header not present.
+		// `alg` header MUST present if there is no externally supplied data.
+		if len(external) == 0 {
+			return err
+		}
 	} else if alg != vkAlg {
 		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
 	}

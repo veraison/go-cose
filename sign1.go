@@ -125,7 +125,10 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 		if err != ErrAlgorithmNotFound {
 			return err
 		}
-		// `alg` header not present.
+		// `alg` header MUST present if there is no externally supplied data.
+		if len(external) == 0 {
+			m.Headers.Protected.SetAlgorithm(skAlg)
+		}
 	} else if alg != skAlg {
 		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
 	}
@@ -159,7 +162,10 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 		if err != ErrAlgorithmNotFound {
 			return err
 		}
-		// `alg` header not present.
+		// `alg` header MUST present if there is no externally supplied data.
+		if len(external) == 0 {
+			return err
+		}
 	} else if alg != vkAlg {
 		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
 	}
