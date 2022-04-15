@@ -15,7 +15,7 @@ type Verifier interface {
 	Algorithm() Algorithm
 
 	// Verify verifies digest with the public key, returning nil for success.
-	// Otherwise, it returns an error.
+	// Otherwise, it returns ErrVerification.
 	//
 	// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
 	Verify(digest, signature []byte) error

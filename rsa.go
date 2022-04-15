@@ -45,7 +45,7 @@ func (rv *rsaVerifier) Algorithm() Algorithm {
 }
 
 // Verify verifies digest with the public key, returning nil for success.
-// Otherwise, it returns an error.
+// Otherwise, it returns ErrVerification.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
 func (rv *rsaVerifier) Verify(digest []byte, signature []byte) error {
