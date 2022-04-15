@@ -39,7 +39,7 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = h.EnsureCritical(); err != nil {
+		if err = h.ensureCritical(); err != nil {
 			return nil, err
 		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
@@ -76,7 +76,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 			return err
 		}
 		candidate := ProtectedHeader(header)
-		if err := candidate.EnsureCritical(); err != nil {
+		if err := candidate.ensureCritical(); err != nil {
 			return err
 		}
 
@@ -139,8 +139,8 @@ func (h ProtectedHeader) Critical() ([]interface{}, error) {
 	return criticalLabels, nil
 }
 
-// EnsureCritical ensures all critical headers present in the protected bucket.
-func (h ProtectedHeader) EnsureCritical() error {
+// ensureCritical ensures all critical headers present in the protected bucket.
+func (h ProtectedHeader) ensureCritical() error {
 	labels, err := h.Critical()
 	if err != nil {
 		return err
