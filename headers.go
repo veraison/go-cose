@@ -39,6 +39,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		if err = h.ensureCritical(); err != nil {
+			return nil, err
+		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
 		if err != nil {
 			return nil, err
@@ -72,12 +75,17 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
 		}
-		(*h) = header
+		candidate := ProtectedHeader(header)
+		if err := candidate.ensureCritical(); err != nil {
+			return err
+		}
 
 		// cast to type Algorithm if `alg` presents
 		if alg, err := h.Algorithm(); err == nil {
 			h.SetAlgorithm(alg)
 		}
+
+		(*h) = candidate
 	}
 	return nil
 }
@@ -109,6 +117,40 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	default:
 		return 0, ErrInvalidAlgorithm
 	}
+}
+
+// Critical indicates which protected header labels an application that is
+// processing a message is required to understand.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func (h ProtectedHeader) Critical() ([]interface{}, error) {
+	value, ok := h[HeaderLabelCritical]
+	if !ok {
+		return nil, nil
+	}
+	criticalLabels, ok := value.([]interface{})
+	if !ok {
+		return nil, errors.New("invalid crit header")
+	}
+	// if present, the array MUST have at least one value in it.
+	if len(criticalLabels) == 0 {
+		return nil, errors.New("empty crit header")
+	}
+	return criticalLabels, nil
+}
+
+// ensureCritical ensures all critical headers present in the protected bucket.
+func (h ProtectedHeader) ensureCritical() error {
+	labels, err := h.Critical()
+	if err != nil {
+		return err
+	}
+	for _, label := range labels {
+		if _, ok := h[label]; !ok {
+			return fmt.Errorf("missing critical header: %v", label)
+		}
+	}
+	return nil
 }
 
 // UnprotectedHeader contains parameters that are not cryptographically
