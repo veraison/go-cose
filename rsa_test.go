@@ -7,13 +7,18 @@ import (
 	"testing"
 )
 
-func Test_rsaSigner(t *testing.T) {
-	// generate key
+func generateTestRSAKey(t *testing.T) *rsa.PrivateKey {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("rsa.GenerateKey() error = %v", err)
 	}
+	return key
+}
+
+func Test_rsaSigner(t *testing.T) {
+	// generate key
 	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
 
 	// set up signer
 	signer, err := NewSigner(alg, key)
@@ -49,11 +54,8 @@ func Test_rsaSigner(t *testing.T) {
 
 func Test_rsaVerifier_Verify_Success(t *testing.T) {
 	// generate key
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("rsa.GenerateKey() error = %v", err)
-	}
 	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
 
 	// generate a valid signature
 	digest, sig := signTestData(t, alg, key)
@@ -78,11 +80,8 @@ func Test_rsaVerifier_Verify_Success(t *testing.T) {
 
 func Test_rsaVerifier_Verify_AlgorithmMismatch(t *testing.T) {
 	// generate key
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("rsa.GenerateKey() error = %v", err)
-	}
 	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
 
 	// generate a valid signature
 	digest, sig := signTestData(t, alg, key)
@@ -102,19 +101,13 @@ func Test_rsaVerifier_Verify_AlgorithmMismatch(t *testing.T) {
 func Test_rsaVerifier_Verify_KeyMismatch(t *testing.T) {
 	// generate key
 	alg := AlgorithmPS256
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("rsa.GenerateKey() error = %v", err)
-	}
+	key := generateTestRSAKey(t)
 
 	// generate a valid signature
 	digest, sig := signTestData(t, alg, key)
 
 	// set up verifier with a different key / new key
-	key, err = rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("rsa.GenerateKey() error = %v", err)
-	}
+	key = generateTestRSAKey(t)
 	verifier := &rsaVerifier{
 		alg: alg,
 		key: &key.PublicKey,
@@ -128,11 +121,8 @@ func Test_rsaVerifier_Verify_KeyMismatch(t *testing.T) {
 
 func Test_rsaVerifier_Verify_InvalidSignature(t *testing.T) {
 	// generate key
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("rsa.GenerateKey() error = %v", err)
-	}
 	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
 
 	// generate a valid signature with a tampered one
 	digest, sig := signTestData(t, alg, key)

@@ -7,13 +7,18 @@ import (
 	"testing"
 )
 
-func Test_ed25519Signer(t *testing.T) {
-	// generate key
-	_, key, err := ed25519.GenerateKey(rand.Reader)
+func generateTestEd25519Key(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+	vk, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("ed25519.GenerateKey() error = %v", err)
 	}
+	return vk, sk
+}
+
+func Test_ed25519Signer(t *testing.T) {
+	// generate key
 	alg := AlgorithmEd25519
+	_, key := generateTestEd25519Key(t)
 
 	// set up signer
 	signer, err := NewSigner(alg, key)
@@ -49,11 +54,8 @@ func Test_ed25519Signer(t *testing.T) {
 
 func Test_ed25519Verifier_Verify_Success(t *testing.T) {
 	// generate key
-	_, key, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("ed25519.GenerateKey() error = %v", err)
-	}
 	alg := AlgorithmEd25519
+	_, key := generateTestEd25519Key(t)
 
 	// generate a valid signature
 	digest, sig := signTestData(t, alg, key)
@@ -79,19 +81,13 @@ func Test_ed25519Verifier_Verify_Success(t *testing.T) {
 func Test_ed25519Verifier_Verify_KeyMismatch(t *testing.T) {
 	// generate key
 	alg := AlgorithmEd25519
-	_, key, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("ed25519.GenerateKey() error = %v", err)
-	}
+	_, key := generateTestEd25519Key(t)
 
 	// generate a valid signature
 	digest, sig := signTestData(t, alg, key)
 
 	// set up verifier with a different key / new key
-	vk, _, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("ed25519.GenerateKey() error = %v", err)
-	}
+	vk, _ := generateTestEd25519Key(t)
 	verifier := &ed25519Verifier{
 		key: vk,
 	}
@@ -104,11 +100,8 @@ func Test_ed25519Verifier_Verify_KeyMismatch(t *testing.T) {
 
 func Test_ed25519Verifier_Verify_InvalidSignature(t *testing.T) {
 	// generate key
-	vk, sk, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("ed25519.GenerateKey() error = %v", err)
-	}
 	alg := AlgorithmEd25519
+	vk, sk := generateTestEd25519Key(t)
 
 	// generate a valid signature with a tampered one
 	digest, sig := signTestData(t, alg, sk)

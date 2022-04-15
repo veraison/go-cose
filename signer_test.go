@@ -2,9 +2,6 @@ package cose
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"reflect"
@@ -29,10 +26,7 @@ func signTestData(t *testing.T, alg Algorithm, key crypto.Signer) (digest, sig [
 
 func TestNewSigner(t *testing.T) {
 	// generate ecdsa key
-	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatalf("ecdsa.GenerateKey() error = %v", err)
-	}
+	ecdsaKey := generateTestECDSAKey(t)
 	ecdsaWrappedKey := struct {
 		crypto.Signer
 	}{
@@ -40,16 +34,10 @@ func TestNewSigner(t *testing.T) {
 	}
 
 	// generate ed25519 key
-	_, ed25519Key, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("ed25519.GenerateKey() error = %v", err)
-	}
+	_, ed25519Key := generateTestEd25519Key(t)
 
 	// generate rsa keys
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("rsa.GenerateKey() error = %v", err)
-	}
+	rsaKey := generateTestRSAKey(t)
 	rsaKeyLowEntropy, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		t.Fatalf("rsa.GenerateKey() error = %v", err)
