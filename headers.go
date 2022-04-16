@@ -81,8 +81,8 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		}
 
 		// cast to type Algorithm if `alg` presents
-		if alg, err := h.Algorithm(); err == nil {
-			h.SetAlgorithm(alg)
+		if alg, err := candidate.Algorithm(); err == nil {
+			candidate.SetAlgorithm(alg)
 		}
 
 		(*h) = candidate
@@ -282,14 +282,38 @@ func (h *Headers) UnmarshalFromRaw() error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
 func validateHeaderLabel(h map[interface{}]interface{}) error {
+	existing := make(map[interface{}]struct{})
 	for label := range h {
-		switch label.(type) {
-		case int, int8, int16, int32, int64,
-			uint, uint8, uint16, uint32, uint64,
-			string:
-			continue
+		switch v := label.(type) {
+		case int:
+			label = int64(v)
+		case int8:
+			label = int64(v)
+		case int16:
+			label = int64(v)
+		case int32:
+			label = int64(v)
+		case int64:
+			label = int64(v)
+		case uint:
+			label = int64(v)
+		case uint8:
+			label = int64(v)
+		case uint16:
+			label = int64(v)
+		case uint32:
+			label = int64(v)
+		case uint64:
+			label = int64(v)
+		case string:
+			// no conversion
 		default:
 			return errors.New("cbor: header label: require int / tstr type")
+		}
+		if _, ok := existing[label]; ok {
+			return fmt.Errorf("cbor: header label: duplicated label: %v", label)
+		} else {
+			existing[label] = struct{}{}
 		}
 	}
 	return nil
