@@ -166,6 +166,11 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			want: ProtectedHeader{},
 		},
 		{
+			name: "empty map",
+			data: []byte{0x41, 0xa0},
+			want: ProtectedHeader{},
+		},
+		{
 			name:    "nil CBOR data",
 			data:    nil,
 			wantErr: true,
@@ -241,8 +246,8 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		var got ProtectedHeader
 		t.Run(tt.name, func(t *testing.T) {
+			var got ProtectedHeader
 			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
 				t.Errorf("ProtectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -405,6 +410,186 @@ func TestProtectedHeader_Critical(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ProtectedHeader.Critical() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
+	tests := []struct {
+		name    string
+		h       UnprotectedHeader
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "valid header",
+			h: UnprotectedHeader{
+				HeaderLabelKeyID: "foobar",
+			},
+			want: []byte{
+				0xa1,                                     // map
+				0x04,                                     // kid
+				0x66, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, // foobar
+			},
+		},
+		{
+			name: "nil header",
+			h:    nil,
+			want: []byte{0xa0},
+		},
+		{
+			name: "empty header",
+			h:    UnprotectedHeader{},
+			want: []byte{0xa0},
+		},
+		{
+			name: "various types of integer label",
+			h: UnprotectedHeader{
+				uint(1):   0,
+				uint8(2):  0,
+				uint16(3): 0,
+				uint32(4): 0,
+				uint64(5): 0,
+				int(-1):   0,
+				int8(-2):  0,
+				int16(-3): 0,
+				int32(-4): 0,
+				int64(-5): 0,
+			},
+			want: []byte{
+				0xaa, // map
+				0x01, 0x00,
+				0x02, 0x00,
+				0x03, 0x00,
+				0x04, 0x00,
+				0x05, 0x00,
+				0x20, 0x00,
+				0x21, 0x00,
+				0x22, 0x00,
+				0x23, 0x00,
+				0x24, 0x00,
+			},
+		},
+		{
+			name: "invalid header label: struct type",
+			h: UnprotectedHeader{
+				struct {
+					value int
+				}{}: 42,
+			},
+			wantErr: true,
+		},
+		{
+			name: "duplicated key",
+			h: UnprotectedHeader{
+				int8(42):  "foo",
+				int64(42): "bar",
+			},
+			wantErr: true,
+		},
+		{
+			name: "un-marshalable content",
+			h: UnprotectedHeader{
+				"foo": make(chan bool),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.h.MarshalCBOR()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UnprotectedHeader.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UnprotectedHeader.MarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		want    UnprotectedHeader
+		wantErr bool
+	}{
+		{
+			name: "valid header",
+			data: []byte{
+				0xa1,                                     // map
+				0x04,                                     // kid
+				0x66, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, // foobar
+			},
+			want: UnprotectedHeader{
+				HeaderLabelKeyID: "foobar",
+			},
+		},
+		{
+			name: "empty map",
+			data: []byte{0xa0},
+			want: UnprotectedHeader{},
+		},
+		{
+			name:    "nil CBOR data",
+			data:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty CBOR data",
+			data:    []byte{},
+			wantErr: true,
+		},
+		{
+			name:    "bad CBOR data",
+			data:    []byte{0x00, 0x01, 0x02, 0x04},
+			wantErr: true,
+		},
+		{
+			name:    "non-map header",
+			data:    []byte{0x00},
+			wantErr: true,
+		},
+		{
+			name: "invalid header label type: bstr type",
+			data: []byte{
+				0xa1, 0x40, 0x00,
+			},
+			wantErr: true,
+		},
+		{
+			name: "duplicated key",
+			data: []byte{
+				0xa2, 0x01, 0x00, 0x01, 0x00,
+			},
+			wantErr: true,
+		},
+		{
+			name: "incomplete CBOR data",
+			data: []byte{
+				0xa5,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid map value",
+			data: []byte{
+				0xa1, 0x00, 0xa1, 0x00, 0x4f, 0x01,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got UnprotectedHeader
+			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
+				t.Errorf("UnprotectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UnprotectedHeader.UnmarshalCBOR() = %v, want %v", got, tt.want)
 			}
 		})
 	}
