@@ -594,3 +594,216 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 		})
 	}
 }
+
+func TestHeaders_MarshalProtected(t *testing.T) {
+	tests := []struct {
+		name    string
+		h       Headers
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "pre-marshaled protected header",
+			h: Headers{
+				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+			want: []byte{0x43, 0xa1, 0x01, 0x26},
+		},
+		{
+			name: "raw over protected",
+			h: Headers{
+				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmPS512,
+				},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+			want: []byte{0x43, 0xa1, 0x01, 0x26},
+		},
+		{
+			name: "no pre-marshaled protected header",
+			h: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+			want: []byte{0x43, 0xa1, 0x01, 0x26},
+		},
+		{
+			name: "invalid protected header",
+			h: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: make(chan bool),
+				},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.h.MarshalProtected()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Headers.MarshalProtected() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Headers.MarshalProtected() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHeaders_MarshalUnprotected(t *testing.T) {
+	tests := []struct {
+		name    string
+		h       Headers
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "pre-marshaled protected header",
+			h: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+			want: []byte{0xa1, 0x04, 0x18, 0x2a},
+		},
+		{
+			name: "raw over protected",
+			h: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 43,
+				},
+			},
+			want: []byte{0xa1, 0x04, 0x18, 0x2a},
+		},
+		{
+			name: "no pre-marshaled protected header",
+			h: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+			want: []byte{0xa1, 0x04, 0x18, 0x2a},
+		},
+		{
+			name: "invalid protected header",
+			h: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: make(chan bool),
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.h.MarshalUnprotected()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Headers.MarshalUnprotected() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Headers.MarshalUnprotected() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHeaders_UnmarshalFromRaw(t *testing.T) {
+	tests := []struct {
+		name    string
+		h       Headers
+		want    Headers
+		wantErr bool
+	}{
+		{
+			name: "nil raw protected header",
+			h: Headers{
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil raw unprotected header",
+			h: Headers{
+				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+			},
+			wantErr: true,
+		},
+		{
+			name: "valid raw header",
+			h: Headers{
+				RawProtected:   []byte{0x43, 0xa1, 0x01, 0x26},
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+			},
+			want: Headers{
+				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+		},
+		{
+			name: "replaced with raw header",
+			h: Headers{
+				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES512,
+				},
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 43,
+				},
+			},
+			want: Headers{
+				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				Unprotected: UnprotectedHeader{
+					HeaderLabelKeyID: 42,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.h
+			if err := got.UnmarshalFromRaw(); (err != nil) != tt.wantErr {
+				t.Errorf("Headers.UnmarshalFromRaw() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
