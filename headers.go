@@ -66,7 +66,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		return errors.New("cbor: nil protected header")
 	}
 	if len(encoded) == 0 {
-		(*h) = make(ProtectedHeader)
+		*h = make(ProtectedHeader)
 	} else {
 		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
 			return errors.New("cbor: protected header: require map type")
@@ -88,7 +88,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 			candidate.SetAlgorithm(alg)
 		}
 
-		(*h) = candidate
+		*h = candidate
 	}
 	return nil
 }
@@ -195,7 +195,7 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data, &header); err != nil {
 		return err
 	}
-	(*h) = header
+	*h = header
 	return nil
 }
 
