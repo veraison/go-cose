@@ -1,6 +1,11 @@
 package cose
 
-import "github.com/fxamacker/cbor/v2"
+import (
+	"bytes"
+	"errors"
+
+	"github.com/fxamacker/cbor/v2"
+)
 
 // CBOR Tags for COSE signatures registered in the IANA "CBOR Tags" registry.
 //
@@ -45,4 +50,30 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// byteString represents a "bstr / nil" type.
+type byteString []byte
+
+// UnmarshalCBOR decodes data into a "bstr / nil" type.
+//
+// Note: `github.com/fxamacker/cbor/v2` considers the primitive value
+// `undefined` (major type 7, value 23) as nil, which is not recognized by COSE.
+//
+// Related Code: https://github.com/fxamacker/cbor/blob/v2.4.0/decode.go#L709
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.3
+func (s *byteString) UnmarshalCBOR(data []byte) error {
+	if s == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil byteString pointer")
+	}
+	var candidate []byte
+	if err := decModeWithTagsForbidden.Unmarshal(data, &candidate); err != nil {
+		return err
+	}
+	if candidate == nil && !bytes.Equal(data, []byte{0xf6}) {
+		return errors.New("cbor: non-standard nil value")
+	}
+	*s = candidate
+	return nil
 }

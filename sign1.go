@@ -22,7 +22,7 @@ type sign1Message struct {
 	_           struct{} `cbor:",toarray"`
 	Protected   cbor.RawMessage
 	Unprotected cbor.RawMessage
-	Payload     []byte
+	Payload     byteString
 	Signature   []byte
 }
 
@@ -53,6 +53,9 @@ func NewSign1Message() *Sign1Message {
 
 // MarshalCBOR encodes Sign1Message into a COSE_Sign1_Tagged object.
 func (m *Sign1Message) MarshalCBOR() ([]byte, error) {
+	if m == nil {
+		return nil, errors.New("cbor: MarshalCBOR on nil Sign1Message pointer")
+	}
 	if len(m.Signature) == 0 {
 		return nil, ErrEmptySignature
 	}

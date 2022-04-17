@@ -218,7 +218,7 @@ type signMessage struct {
 	_           struct{} `cbor:",toarray"`
 	Protected   cbor.RawMessage
 	Unprotected cbor.RawMessage
-	Payload     []byte
+	Payload     byteString
 	Signatures  []cbor.RawMessage
 }
 
