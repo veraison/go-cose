@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"crypto/rand"
 	"reflect"
 	"testing"
 )
@@ -310,6 +311,159 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Sign1Message.MarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSign1Message_Sign(t *testing.T) {
+	// generate key and set up signer / verifier
+	alg := AlgorithmES256
+	key := generateTestECDSAKey(t)
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// sign / verify round trip
+	// see also conformance_test.go for strict tests.
+	tests := []struct {
+		name             string
+		msg              *Sign1Message
+		externalOnSign   []byte
+		externalOnVerify []byte
+		wantErr          bool
+		check            func(t *testing.T, m *Sign1Message)
+	}{
+		{
+			name: "valid message",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			externalOnSign:   []byte{},
+			externalOnVerify: []byte{},
+		},
+		{
+			name: "nil external",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			externalOnSign:   nil,
+			externalOnVerify: nil,
+		},
+		{
+			name: "mixed nil / empty external",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			externalOnSign:   []byte{},
+			externalOnVerify: nil,
+		},
+		{
+			name: "nil payload",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+				},
+				Payload: nil,
+			},
+		},
+		{
+			name: "mismatch algorithm",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES512,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing algorithm",
+			msg: &Sign1Message{
+				Payload: []byte("hello world"),
+			},
+			check: func(t *testing.T, m *Sign1Message) {
+				got, err := m.Headers.Protected.Algorithm()
+				if err != nil {
+					t.Errorf("Sign1Message.Headers.Protected.Algorithm() error = %v", err)
+				}
+				if got != alg {
+					t.Errorf("Sign1Message.Headers.Protected.Algorithm() = %v, want %v", got, alg)
+				}
+			},
+		},
+		{
+			name: "missing algorithm with raw protected",
+			msg: &Sign1Message{
+				Headers: Headers{
+					RawProtected: []byte{0x40},
+				},
+				Payload: []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing algorithm with externally supplied data",
+			msg: &Sign1Message{
+				Payload: []byte("hello world"),
+			},
+			externalOnSign:   []byte("foo"),
+			externalOnVerify: []byte("foo"),
+			check: func(t *testing.T, m *Sign1Message) {
+				_, err := m.Headers.Protected.Algorithm()
+				if want := ErrAlgorithmNotFound; err != want {
+					t.Errorf("Sign1Message.Headers.Protected.Algorithm() error = %v, wantErr %v", err, want)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.Sign(rand.Reader, tt.externalOnSign, signer)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Sign1Message.Sign() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if tt.check != nil {
+				tt.check(t, tt.msg)
+			}
+			if err := tt.msg.Verify(tt.externalOnVerify, verifier); err != nil {
+				t.Errorf("Sign1Message.Verify() error = %v", err)
 			}
 		})
 	}
