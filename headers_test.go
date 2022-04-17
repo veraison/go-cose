@@ -203,6 +203,13 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "invalid header label type: major type 7: simple value", // issue #38
+			data: []byte{
+				0x43, 0xa1, 0xf3, 0x00,
+			},
+			wantErr: true,
+		},
+		{
 			name: "empty critical",
 			data: []byte{
 				0x43, 0xa1, 0x02, 0x80,
@@ -557,6 +564,13 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			name: "invalid header label type: bstr type",
 			data: []byte{
 				0xa1, 0x40, 0x00,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid header label type: major type 7: simple value", // issue #38
+			data: []byte{
+				0xa1, 0xf3, 0x00,
 			},
 			wantErr: true,
 		},
