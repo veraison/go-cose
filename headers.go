@@ -55,6 +55,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 // ProtectedHeader is an empty_or_serialized_map where
 // 	 empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
 func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
+	if h == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil ProtectedHeader pointer")
+	}
 	var encoded []byte
 	if err := decMode.Unmarshal(data, &encoded); err != nil {
 		return err
@@ -173,6 +176,9 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 //
 // UnprotectedHeader is a header_map.
 func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
+	if h == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil UnprotectedHeader pointer")
+	}
 	if data == nil {
 		return errors.New("cbor: nil unprotected header")
 	}
