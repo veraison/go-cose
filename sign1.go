@@ -3,7 +3,6 @@ package cose
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/fxamacker/cbor/v2"
@@ -122,22 +121,16 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 		return errors.New("Sign1Message signature already has signature bytes")
 	}
 
-	// check algorithm if present
-	skAlg := signer.Algorithm()
-	if alg, err := m.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			m.Headers.Protected.SetAlgorithm(skAlg)
-		}
-	} else if alg != skAlg {
-		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := signer.Algorithm()
+	err := m.Headers.ensureSigningAlgorithm(alg, external)
+	if err != nil {
+		return err
 	}
 
 	// sign the message
-	digest, err := m.digestToBeSigned(skAlg, external)
+	digest, err := m.digestToBeSigned(alg, external)
 	if err != nil {
 		return err
 	}
@@ -159,22 +152,16 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 		return ErrEmptySignature
 	}
 
-	// check algorithm if present
-	vkAlg := verifier.Algorithm()
-	if alg, err := m.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			return err
-		}
-	} else if alg != vkAlg {
-		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := verifier.Algorithm()
+	err := m.Headers.ensureVerificationAlgorithm(alg, external)
+	if err != nil {
+		return err
 	}
 
 	// verify the message
-	digest, err := m.digestToBeSigned(vkAlg, external)
+	digest, err := m.digestToBeSigned(alg, external)
 	if err != nil {
 		return err
 	}

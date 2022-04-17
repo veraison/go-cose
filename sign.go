@@ -102,22 +102,15 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 		return errors.New("Signature already has signature bytes")
 	}
 
-	// check algorithm if present
-	skAlg := signer.Algorithm()
-	if alg, err := s.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			s.Headers.Protected.SetAlgorithm(skAlg)
-		}
-	} else if alg != skAlg {
-		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := signer.Algorithm()
+	if err := s.Headers.ensureSigningAlgorithm(alg, external); err != nil {
+		return err
 	}
 
 	// sign the message
-	digest, err := s.digestToBeSigned(skAlg, protected, payload, external)
+	digest, err := s.digestToBeSigned(alg, protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -141,22 +134,16 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 		return ErrEmptySignature
 	}
 
-	// check algorithm if present
-	vkAlg := verifier.Algorithm()
-	if alg, err := s.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			return err
-		}
-	} else if alg != vkAlg {
-		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := verifier.Algorithm()
+	err := s.Headers.ensureVerificationAlgorithm(alg, external)
+	if err != nil {
+		return err
 	}
 
 	// verify the message
-	digest, err := s.digestToBeSigned(vkAlg, protected, payload, external)
+	digest, err := s.digestToBeSigned(alg, protected, payload, external)
 	if err != nil {
 		return err
 	}

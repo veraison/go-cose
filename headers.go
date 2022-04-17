@@ -282,6 +282,54 @@ func (h *Headers) UnmarshalFromRaw() error {
 	return nil
 }
 
+// ensureSigningAlgorithm ensures the presence of the `alg` header if there is
+// no externally supplied data for signing.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (h *Headers) ensureSigningAlgorithm(alg Algorithm, external []byte) error {
+	candidate, err := h.Protected.Algorithm()
+	switch err {
+	case nil:
+		if candidate != alg {
+			return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, alg, candidate)
+		}
+		return nil
+	case ErrAlgorithmNotFound:
+		if len(external) > 0 {
+			return nil
+		}
+		if h.RawProtected != nil {
+			return ErrAlgorithmNotFound
+		}
+		if h.Protected == nil {
+			h.Protected = make(ProtectedHeader)
+		}
+		h.Protected.SetAlgorithm(alg)
+		return nil
+	}
+	return err
+}
+
+// ensureVerificationAlgorithm ensures the presence of the `alg` header if there
+// is no externally supplied data for verification.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (h *Headers) ensureVerificationAlgorithm(alg Algorithm, external []byte) error {
+	candidate, err := h.Protected.Algorithm()
+	switch err {
+	case nil:
+		if candidate != alg {
+			return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, alg, candidate)
+		}
+		return nil
+	case ErrAlgorithmNotFound:
+		if len(external) > 0 {
+			return nil
+		}
+	}
+	return err
+}
+
 // validateHeaderLabel validates if all header labels are integers or strings.
 //
 //   label = int / tstr
