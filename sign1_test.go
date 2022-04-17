@@ -449,6 +449,14 @@ func TestSign1Message_Sign(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "double signing",
+			msg: &Sign1Message{
+				Payload:   []byte("hello world"),
+				Signature: []byte("foobar"),
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
