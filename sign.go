@@ -24,6 +24,11 @@ type signature struct {
 	Signature   []byte
 }
 
+// signaturePrefix represents the fixed prefix of COSE_Signature.
+var signaturePrefix = []byte{
+	0x83, // Array of length 3
+}
+
 // Signature represents a decoded COSE_Signature.
 //
 // Reference: https://tools.ietf.org/html/rfc8152#section-4.1
@@ -44,6 +49,9 @@ func NewSignature() *Signature {
 
 // MarshalCBOR encodes Signature into a COSE_Signature object.
 func (s *Signature) MarshalCBOR() ([]byte, error) {
+	if s == nil {
+		return nil, errors.New("cbor: MarshalCBOR on nil Signature pointer")
+	}
 	if len(s.Signature) == 0 {
 		return nil, ErrEmptySignature
 	}
@@ -67,6 +75,11 @@ func (s *Signature) MarshalCBOR() ([]byte, error) {
 func (s *Signature) UnmarshalCBOR(data []byte) error {
 	if s == nil {
 		return errors.New("cbor: UnmarshalCBOR on nil Signature pointer")
+	}
+
+	// fast signature check
+	if !bytes.HasPrefix(data, signaturePrefix) {
+		return errors.New("cbor: invalid Signature object")
 	}
 
 	// decode to signature and parse
