@@ -120,6 +120,9 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 	if len(s.Signature) > 0 {
 		return errors.New("Signature already has signature bytes")
 	}
+	if len(protected) == 0 || protected[0]>>5 != 2 { // protected is a bstr
+		return errors.New("invalid body protected headers")
+	}
 
 	// check algorithm if present.
 	// `alg` header MUST present if there is no externally supplied data.
@@ -158,6 +161,9 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 	if len(s.Signature) == 0 {
 		return ErrEmptySignature
 	}
+	if len(protected) == 0 || protected[0]>>5 != 2 { // protected is a bstr
+		return errors.New("invalid body protected headers")
+	}
 
 	// check algorithm if present.
 	// `alg` header MUST present if there is no externally supplied data.
@@ -191,9 +197,6 @@ func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessag
 	//       external_aad : bstr,
 	//       payload : bstr
 	//   ]
-	if len(bodyProtected) == 0 {
-		bodyProtected = []byte{0x40} // empty bstr
-	}
 	var signProtected cbor.RawMessage
 	signProtected, err := s.Headers.MarshalProtected()
 	if err != nil {

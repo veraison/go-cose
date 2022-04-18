@@ -618,7 +618,6 @@ func TestSign1Message_Sign_Internal(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestSign1Message_Verify(t *testing.T) {

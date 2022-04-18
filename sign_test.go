@@ -1,8 +1,13 @@
 package cose
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/rand"
 	"reflect"
 	"testing"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 func TestSignature_MarshalCBOR(t *testing.T) {
@@ -223,6 +228,486 @@ func TestSignature_UnmarshalCBOR(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Signature.MarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSignature_Sign(t *testing.T) {
+	// generate key and set up signer / verifier
+	alg := AlgorithmES256
+	key := generateTestECDSAKey(t)
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// sign / verify round trip
+	type args struct {
+		protected cbor.RawMessage
+		payload   []byte
+		external  []byte
+	}
+	tests := []struct {
+		name     string
+		sig      *Signature
+		onSign   args
+		onVerify args
+		wantErr  bool
+		check    func(t *testing.T, s *Signature)
+	}{
+		{
+			name: "valid message",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte{},
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte{},
+			},
+		},
+		{
+			name: "valid message with external",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte("foo"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte("foo"),
+			},
+		},
+		{
+			name: "nil external",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  nil,
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  nil,
+			},
+		},
+		{
+			name: "mixed nil / empty external",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte{},
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  nil,
+			},
+		},
+		{
+			name: "nil payload", // payload is detached
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   nil,
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "mismatch algorithm",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES512,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing algorithm",
+			sig:  &Signature{},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			check: func(t *testing.T, s *Signature) {
+				got, err := s.Headers.Protected.Algorithm()
+				if err != nil {
+					t.Errorf("Signature.Headers.Protected.Algorithm() error = %v", err)
+				}
+				if got != alg {
+					t.Errorf("Signature.Headers.Protected.Algorithm() = %v, want %v", got, alg)
+				}
+			},
+		},
+		{
+			name: "missing algorithm with raw protected",
+			sig: &Signature{
+				Headers: Headers{
+					RawProtected: []byte{0x40},
+				},
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing algorithm with externally supplied data",
+			sig:  &Signature{},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte("foo"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte("foo"),
+			},
+			check: func(t *testing.T, s *Signature) {
+				_, err := s.Headers.Protected.Algorithm()
+				if want := ErrAlgorithmNotFound; err != want {
+					t.Errorf("Signature.Headers.Protected.Algorithm() error = %v, wantErr %v", err, want)
+				}
+			},
+		},
+		{
+			name: "double signing",
+			sig: &Signature{
+				Signature: []byte("foobar"),
+			},
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil signature",
+			sig:  nil,
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil body protected header",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: nil,
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: nil,
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty body protected header",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid protected header",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			onSign: args{
+				protected: []byte{0xa0},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0xa0},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.sig.Sign(rand.Reader, signer, tt.onSign.protected, tt.onSign.payload, tt.onSign.external)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Signature.Sign() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if tt.check != nil {
+				tt.check(t, tt.sig)
+			}
+			if err := tt.sig.Verify(verifier, tt.onVerify.protected, tt.onVerify.payload, tt.onVerify.external); err != nil {
+				t.Errorf("Signature.Verify() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestSignature_Sign_Internal(t *testing.T) {
+	tests := []struct {
+		name       string
+		sig        *Signature
+		protected  cbor.RawMessage
+		payload    []byte
+		external   []byte
+		toBeSigned []byte
+	}{
+		{
+			name: "valid message",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			protected: []byte{0x40, 0xa1, 0x00, 0x00},
+			payload:   []byte("hello world"),
+			external:  []byte{},
+			toBeSigned: []byte{
+				0x85,                                                       // array type
+				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
+				0x40, 0xa1, 0x00, 0x00, // body_protected
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
+				0x40,                                                                   // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "valid message with empty parent protected header",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			protected: []byte{0x40},
+			payload:   []byte("hello world"),
+			external:  []byte{},
+			toBeSigned: []byte{
+				0x85,                                                       // array type
+				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
+				0x40,                                           // body_protected
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
+				0x40,                                                                   // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "valid message with external",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			protected: []byte{0x40},
+			payload:   []byte("hello world"),
+			external:  []byte("foo"),
+			toBeSigned: []byte{
+				0x85,                                                       // array type
+				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
+				0x40,                                           // body_protected
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
+				0x43, 0x66, 0x6f, 0x6f, // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "nil external",
+			sig: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			},
+			protected: []byte{0x40},
+			payload:   []byte("hello world"),
+			external:  nil,
+			toBeSigned: []byte{
+				0x85,                                                       // array type
+				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
+				0x40,                                           // body_protected
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
+				0x40,                                                                   // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name:      "nil protected header",
+			sig:       &Signature{},
+			protected: []byte{0x40},
+			payload:   []byte("hello world"),
+			external:  []byte("foo"),
+			toBeSigned: []byte{
+				0x85,                                                       // array type
+				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
+				0x40,                   // body_protected
+				0x40,                   // sign_protected
+				0x43, 0x66, 0x6f, 0x6f, // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hash := crypto.SHA256
+			RegisterAlgorithm(algorithmMock, "Mock", hash, nil)
+			defer resetExtendedAlgorithm()
+
+			want := make([]byte, 64)
+			_, err := rand.Read(want)
+			if err != nil {
+				t.Fatalf("rand.Read() error = %v", err)
+			}
+			h := hash.New()
+			h.Write(tt.toBeSigned)
+			digest := h.Sum(nil)
+			signer := newMockSigner(t)
+			signer.setup(digest, want)
+
+			sig := tt.sig
+			if err := sig.Sign(rand.Reader, signer, tt.protected, tt.payload, tt.external); err != nil {
+				t.Errorf("Signature.Sign() error = %v", err)
+				return
+			}
+			if got := sig.Signature; !bytes.Equal(got, want) {
+				t.Errorf("Signature.Sign() signature = %v, want %v", got, want)
 			}
 		})
 	}
