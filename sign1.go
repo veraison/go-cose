@@ -252,8 +252,5 @@ func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, ex
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func Verify1(msg *Sign1Message, external []byte, verifier Verifier) error {
-	if msg == nil {
-		return errors.New("nil Sign1Message")
-	}
 	return msg.Verify(external, verifier)
 }
