@@ -257,6 +257,7 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			var got ProtectedHeader
 			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
 				t.Errorf("ProtectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ProtectedHeader.UnmarshalCBOR() = %v, want %v", got, tt.want)
@@ -601,6 +602,7 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			var got UnprotectedHeader
 			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
 				t.Errorf("UnprotectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("UnprotectedHeader.UnmarshalCBOR() = %v, want %v", got, tt.want)
