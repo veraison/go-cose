@@ -10,6 +10,7 @@ var (
 	ErrAlgorithmRegistered   = errors.New("algorithm registered")
 	ErrEmptySignature        = errors.New("empty signature")
 	ErrInvalidAlgorithm      = errors.New("invalid algorithm")
+	ErrMissingPayload        = errors.New("missing payload")
 	ErrNoSignatures          = errors.New("no signatures attached")
 	ErrUnavailableHashFunc   = errors.New("hash function is not available")
 	ErrUnknownAlgorithm      = errors.New("unknown algorithm")

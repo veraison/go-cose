@@ -98,6 +98,12 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload, external []byte) error {
+	if s == nil {
+		return errors.New("signing nil Signature")
+	}
+	if payload == nil {
+		return ErrMissingPayload
+	}
 	if len(s.Signature) > 0 {
 		return errors.New("Signature already has signature bytes")
 	}
@@ -130,6 +136,12 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload, external []byte) error {
+	if s == nil {
+		return errors.New("verifying nil Signature")
+	}
+	if payload == nil {
+		return ErrMissingPayload
+	}
 	if len(s.Signature) == 0 {
 		return ErrEmptySignature
 	}
@@ -158,6 +170,14 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessage, payload, external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
+	//
+	//   Sig_structure = [
+	//       context : "Signature",
+	//       body_protected : empty_or_serialized_map,
+	//       sign_protected : empty_or_serialized_map,
+	//       external_aad : bstr,
+	//       payload : bstr
+	//   ]
 	if len(bodyProtected) == 0 {
 		bodyProtected = []byte{0x40} // empty bstr
 	}
@@ -168,9 +188,6 @@ func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessag
 	}
 	if external == nil {
 		external = []byte{}
-	}
-	if payload == nil {
-		payload = []byte{}
 	}
 	sigStructure := []interface{}{
 		"Signature",   // context
@@ -317,6 +334,12 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error {
+	if m == nil {
+		return errors.New("signing nil SignMessage")
+	}
+	if m.Payload == nil {
+		return ErrMissingPayload
+	}
 	switch len(m.Signatures) {
 	case 0:
 		return ErrNoSignatures
@@ -351,6 +374,12 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) e
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error {
+	if m == nil {
+		return errors.New("verifying nil SignMessage")
+	}
+	if m.Payload == nil {
+		return ErrMissingPayload
+	}
 	switch len(m.Signatures) {
 	case 0:
 		return ErrNoSignatures

@@ -407,7 +407,7 @@ func TestSign1Message_Sign(t *testing.T) {
 			externalOnVerify: nil,
 		},
 		{
-			name: "nil payload",
+			name: "nil payload", // payload is detached
 			msg: &Sign1Message{
 				Headers: Headers{
 					Protected: ProtectedHeader{
@@ -416,6 +416,7 @@ func TestSign1Message_Sign(t *testing.T) {
 				},
 				Payload: nil,
 			},
+			wantErr: true,
 		},
 		{
 			name: "mismatch algorithm",
@@ -742,4 +743,28 @@ func TestSign1Message_Verify(t *testing.T) {
 			}
 		})
 	}
+
+	// special cases
+	t.Run("nil payload", func(t *testing.T) { // payload is detached
+		msg := &Sign1Message{
+			Headers: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelAlgorithm: AlgorithmES256,
+				},
+			},
+			Payload: []byte{},
+		}
+		if err := msg.Sign(rand.Reader, nil, signer); err != nil {
+			t.Errorf("Sign1Message.Sign() error = %v", err)
+			return
+		}
+
+		// make payload nil on verify
+		msg.Payload = nil
+
+		// verify message
+		if err := msg.Verify(nil, verifier); err == nil {
+			t.Error("Sign1Message.Verify() error = nil, wantErr true")
+		}
+	})
 }
