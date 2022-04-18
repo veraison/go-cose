@@ -712,3 +712,280 @@ func TestSignature_Sign_Internal(t *testing.T) {
 		})
 	}
 }
+
+func TestSignature_Verify(t *testing.T) {
+	// generate key and set up signer / verifier
+	alg := AlgorithmES256
+	key := generateTestECDSAKey(t)
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// sign / verify round trip
+	type args struct {
+		protected cbor.RawMessage
+		payload   []byte
+		external  []byte
+	}
+	tests := []struct {
+		name     string
+		sig      *Signature
+		onSign   args
+		onVerify args
+		tamper   func(s *Signature) *Signature
+		wantErr  bool
+	}{
+		{
+			name: "round trip on valid message",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte{},
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte{},
+			},
+		},
+		{
+			name: "round trip on valid message with nil external data",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+		},
+		{
+			name: "mixed nil / empty external",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  nil,
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte{},
+			},
+		},
+		{
+			name: "nil body protected header",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: nil,
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty body protected header",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid body protected header",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0xa0},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "body protected header mismatch",
+			onSign: args{
+				protected: []byte{0x43, 0xa1, 0x00, 0x00},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x43, 0xa1, 0x00, 0x01},
+				payload:   []byte("hello world"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil payload",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte{},
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "payload mismatch",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("foobar"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "external mismatch",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte("foo"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+				external:  []byte("bar"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil signature struct",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			tamper: func(s *Signature) *Signature {
+				return nil
+			},
+			wantErr: true,
+		},
+		{
+			name: "strip signature",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			tamper: func(s *Signature) *Signature {
+				s.Signature = nil
+				return s
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty signature",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			tamper: func(s *Signature) *Signature {
+				s.Signature = []byte{}
+				return s
+			},
+			wantErr: true,
+		},
+		{
+			name: "tamper protected header",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			tamper: func(s *Signature) *Signature {
+				s.Headers.Protected["foo"] = "bar"
+				return s
+			},
+			wantErr: true,
+		},
+		{
+			name: "tamper unprotected header",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			tamper: func(s *Signature) *Signature {
+				s.Headers.Unprotected["foo"] = "bar"
+				return s
+			},
+			wantErr: false, // allowed
+		},
+		{
+			name: "tamper signature",
+			onSign: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			onVerify: args{
+				protected: []byte{0x40},
+				payload:   []byte("hello world"),
+			},
+			tamper: func(s *Signature) *Signature {
+				s.Signature[0]++
+				return s
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// generate signature request and sign
+			sig := &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+			}
+			if err := sig.Sign(rand.Reader, signer, tt.onSign.protected, tt.onSign.payload, tt.onSign.external); err != nil {
+				t.Errorf("Signature.Sign() error = %v", err)
+				return
+			}
+
+			// tamper signature
+			if tt.tamper != nil {
+				sig = tt.tamper(sig)
+			}
+
+			// verify signature
+			if err := sig.Verify(verifier, tt.onVerify.protected, tt.onVerify.payload, tt.onVerify.external); (err != nil) != tt.wantErr {
+				t.Errorf("Signature.Verify() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
