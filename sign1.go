@@ -187,15 +187,11 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm, external []byte) ([]byte,
 	if external == nil {
 		external = []byte{}
 	}
-	payload := m.Payload
-	if payload == nil {
-		payload = []byte{}
-	}
 	sigStructure := []interface{}{
 		"Signature1", // context
 		protected,    // body_protected
 		external,     // external_aad
-		payload,      // payload
+		m.Payload,    // payload
 	}
 
 	// create the value ToBeSigned by encoding the Sig_structure to a byte

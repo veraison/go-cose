@@ -1,6 +1,8 @@
 package cose
 
 import (
+	"bytes"
+	"crypto"
 	"crypto/rand"
 	"reflect"
 	"testing"
@@ -357,6 +359,22 @@ func TestSign1Message_Sign(t *testing.T) {
 			externalOnVerify: []byte{},
 		},
 		{
+			name: "valid message with external",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			externalOnSign:   []byte("foo"),
+			externalOnVerify: []byte("foo"),
+		},
+		{
 			name: "nil external",
 			msg: &Sign1Message{
 				Headers: Headers{
@@ -482,6 +500,124 @@ func TestSign1Message_Sign(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSign1Message_Sign_Internal(t *testing.T) {
+	tests := []struct {
+		name       string
+		msg        *Sign1Message
+		external   []byte
+		toBeSigned []byte
+	}{
+		{
+			name: "valid message",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			external: []byte{},
+			toBeSigned: []byte{
+				0x84,                                                             // array type
+				0x6a, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x31, // context
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // protected
+				0x40,                                                                   // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "valid message with external",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			external: []byte("foo"),
+			toBeSigned: []byte{
+				0x84,                                                             // array type
+				0x6a, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x31, // context
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // protected
+				0x43, 0x66, 0x6f, 0x6f, // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "nil external",
+			msg: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			external: nil,
+			toBeSigned: []byte{
+				0x84,                                                             // array type
+				0x6a, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x31, // context
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // protected
+				0x40,                                                                   // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "nil protected header",
+			msg: &Sign1Message{
+				Payload: []byte("hello world"),
+			},
+			external: []byte("foo"),
+			toBeSigned: []byte{
+				0x84,                                                             // array type
+				0x6a, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x31, // context
+				0x40,                   // protected
+				0x43, 0x66, 0x6f, 0x6f, // external
+				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hash := crypto.SHA256
+			RegisterAlgorithm(algorithmMock, "Mock", hash, nil)
+			defer resetExtendedAlgorithm()
+
+			sig := make([]byte, 64)
+			_, err := rand.Read(sig)
+			if err != nil {
+				t.Fatalf("rand.Read() error = %v", err)
+			}
+			h := hash.New()
+			h.Write(tt.toBeSigned)
+			digest := h.Sum(nil)
+			signer := newMockSigner(t)
+			signer.setup(digest, sig)
+
+			msg := tt.msg
+			if err := msg.Sign(rand.Reader, tt.external, signer); err != nil {
+				t.Errorf("Sign1Message.Sign() error = %v", err)
+				return
+			}
+			if got := msg.Signature; !bytes.Equal(got, sig) {
+				t.Errorf("Sign1Message.Sign() signature = %v, want %v", got, sig)
+			}
+		})
+	}
+
 }
 
 func TestSign1Message_Verify(t *testing.T) {

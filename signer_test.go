@@ -4,6 +4,8 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/hex"
+	"io"
 	"reflect"
 	"testing"
 )
@@ -129,4 +131,38 @@ func TestNewSigner(t *testing.T) {
 			}
 		})
 	}
+}
+
+const algorithmMock Algorithm = -0x6d6f636b
+
+type mockSigner struct {
+	t *testing.T
+	m map[string]string
+}
+
+func newMockSigner(t *testing.T) *mockSigner {
+	return &mockSigner{
+		t: t,
+		m: make(map[string]string),
+	}
+}
+
+func (m *mockSigner) setup(digest, sig []byte) {
+	m.m[hex.EncodeToString(digest)] = hex.EncodeToString(sig) // deep copy
+}
+
+func (m *mockSigner) Algorithm() Algorithm {
+	return algorithmMock
+}
+
+func (m *mockSigner) Sign(rand io.Reader, digest []byte) ([]byte, error) {
+	sigHex, ok := m.m[hex.EncodeToString(digest)]
+	if !ok {
+		m.t.Fatalf("mockSigner: not setup: %v", digest)
+	}
+	sig, err := hex.DecodeString(sigHex)
+	if err != nil {
+		m.t.Fatalf("mockSigner: failed to decode: %v", sigHex)
+	}
+	return sig, nil
 }
