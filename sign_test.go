@@ -1887,7 +1887,239 @@ func TestSignMessage_Sign(t *testing.T) {
 			Signatures: []*Signature{{}},
 		}
 		if err := msg.Sign(rand.Reader, nil); err == nil {
-			t.Error("Sign1Message.Sign() error = nil, wantErr true")
+			t.Error("SignMessage.Sign() error = nil, wantErr true")
+		}
+	})
+}
+
+func TestSignMessage_Verify(t *testing.T) {
+	// generate key and set up signer / verifier
+	gen := func(alg Algorithm) (Signer, Verifier) {
+		key := generateTestECDSAKey(t)
+		signer, err := NewSigner(alg, key)
+		if err != nil {
+			t.Fatalf("NewSigner() error = %v", err)
+		}
+		verifier, err := NewVerifier(alg, key.Public())
+		if err != nil {
+			t.Fatalf("NewVerifier() error = %v", err)
+		}
+		return signer, verifier
+	}
+	algorithms := []Algorithm{AlgorithmES256, AlgorithmES512}
+	signers := make([]Signer, 2)
+	verifiers := make([]Verifier, 2)
+	for i, alg := range algorithms {
+		signers[i], verifiers[i] = gen(alg)
+	}
+
+	// sign / verify round trip
+	tests := []struct {
+		name             string
+		externalOnSign   []byte
+		externalOnVerify []byte
+		verifiers        []Verifier
+		tamper           func(m *SignMessage) *SignMessage
+		wantErr          bool
+	}{
+		{
+			name:      "round trip on valid message",
+			verifiers: verifiers,
+		},
+		{
+			name:             "external mismatch",
+			externalOnSign:   []byte("foo"),
+			externalOnVerify: []byte("bar"),
+			verifiers:        verifiers,
+			wantErr:          true,
+		},
+		{
+			name:             "mixed nil / empty external",
+			externalOnSign:   nil,
+			externalOnVerify: []byte{},
+			verifiers:        verifiers,
+		},
+		{
+			name:      "nil message",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				return nil
+			},
+			wantErr: true,
+		},
+		{
+			name:      "strip signatures",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Signatures = nil
+				return m
+			},
+			wantErr: true,
+		},
+		{
+			name:      "empty signatures",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Signatures = []*Signature{}
+				return m
+			},
+			wantErr: true,
+		},
+		{
+			name:      "tamper protected header",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Headers.Protected["foo"] = "bar"
+				return m
+			},
+			wantErr: true,
+		},
+		{
+			name:      "tamper unprotected header",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Headers.Unprotected["foo"] = "bar"
+				return m
+			},
+			wantErr: false, // allowed
+		},
+		{
+			name:      "tamper payload",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Payload = []byte("foobar")
+				return m
+			},
+			wantErr: true,
+		},
+		{
+			name:      "tamper signature",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Signatures[1].Signature[0]++
+				return m
+			},
+			wantErr: true,
+		},
+		{
+			name:      "no verifiers",
+			verifiers: nil,
+			wantErr:   true,
+		},
+
+		{
+			name:      "too few verifiers",
+			verifiers: verifiers[:1],
+			wantErr:   true,
+		},
+		{
+			name:      "too many verifiers",
+			verifiers: verifiers,
+			tamper: func(m *SignMessage) *SignMessage {
+				m.Signatures = m.Signatures[:1]
+				return m
+			},
+			wantErr: true,
+		},
+		{
+			name:      "verifier mismatch",
+			verifiers: []Verifier{verifiers[1], verifiers[0]},
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// generate message and sign
+			msg := &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			}
+			if err := msg.Sign(rand.Reader, tt.externalOnSign, signers...); err != nil {
+				t.Errorf("SignMessage.Sign() error = %v", err)
+				return
+			}
+
+			// tamper message
+			if tt.tamper != nil {
+				msg = tt.tamper(msg)
+			}
+
+			// verify message
+			if err := msg.Verify(tt.externalOnVerify, tt.verifiers...); (err != nil) != tt.wantErr {
+				t.Errorf("SignMessage.Verify() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	// special cases
+	t.Run("nil payload", func(t *testing.T) { // payload is detached
+		msg := &SignMessage{
+			Headers: Headers{
+				Protected: ProtectedHeader{
+					HeaderLabelContentType: "text/plain",
+				},
+				Unprotected: UnprotectedHeader{
+					"extra": "test",
+				},
+			},
+			Payload: []byte{},
+			Signatures: []*Signature{
+				{
+					Headers: Headers{
+						Protected: ProtectedHeader{
+							HeaderLabelAlgorithm: AlgorithmES256,
+						},
+						Unprotected: UnprotectedHeader{
+							HeaderLabelKeyID: 42,
+						},
+					},
+				},
+				{
+					Headers: Headers{
+						Protected: ProtectedHeader{
+							HeaderLabelAlgorithm: AlgorithmES512,
+						},
+					},
+				},
+			},
+		}
+		if err := msg.Sign(rand.Reader, nil, signers...); err != nil {
+			t.Errorf("SignMessage.Sign() error = %v", err)
+			return
+		}
+
+		// make payload nil on verify
+		msg.Payload = nil
+
+		// verify message
+		if err := msg.Verify(nil, verifiers...); err == nil {
+			t.Error("SignMessage.Verify() error = nil, wantErr true")
 		}
 	})
 }
