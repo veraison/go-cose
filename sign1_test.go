@@ -313,7 +313,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Sign1Message.MarshalCBOR() = %v, want %v", got, tt.want)
+				t.Errorf("Sign1Message.UnmarshalCBOR() = %v, want %v", got, tt.want)
 			}
 		})
 	}

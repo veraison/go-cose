@@ -1241,3 +1241,337 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 		})
 	}
 }
+
+func TestSignMessage_UnmarshalCBOR(t *testing.T) {
+	// test nil pointer
+	t.Run("nil SignMessage pointer", func(t *testing.T) {
+		var msg *SignMessage
+		data := []byte{
+			0xd8, 0x62, 0x84, 0x40, 0xa0, 0xf6,
+			0x81, 0x83, 0x40, 0xa0, 0x41, 0x00,
+		}
+		if err := msg.UnmarshalCBOR(data); err == nil {
+			t.Errorf("want error on nil *SignMessage")
+		}
+	})
+
+	// test others
+	tests := []struct {
+		name    string
+		data    []byte
+		want    SignMessage
+		wantErr bool
+	}{
+		{
+			name: "valid message with multiple signatures",
+			data: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0x4b, // payload
+				0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64,
+				0x82,                   // signatures
+				0x83,                   // signature 0
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // signature
+				0x83,                         // signature 1
+				0x44, 0xa1, 0x01, 0x38, 0x26, // protected
+				0xa0,                   // unprotected
+				0x43, 0x62, 0x61, 0x72, // signature
+			},
+			want: SignMessage{
+				Headers: Headers{
+					RawProtected: []byte{
+						0x4d, 0xa1,
+						0x03,
+						0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+					},
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					RawUnprotected: []byte{
+						0xa1,
+						0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+						0x64, 0x74, 0x65, 0x73, 0x74,
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: int64(42),
+							},
+						},
+						Signature: []byte("foo"),
+					},
+					{
+						Headers: Headers{
+							RawProtected: []byte{0x44, 0xa1, 0x01, 0x38, 0x26},
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmPS512,
+							},
+							RawUnprotected: []byte{0xa0},
+							Unprotected:    UnprotectedHeader{},
+						},
+						Signature: []byte("bar"),
+					},
+				},
+			},
+		},
+		{
+			name: "valid message with one signature",
+			data: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0x4b, // payload
+				0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64,
+				0x81,                   // signatures
+				0x83,                   // signature 0
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // signature
+			},
+			want: SignMessage{
+				Headers: Headers{
+					RawProtected: []byte{
+						0x4d, 0xa1,
+						0x03,
+						0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+					},
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					RawUnprotected: []byte{
+						0xa1,
+						0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+						0x64, 0x74, 0x65, 0x73, 0x74,
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: int64(42),
+							},
+						},
+						Signature: []byte("foo"),
+					},
+				},
+			},
+		},
+		{
+			name: "valid message with nil payload",
+			data: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0xf6,                   // payload
+				0x81,                   // signatures
+				0x83,                   // signature 0
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // signature
+			},
+			want: SignMessage{
+				Headers: Headers{
+					RawProtected: []byte{
+						0x4d, 0xa1,
+						0x03,
+						0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+					},
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					RawUnprotected: []byte{
+						0xa1,
+						0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+						0x64, 0x74, 0x65, 0x73, 0x74,
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: nil,
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: int64(42),
+							},
+						},
+						Signature: []byte("foo"),
+					},
+				},
+			},
+		},
+		{
+			name: "nil signatures",
+			data: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0xf6, // nil payload
+				0xf6, // signatures
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty signatures",
+			data: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0xf6, // nil payload
+				0x80, // signatures
+			},
+			wantErr: true,
+		},
+		{
+			name: "tagged signature", // issue #30
+			data: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0xf6,       // nil payload
+				0x81,       // signatures
+				0x83,       // signature 0
+				0x40, 0xa0, // empty headers
+				0xcb, 0xa1, 0x00, // tagged signature
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil CBOR data",
+			data:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty CBOR data",
+			data:    []byte{},
+			wantErr: true,
+		},
+		{
+			name: "mismatch tag",
+			data: []byte{
+				0xd2, 0x84, // tag
+				0x40, 0xa0, // empty headers
+				0xf6,       // nil payload
+				0x81,       // signatures
+				0x83,       // signature 0
+				0x40, 0xa0, // empty headers
+				0x41, 0x00, // signature
+			},
+			wantErr: true,
+		},
+		{
+			name: "mismatch type",
+			data: []byte{
+				0xd8, 0x62, 0x40,
+			},
+			wantErr: true,
+		},
+		{
+			name: "smaller array size",
+			data: []byte{
+				0xd8, 0x62, 0x83, // tag
+				0x40, 0xa0, // empty headers
+				0xf6, // nil payload
+			},
+			wantErr: true,
+		},
+		{
+			name: "larger array size",
+			data: []byte{
+				0xd8, 0x62, 0x85, // tag
+				0x40, 0xa0, // empty headers
+				0xf6,       // nil payload
+				0x81,       // signatures
+				0x83,       // signature 0
+				0x40, 0xa0, // empty headers
+				0x41, 0x00, // signature
+				0x40,
+			},
+			wantErr: true,
+		},
+		{
+			name: "undefined payload",
+			data: []byte{
+				0xd8, 0x62, 0x84, // tag
+				0x40, 0xa0, // empty headers
+				0xf7,       // undefined payload
+				0x81,       // signatures
+				0x83,       // signature 0
+				0x40, 0xa0, // empty headers
+				0x41, 0x00, // signature
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got SignMessage
+			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
+				t.Errorf("SignMessage.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SignMessage.UnmarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
