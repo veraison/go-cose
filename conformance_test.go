@@ -69,11 +69,15 @@ var testCases = []struct {
 	{name: "sign1-sign-0002"},
 	{name: "sign1-sign-0003"},
 	{name: "sign1-sign-0004", deterministic: true},
+	{name: "sign1-sign-0005", deterministic: true},
+	{name: "sign1-sign-0006", deterministic: true},
 	{name: "sign1-verify-0000"},
 	{name: "sign1-verify-0001"},
 	{name: "sign1-verify-0002"},
 	{name: "sign1-verify-0003"},
 	{name: "sign1-verify-0004"},
+	{name: "sign1-verify-0005"},
+	{name: "sign1-verify-0006"},
 	{name: "sign1-verify-negative-0000", err: "cbor: invalid protected header: cbor: cannot unmarshal map into Go value of type []uint8"},
 	{name: "sign1-verify-negative-0001", err: "cbor: invalid protected header: cbor: protected header: require map type"},
 	{name: "sign1-verify-negative-0002", err: "cbor: invalid protected header: cbor: found duplicate map key \"1\" at map element index 1"},
@@ -300,6 +304,10 @@ func mustNameToAlg(name string) cose.Algorithm {
 	switch name {
 	case "PS256":
 		return cose.AlgorithmPS256
+	case "PS384":
+		return cose.AlgorithmPS384
+	case "PS512":
+		return cose.AlgorithmPS512
 	case "ES256":
 		return cose.AlgorithmES256
 	case "ES384":
