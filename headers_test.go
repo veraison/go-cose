@@ -251,6 +251,13 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "int map key too large",
+			data: []byte{
+				0x4b, 0xa1, 0x3b, 0x83, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

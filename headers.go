@@ -3,6 +3,7 @@ package cose
 import (
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -391,7 +392,14 @@ func (hlv *headerLabelValidator) UnmarshalCBOR(data []byte) error {
 	}
 	switch data[0] & 0xe0 >> 5 {
 	case 0, 1, 3:
-		return decMode.Unmarshal(data, &hlv.value)
+		err := decMode.Unmarshal(data, &hlv.value)
+		if err != nil {
+			return err
+		}
+		if _, ok := hlv.value.(big.Int); ok {
+			return errors.New("cbor: header label: int key must not be higher than 1<<63 - 1")
+		}
+		return nil
 	}
 	return errors.New("cbor: header label: require int / tstr type")
 }
