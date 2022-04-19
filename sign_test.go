@@ -593,7 +593,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 				0x40, 0xa1, 0x00, 0x00, // body_protected
 				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
 				0x40,                                                                   // external
-				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
 			},
 		},
 		{
@@ -617,7 +617,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 				0x40,                                           // body_protected
 				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
 				0x40,                                                                   // external
-				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
 			},
 		},
 		{
@@ -641,7 +641,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 				0x40,                                           // body_protected
 				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
 				0x43, 0x66, 0x6f, 0x6f, // external
-				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
 			},
 		},
 		{
@@ -665,7 +665,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 				0x40,                                           // body_protected
 				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
 				0x40,                                                                   // external
-				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
 			},
 		},
 		{
@@ -680,7 +680,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 				0x40,                   // body_protected
 				0x40,                   // sign_protected
 				0x43, 0x66, 0x6f, 0x6f, // external
-				0x4B, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
 			},
 		},
 	}
@@ -985,6 +985,258 @@ func TestSignature_Verify(t *testing.T) {
 			// verify signature
 			if err := sig.Verify(verifier, tt.onVerify.protected, tt.onVerify.payload, tt.onVerify.external); (err != nil) != tt.wantErr {
 				t.Errorf("Signature.Verify() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSignMessage_MarshalCBOR(t *testing.T) {
+	tests := []struct {
+		name    string
+		m       *SignMessage
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "valid message with multiple signatures",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+						Signature: []byte("foo"),
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmPS512,
+							},
+						},
+						Signature: []byte("bar"),
+					},
+				},
+			},
+			want: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0x4b, // payload
+				0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64,
+				0x82,                   // signatures
+				0x83,                   // signature 0
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // signature
+				0x83,                         // signature 1
+				0x44, 0xa1, 0x01, 0x38, 0x26, // protected
+				0xa0,                   // unprotected
+				0x43, 0x62, 0x61, 0x72, // signature
+			},
+		},
+		{
+			name: "valid message with one signature",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+						Signature: []byte("foo"),
+					},
+				},
+			},
+			want: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0x4b, // payload
+				0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64,
+				0x81,                   // signatures
+				0x83,                   // signature 0
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // signature
+			},
+		},
+		{
+			name: "nil signatures",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload:    []byte("hello world"),
+				Signatures: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty signatures",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload:    []byte("hello world"),
+				Signatures: []*Signature{},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil message",
+			m:       nil,
+			wantErr: true,
+		},
+		{
+			name: "nil payload",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: nil,
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+						Signature: []byte("foo"),
+					},
+				},
+			},
+			want: []byte{
+				0xd8, 0x62, // tag
+				0x84,
+				0x4d, 0xa1, // protected
+				0x03,
+				0x6a, 0x74, 0x65, 0x78, 0x74, 0x2f, 0x70, 0x6c, 0x61, 0x69, 0x6e,
+				0xa1, // unprotected
+				0x65, 0x65, 0x78, 0x74, 0x72, 0x61,
+				0x64, 0x74, 0x65, 0x73, 0x74,
+				0xf6,                   // payload
+				0x81,                   // signatures
+				0x83,                   // signature 0
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // signature
+			},
+		},
+		{
+			name: "invalid protected header",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: make(chan bool),
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: 42,
+					},
+				},
+				Payload: []byte("foo"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+						},
+						Signature: []byte("foo"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid unprotected header",
+			m: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelKeyID: make(chan bool),
+					},
+				},
+				Payload: []byte("foo"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+						},
+						Signature: []byte("foo"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.m.MarshalCBOR()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SignMessage.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SignMessage.MarshalCBOR() = %v, want %v", got, tt.want)
 			}
 		})
 	}

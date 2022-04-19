@@ -269,6 +269,9 @@ func NewSignMessage() *SignMessage {
 
 // MarshalCBOR encodes SignMessage into a COSE_Sign_Tagged object.
 func (m *SignMessage) MarshalCBOR() ([]byte, error) {
+	if m == nil {
+		return nil, errors.New("cbor: MarshalCBOR on nil SignMessage pointer")
+	}
 	if len(m.Signatures) == 0 {
 		return nil, ErrNoSignatures
 	}
