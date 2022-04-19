@@ -3,7 +3,6 @@ package cose
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/fxamacker/cbor/v2"
@@ -22,7 +21,7 @@ type sign1Message struct {
 	_           struct{} `cbor:",toarray"`
 	Protected   cbor.RawMessage
 	Unprotected cbor.RawMessage
-	Payload     []byte
+	Payload     byteString
 	Signature   []byte
 }
 
@@ -53,6 +52,9 @@ func NewSign1Message() *Sign1Message {
 
 // MarshalCBOR encodes Sign1Message into a COSE_Sign1_Tagged object.
 func (m *Sign1Message) MarshalCBOR() ([]byte, error) {
+	if m == nil {
+		return nil, errors.New("cbor: MarshalCBOR on nil Sign1Message pointer")
+	}
 	if len(m.Signature) == 0 {
 		return nil, ErrEmptySignature
 	}
@@ -115,26 +117,26 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error {
+	if m == nil {
+		return errors.New("signing nil Sign1Message")
+	}
+	if m.Payload == nil {
+		return ErrMissingPayload
+	}
 	if len(m.Signature) > 0 {
 		return errors.New("Sign1Message signature already has signature bytes")
 	}
 
-	// check algorithm if present
-	skAlg := signer.Algorithm()
-	if alg, err := m.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			m.Headers.Protected.SetAlgorithm(skAlg)
-		}
-	} else if alg != skAlg {
-		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := signer.Algorithm()
+	err := m.Headers.ensureSigningAlgorithm(alg, external)
+	if err != nil {
+		return err
 	}
 
 	// sign the message
-	digest, err := m.digestToBeSigned(skAlg, external)
+	digest, err := m.digestToBeSigned(alg, external)
 	if err != nil {
 		return err
 	}
@@ -152,26 +154,26 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
+	if m == nil {
+		return errors.New("verifying nil Sign1Message")
+	}
+	if m.Payload == nil {
+		return ErrMissingPayload
+	}
 	if len(m.Signature) == 0 {
 		return ErrEmptySignature
 	}
 
-	// check algorithm if present
-	vkAlg := verifier.Algorithm()
-	if alg, err := m.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			return err
-		}
-	} else if alg != vkAlg {
-		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := verifier.Algorithm()
+	err := m.Headers.ensureVerificationAlgorithm(alg, external)
+	if err != nil {
+		return err
 	}
 
 	// verify the message
-	digest, err := m.digestToBeSigned(vkAlg, external)
+	digest, err := m.digestToBeSigned(alg, external)
 	if err != nil {
 		return err
 	}
@@ -186,6 +188,13 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) digestToBeSigned(alg Algorithm, external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
+	//
+	//   Sig_structure = [
+	//       context : "Signature1",
+	//       body_protected : empty_or_serialized_map,
+	//       external_aad : bstr,
+	//       payload : bstr
+	//   ]
 	var protected cbor.RawMessage
 	protected, err := m.Headers.MarshalProtected()
 	if err != nil {
@@ -194,15 +203,11 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm, external []byte) ([]byte,
 	if external == nil {
 		external = []byte{}
 	}
-	payload := m.Payload
-	if payload == nil {
-		payload = []byte{}
-	}
 	sigStructure := []interface{}{
 		"Signature1", // context
 		protected,    // body_protected
 		external,     // external_aad
-		payload,      // payload
+		m.Payload,    // payload
 	}
 
 	// create the value ToBeSigned by encoding the Sig_structure to a byte
@@ -247,8 +252,5 @@ func Sign1(rand io.Reader, signer Signer, protected ProtectedHeader, payload, ex
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func Verify1(msg *Sign1Message, external []byte, verifier Verifier) error {
-	if msg == nil {
-		return errors.New("nil Sign1Message")
-	}
 	return msg.Verify(external, verifier)
 }

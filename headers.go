@@ -55,6 +55,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 // ProtectedHeader is an empty_or_serialized_map where
 // 	 empty_or_serialized_map = bstr .cbor header_map / bstr .size 0
 func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
+	if h == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil ProtectedHeader pointer")
+	}
 	var encoded []byte
 	if err := decMode.Unmarshal(data, &encoded); err != nil {
 		return err
@@ -63,7 +66,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		return errors.New("cbor: nil protected header")
 	}
 	if len(encoded) == 0 {
-		(*h) = make(ProtectedHeader)
+		*h = make(ProtectedHeader)
 	} else {
 		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
 			return errors.New("cbor: protected header: require map type")
@@ -81,11 +84,11 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		}
 
 		// cast to type Algorithm if `alg` presents
-		if alg, err := h.Algorithm(); err == nil {
-			h.SetAlgorithm(alg)
+		if alg, err := candidate.Algorithm(); err == nil {
+			candidate.SetAlgorithm(alg)
 		}
 
-		(*h) = candidate
+		*h = candidate
 	}
 	return nil
 }
@@ -173,6 +176,9 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 //
 // UnprotectedHeader is a header_map.
 func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
+	if h == nil {
+		return errors.New("cbor: UnmarshalCBOR on nil UnprotectedHeader pointer")
+	}
 	if data == nil {
 		return errors.New("cbor: nil unprotected header")
 	}
@@ -189,7 +195,7 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data, &header); err != nil {
 		return err
 	}
-	(*h) = header
+	*h = header
 	return nil
 }
 
@@ -276,20 +282,92 @@ func (h *Headers) UnmarshalFromRaw() error {
 	return nil
 }
 
+// ensureSigningAlgorithm ensures the presence of the `alg` header if there is
+// no externally supplied data for signing.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (h *Headers) ensureSigningAlgorithm(alg Algorithm, external []byte) error {
+	candidate, err := h.Protected.Algorithm()
+	switch err {
+	case nil:
+		if candidate != alg {
+			return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, alg, candidate)
+		}
+		return nil
+	case ErrAlgorithmNotFound:
+		if len(external) > 0 {
+			return nil
+		}
+		if h.RawProtected != nil {
+			return ErrAlgorithmNotFound
+		}
+		if h.Protected == nil {
+			h.Protected = make(ProtectedHeader)
+		}
+		h.Protected.SetAlgorithm(alg)
+		return nil
+	}
+	return err
+}
+
+// ensureVerificationAlgorithm ensures the presence of the `alg` header if there
+// is no externally supplied data for verification.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (h *Headers) ensureVerificationAlgorithm(alg Algorithm, external []byte) error {
+	candidate, err := h.Protected.Algorithm()
+	switch err {
+	case nil:
+		if candidate != alg {
+			return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, alg, candidate)
+		}
+		return nil
+	case ErrAlgorithmNotFound:
+		if len(external) > 0 {
+			return nil
+		}
+	}
+	return err
+}
+
 // validateHeaderLabel validates if all header labels are integers or strings.
 //
 //   label = int / tstr
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
 func validateHeaderLabel(h map[interface{}]interface{}) error {
+	existing := make(map[interface{}]struct{})
 	for label := range h {
-		switch label.(type) {
-		case int, int8, int16, int32, int64,
-			uint, uint8, uint16, uint32, uint64,
-			string:
-			continue
+		switch v := label.(type) {
+		case int:
+			label = int64(v)
+		case int8:
+			label = int64(v)
+		case int16:
+			label = int64(v)
+		case int32:
+			label = int64(v)
+		case int64:
+			label = int64(v)
+		case uint:
+			label = int64(v)
+		case uint8:
+			label = int64(v)
+		case uint16:
+			label = int64(v)
+		case uint32:
+			label = int64(v)
+		case uint64:
+			label = int64(v)
+		case string:
+			// no conversion
 		default:
 			return errors.New("cbor: header label: require int / tstr type")
+		}
+		if _, ok := existing[label]; ok {
+			return fmt.Errorf("cbor: header label: duplicated label: %v", label)
+		} else {
+			existing[label] = struct{}{}
 		}
 	}
 	return nil

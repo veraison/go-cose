@@ -37,7 +37,7 @@ func (ev *ed25519Verifier) Algorithm() Algorithm {
 }
 
 // Verify verifies digest with the public key, returning nil for success.
-// Otherwise, it returns an error.
+// Otherwise, it returns ErrVerification.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.2
 func (ev *ed25519Verifier) Verify(digest []byte, signature []byte) error {

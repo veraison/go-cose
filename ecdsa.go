@@ -129,10 +129,16 @@ func (ev *ecdsaVerifier) Algorithm() Algorithm {
 }
 
 // Verify verifies digest with the public key, returning nil for success.
-// Otherwise, it returns an error.
+// Otherwise, it returns ErrVerification.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func (ev *ecdsaVerifier) Verify(digest []byte, signature []byte) error {
+	// verify digest size
+	if h, ok := ev.alg.hashFunc(); !ok || h.Size() != len(digest) {
+		return ErrVerification
+	}
+
+	// verify signature
 	r, s, err := decodeECDSASignature(ev.key.Curve, signature)
 	if err != nil {
 		return ErrVerification

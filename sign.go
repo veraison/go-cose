@@ -24,6 +24,11 @@ type signature struct {
 	Signature   []byte
 }
 
+// signaturePrefix represents the fixed prefix of COSE_Signature.
+var signaturePrefix = []byte{
+	0x83, // Array of length 3
+}
+
 // Signature represents a decoded COSE_Signature.
 //
 // Reference: https://tools.ietf.org/html/rfc8152#section-4.1
@@ -44,6 +49,9 @@ func NewSignature() *Signature {
 
 // MarshalCBOR encodes Signature into a COSE_Signature object.
 func (s *Signature) MarshalCBOR() ([]byte, error) {
+	if s == nil {
+		return nil, errors.New("cbor: MarshalCBOR on nil Signature pointer")
+	}
 	if len(s.Signature) == 0 {
 		return nil, ErrEmptySignature
 	}
@@ -67,6 +75,11 @@ func (s *Signature) MarshalCBOR() ([]byte, error) {
 func (s *Signature) UnmarshalCBOR(data []byte) error {
 	if s == nil {
 		return errors.New("cbor: UnmarshalCBOR on nil Signature pointer")
+	}
+
+	// fast signature check
+	if !bytes.HasPrefix(data, signaturePrefix) {
+		return errors.New("cbor: invalid Signature object")
 	}
 
 	// decode to signature and parse
@@ -98,26 +111,28 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload, external []byte) error {
+	if s == nil {
+		return errors.New("signing nil Signature")
+	}
+	if payload == nil {
+		return ErrMissingPayload
+	}
 	if len(s.Signature) > 0 {
 		return errors.New("Signature already has signature bytes")
 	}
+	if len(protected) == 0 || protected[0]>>5 != 2 { // protected is a bstr
+		return errors.New("invalid body protected headers")
+	}
 
-	// check algorithm if present
-	skAlg := signer.Algorithm()
-	if alg, err := s.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			s.Headers.Protected.SetAlgorithm(skAlg)
-		}
-	} else if alg != skAlg {
-		return fmt.Errorf("%w: signer %v: header %v", ErrAlgorithmMismatch, skAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := signer.Algorithm()
+	if err := s.Headers.ensureSigningAlgorithm(alg, external); err != nil {
+		return err
 	}
 
 	// sign the message
-	digest, err := s.digestToBeSigned(skAlg, protected, payload, external)
+	digest, err := s.digestToBeSigned(alg, protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -137,26 +152,29 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload, external []byte) error {
+	if s == nil {
+		return errors.New("verifying nil Signature")
+	}
+	if payload == nil {
+		return ErrMissingPayload
+	}
 	if len(s.Signature) == 0 {
 		return ErrEmptySignature
 	}
+	if len(protected) == 0 || protected[0]>>5 != 2 { // protected is a bstr
+		return errors.New("invalid body protected headers")
+	}
 
-	// check algorithm if present
-	vkAlg := verifier.Algorithm()
-	if alg, err := s.Headers.Protected.Algorithm(); err != nil {
-		if err != ErrAlgorithmNotFound {
-			return err
-		}
-		// `alg` header MUST present if there is no externally supplied data.
-		if len(external) == 0 {
-			return err
-		}
-	} else if alg != vkAlg {
-		return fmt.Errorf("%w: verifier %v: header %v", ErrAlgorithmMismatch, vkAlg, alg)
+	// check algorithm if present.
+	// `alg` header MUST present if there is no externally supplied data.
+	alg := verifier.Algorithm()
+	err := s.Headers.ensureVerificationAlgorithm(alg, external)
+	if err != nil {
+		return err
 	}
 
 	// verify the message
-	digest, err := s.digestToBeSigned(vkAlg, protected, payload, external)
+	digest, err := s.digestToBeSigned(alg, protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -171,9 +189,14 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessage, payload, external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
-	if len(bodyProtected) == 0 {
-		bodyProtected = []byte{0x40} // empty bstr
-	}
+	//
+	//   Sig_structure = [
+	//       context : "Signature",
+	//       body_protected : empty_or_serialized_map,
+	//       sign_protected : empty_or_serialized_map,
+	//       external_aad : bstr,
+	//       payload : bstr
+	//   ]
 	var signProtected cbor.RawMessage
 	signProtected, err := s.Headers.MarshalProtected()
 	if err != nil {
@@ -181,9 +204,6 @@ func (s *Signature) digestToBeSigned(alg Algorithm, bodyProtected cbor.RawMessag
 	}
 	if external == nil {
 		external = []byte{}
-	}
-	if payload == nil {
-		payload = []byte{}
 	}
 	sigStructure := []interface{}{
 		"Signature",   // context
@@ -218,7 +238,7 @@ type signMessage struct {
 	_           struct{} `cbor:",toarray"`
 	Protected   cbor.RawMessage
 	Unprotected cbor.RawMessage
-	Payload     []byte
+	Payload     byteString
 	Signatures  []cbor.RawMessage
 }
 
@@ -249,6 +269,9 @@ func NewSignMessage() *SignMessage {
 
 // MarshalCBOR encodes SignMessage into a COSE_Sign_Tagged object.
 func (m *SignMessage) MarshalCBOR() ([]byte, error) {
+	if m == nil {
+		return nil, errors.New("cbor: MarshalCBOR on nil SignMessage pointer")
+	}
 	if len(m.Signatures) == 0 {
 		return nil, ErrNoSignatures
 	}
@@ -330,6 +353,12 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error {
+	if m == nil {
+		return errors.New("signing nil SignMessage")
+	}
+	if m.Payload == nil {
+		return ErrMissingPayload
+	}
 	switch len(m.Signatures) {
 	case 0:
 		return ErrNoSignatures
@@ -364,6 +393,12 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) e
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error {
+	if m == nil {
+		return errors.New("verifying nil SignMessage")
+	}
+	if m.Payload == nil {
+		return ErrMissingPayload
+	}
 	switch len(m.Signatures) {
 	case 0:
 		return ErrNoSignatures
