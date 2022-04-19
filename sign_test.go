@@ -1879,4 +1879,15 @@ func TestSignMessage_Sign(t *testing.T) {
 			}
 		})
 	}
+
+	// special cases
+	t.Run("no signer", func(t *testing.T) {
+		msg := &SignMessage{
+			Payload:    []byte("hello world"),
+			Signatures: []*Signature{{}},
+		}
+		if err := msg.Sign(rand.Reader, nil); err == nil {
+			t.Error("Sign1Message.Sign() error = nil, wantErr true")
+		}
+	})
 }
