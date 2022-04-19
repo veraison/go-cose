@@ -1,67 +1,105 @@
-# Why forking Mozilla go-cose?
-
-This fork of [Mozilla go-cose](https://github.com/mozilla-services/go-cose) adds [Sign1](https://tools.ietf.org/html/rfc8152#section-4.2) capabilities to the parent package.  We hope we can reconcile our fork quite quickly.  In the meantime, you can inspect the delta [here](https://github.com/mozilla-services/go-cose/compare/master...veraison:master).
-
 # go-cose
 
-[![GitHub CI](https://github.com/veraison/go-cose/workflows/ci/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3Aci)
-
-[![Coverage Status](https://github.com/veraison/go-cose/workflows/cover%20%E2%89%A589%25/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3A%22cover%20%E2%89%A589%25%22)
+[![go.dev](https://pkg.go.dev/badge/github.com/veraison/go-cose.svg)](https://pkg.go.dev/github.com/veraison/go-cose)
+[![tests](https://github.com/veraison/go-cose/workflows/ci/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3Aci)
+[![coverage](https://github.com/veraison/go-cose/workflows/cover%20%E2%89%A589%25/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3A%22cover%20%E2%89%A589%25%22)
 
 A [COSE](https://tools.ietf.org/html/rfc8152) library for go.
 
-It currently supports signing and verifying the SignMessage and Sign1Message types with the ES{256,384,512} and PS256 algorithms.
+## Installation
 
-[API docs](https://pkg.go.dev/github.com/veraison/go-cose)
+go-cose is compatible with modern Go releases in module mode, with Go installed:
+
+```bash
+go get github.com/veraison/go-cose
+```
+
+will resolve and add the package to the current development module, along with its dependencies.
+
+Alternatively the same can be achieved if you use import in a package:
+
+```go
+import "github.com/veraison/go-cose"
+```
+
+and run `go get` without parameters.
+
+Finally, to use the top-of-trunk version of this repo, use the following command:
+
+```bash
+go get github.com/veraison/go-cose@main
+```
 
 ## Usage
 
-### Install
-
-```console
-go get -u github.com/veraison/go-cose
+```go
+import "github.com/veraison/go-cose"
 ```
 
-### Signing a message
+Construct a new COSE_Sign1 message, then sign it using ECDSA w/ 512 and finally marshal it. For example:
 
-See [example/sign.go](example/sign.go) and run it with:
+```go
+// create a signer
+privateKey, _ := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+signer, _ := cose.NewSigner(cose.AlgorithmES512, privateKey)
 
-```console
-$ go run example/sign.go
-Bit lengths of integers r and s (256 and 256) do not match the key length 255
-Message signature (ES256): 043685f99421f9e80c7c3c50d0fc8266161d3d614aaa3b63d2cdf581713fca62bb5d2e34d2352dbe41424b31d0b4a11d6b2d4764c18e2af04f4520fbe494d51c
+// create message to be signed
+msg := cose.NewSign1Message()
+msgToSign.Payload = []byte("hello world")
+msg.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+
+// sign message
+_ = msg.Sign(rand.Reader, nil, signer)
+
+// marshall message
+data, _ := msg.MarshalCBOR()
 ```
 
-### Verifying a message
+Verify a raw COSE_Sign1 message. For example:
 
-See [example/verify.go](example/verify.go) and run it with:
+```go
+// create a verifier from a trusted private key
+publicKey := privateKey.Public()
+verifier, _ := cose.NewVerifier(cose.AlgorithmES512, publicKey)
 
-```console
-$ go run example/verify.go
-Bit lengths of integers r and s (256 and 254) do not match the key length 254
-Message signature (ES256): 9411dc5200c1cb67ccd76424ade09ce89c4a8d8d2b66f2bbf70edf63beb2dc3cbde83250773e659b635d3715442a1efaa6b0c030ee8a2523c3e37a22ddb055fa
-Message signature verified
+// create a sign message from a raw COSE_Sign1 payload
+var msg cose.Sign1Message
+_ = msg.UnmarshalCBOR(raw)
+_ = msg.Verify(nil, verifier)
 ```
 
-### Signing a message with one signer (Sign1)
+## Features
 
-See [example/sign1.go](example/sign1.go) and run it with:
+### Signing and Verifying Objects
 
-```console
-$ go run example/sign1.go
-2020/11/24 14:13:48 COSE Sign1 signature bytes: 424285def70f75909cc763640d7ace555a6dafa576e0ed1b50964b80efbd92746e268ee6e5fa58258ae873bc1a510b1cc964b5c3905100ea0e625253a10150df
-2020/11/24 14:13:48 COSE Sign1 message: d28443a10126a10401586da70a49948f8860d13a463e8e0b530198f50a4ff6c05861c8860d13a638ea4fe2fa0ff5100306c11a5afd322e0e0314a36f416e64726f69642041707020466f6fa10e017253656375726520456c656d656e7420456174d83dd24201236d4c696e757820416e64726f6964a10e015840424285def70f75909cc763640d7ace555a6dafa576e0ed1b50964b80efbd92746e268ee6e5fa58258ae873bc1a510b1cc964b5c3905100ea0e625253a10150df
-2020/11/24 14:13:48 COSE Sign1 signature verified
+go-cose supports two different signature structures:
+- [cose.Sign1Message](https://pkg.go.dev/github.com/veraison/go-cose#Sign1Message) implements [COSE_Sign1](https://datatracker.ietf.org/doc/html/rfc8152#section-4.2).
+- [cose.SignMessage](https://pkg.go.dev/github.com/veraison/go-cose#SignMessage) implements [COSE_Sign](https://datatracker.ietf.org/doc/html/rfc8152#section-4.1).
+
+### Built-in Algorithms
+
+go-cose has built-in supports the following algorithms:
+- PS{256,384,512}: RSASSA-PSS w/ SHA as defined in RFC 8230.
+- ES{256,384,512}: ECDSA w/ SHA as defined in RFC 8152.
+- Ed25519: PureEdDSA as defined in RFC 8152.
+
+### Custom Algorithms
+
+The supported algorithms can be extended at runtime by using [cose.RegisterAlgorithm](https://pkg.go.dev/github.com/veraison/go-cose#RegisterAlgorithm).
+
+[API docs](https://pkg.go.dev/github.com/veraison/go-cose)
+
+### Conformance Tests
+
+go-cose runs the [GlueCOSE](https://github.com/gluecose/test-vectors) test suite on every local `go test` execution.
+These are also executed on every CI job.
+
+### Fuzz Tests
+
+go-cose implements several fuzz tests using [Go's native fuzzing](https://go.dev/doc/fuzz).
+
+Fuzzing only requires Go 1.18 or higher, and can be executed as follows:
+
+```bash
+go test -fuzz=FuzzSign1
 ```
-
-## Development
-
-Running tests:
-
-1. Install [rust and cargo](https://www.rustup.rs/)
-
-1. On OSX: `brew install nss` [nss](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS) then in `sign_verify_cose_rust_cli_test.go` add `NSS_LIB_DIR` to `cmd` or `-L /usr/local/opt/nss/lib` to RUSTFLAGS e.g. `cmd.Env = append(os.Environ(), "NSS_LIB_DIR=/usr/local/opt/nss/lib", "RUSTFLAGS=-A dead_code -A unused_imports")`
-
-1. If you already have `dep` and `golint` commands installed, run `make install-godep install-golint`
-
-1. Run `go test`
