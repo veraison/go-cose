@@ -1575,3 +1575,308 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 		})
 	}
 }
+
+func TestSignMessage_Sign(t *testing.T) {
+	// generate key and set up signer / verifier
+	gen := func(alg Algorithm) (Signer, Verifier) {
+		key := generateTestECDSAKey(t)
+		signer, err := NewSigner(alg, key)
+		if err != nil {
+			t.Fatalf("NewSigner() error = %v", err)
+		}
+		verifier, err := NewVerifier(alg, key.Public())
+		if err != nil {
+			t.Fatalf("NewVerifier() error = %v", err)
+		}
+		return signer, verifier
+	}
+	algorithms := []Algorithm{AlgorithmES256, AlgorithmES512}
+	signers := make([]Signer, 2)
+	verifiers := make([]Verifier, 2)
+	for i, alg := range algorithms {
+		signers[i], verifiers[i] = gen(alg)
+	}
+
+	// sign / verify round trip
+	tests := []struct {
+		name             string
+		msg              *SignMessage
+		externalOnSign   []byte
+		externalOnVerify []byte
+		wantErr          bool
+		check            func(t *testing.T, m *SignMessage)
+	}{
+		{
+			name: "valid message",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			externalOnSign:   []byte{},
+			externalOnVerify: []byte{},
+		},
+		{
+			name: "valid message with external",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			externalOnSign:   []byte("foo"),
+			externalOnVerify: []byte("foo"),
+		},
+		{
+			name: "nil external",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			externalOnSign:   nil,
+			externalOnVerify: nil,
+		},
+		{
+			name: "mixed nil / empty external",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: 42,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			externalOnSign:   []byte{},
+			externalOnVerify: nil,
+		},
+		{
+			name: "nil payload", // payload is detached
+			msg: &SignMessage{
+				Payload: nil,
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "mismatch algorithm",
+			msg: &SignMessage{
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "plain message",
+			msg: &SignMessage{
+				Payload:    []byte("hello world"),
+				Signatures: []*Signature{{}, {}},
+			},
+			check: func(t *testing.T, m *SignMessage) {
+				for i, alg := range algorithms {
+					got, err := m.Signatures[i].Headers.Protected.Algorithm()
+					if err != nil {
+						t.Errorf("SignMessage.Signatures[%d].Headers.Protected.Algorithm() error = %v", i, err)
+					}
+					if got != alg {
+						t.Errorf("SignMessage.Signatures[%d].Headers.Protected.Algorithm() = %v, want %v", i, got, alg)
+					}
+				}
+			},
+		},
+		{
+			name: "double signing",
+			msg: &SignMessage{
+				Payload: []byte("hello world"),
+				Signatures: []*Signature{
+					{},
+					{
+						Signature: []byte("foobar"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "nil message",
+			msg:     nil,
+			wantErr: true,
+		},
+		{
+			name: "too few signers",
+			msg: &SignMessage{
+				Payload:    []byte("hello world"),
+				Signatures: []*Signature{{}, {}, {}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "too many signers",
+			msg: &SignMessage{
+				Payload:    []byte("hello world"),
+				Signatures: []*Signature{{}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty signatures",
+			msg: &SignMessage{
+				Payload:    []byte("hello world"),
+				Signatures: []*Signature{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil signatures",
+			msg: &SignMessage{
+				Payload:    []byte("hello world"),
+				Signatures: nil,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.Sign(rand.Reader, tt.externalOnSign, signers...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SignMessage.Sign() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if tt.check != nil {
+				tt.check(t, tt.msg)
+			}
+			if err := tt.msg.Verify(tt.externalOnVerify, verifiers...); err != nil {
+				t.Errorf("SignMessage.Verify() error = %v", err)
+			}
+		})
+	}
+}
