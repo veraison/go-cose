@@ -22,7 +22,7 @@ type sign1Message struct {
 	Protected   cbor.RawMessage
 	Unprotected cbor.RawMessage
 	Payload     byteString
-	Signature   []byte
+	Signature   byteString
 }
 
 // sign1MessagePrefix represents the fixed prefix of COSE_Sign1_Tagged.

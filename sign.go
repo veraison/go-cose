@@ -21,7 +21,7 @@ type signature struct {
 	_           struct{} `cbor:",toarray"`
 	Protected   cbor.RawMessage
 	Unprotected cbor.RawMessage
-	Signature   []byte
+	Signature   byteString
 }
 
 // signaturePrefix represents the fixed prefix of COSE_Signature.
