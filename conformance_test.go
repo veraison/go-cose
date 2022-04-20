@@ -78,7 +78,7 @@ var testCases = []struct {
 	{name: "sign1-verify-0004"},
 	{name: "sign1-verify-0005"},
 	{name: "sign1-verify-0006"},
-	{name: "sign1-verify-negative-0000", err: "cbor: invalid protected header: cbor: cannot unmarshal map into Go value of type []uint8"},
+	{name: "sign1-verify-negative-0000", err: "cbor: invalid protected header: cbor: require bstr type"},
 	{name: "sign1-verify-negative-0001", err: "cbor: invalid protected header: cbor: protected header: require map type"},
 	{name: "sign1-verify-negative-0002", err: "cbor: invalid protected header: cbor: found duplicate map key \"1\" at map element index 1"},
 	{name: "sign1-verify-negative-0003", err: "cbor: invalid unprotected header: cbor: found duplicate map key \"4\" at map element index 1"},

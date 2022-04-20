@@ -59,8 +59,8 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	if h == nil {
 		return errors.New("cbor: UnmarshalCBOR on nil ProtectedHeader pointer")
 	}
-	var encoded []byte
-	if err := decMode.Unmarshal(data, &encoded); err != nil {
+	var encoded byteString
+	if err := encoded.UnmarshalCBOR(data); err != nil {
 		return err
 	}
 	if encoded == nil {
