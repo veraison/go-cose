@@ -1,0 +1,19 @@
+{
+  "uuid": "10F06D49-9AD3-427C-9496-B7EAD5EE721C",
+  "title": "Protected header inner type is not map",
+  "description": "The protected header is serialised as bstr but the embedded type is not a map, which the Sign1 parser should reject",
+  "key": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
+    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4"
+  },
+  "alg": "ES256",
+  "sign1::verify": {
+    "taggedCOSESign1": {
+      "cborHex": "d28443820126a10442313154546869732069732074686520636f6e74656e742e5840ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "cborDiag": "18([h'820126', {4: '11'}, h'546869732069732074686520636F6E74656E742E', h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'])"
+    },
+    "shouldVerify": false
+  }
+}
