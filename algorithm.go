@@ -159,7 +159,7 @@ func (a Algorithm) computeHash(data []byte) ([]byte, error) {
 // The parameter `hash` is the hash algorithm associated with the algorithm. If
 // hashFunc presents, hash is ignored. If hashFunc does not present and hash is
 // set to 0, no hash is used for this algorithm.
-// The parameter `hashFunc`` is preferred in the case that the hash algorithm is not
+// The parameter `hashFunc` is preferred in the case that the hash algorithm is not
 // supported by the golang build-in crypto hashes.
 func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc func() hash.Hash) error {
 	if _, ok := alg.hashFunc(); ok {
