@@ -69,7 +69,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	if len(encoded) == 0 {
 		*h = make(ProtectedHeader)
 	} else {
-		if encoded[0]&0xe0 != 0xa0 { // major type 5: map
+		if encoded[0]>>5 != 5 { // major type 5: map
 			return errors.New("cbor: protected header: require map type")
 		}
 		if err := validateHeaderLabelCBOR(encoded); err != nil {
@@ -186,7 +186,7 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("cbor: unprotected header: missing type")
 	}
-	if data[0]&0xe0 != 0xa0 { // major type 5: map
+	if data[0]>>5 != 5 { // major type 5: map
 		return errors.New("cbor: unprotected header: require map type")
 	}
 	if err := validateHeaderLabelCBOR(data); err != nil {
@@ -390,7 +390,7 @@ func (hlv *headerLabelValidator) UnmarshalCBOR(data []byte) error {
 	if len(data) == 0 {
 		return errors.New("cbor: header label: missing type")
 	}
-	switch data[0] & 0xe0 >> 5 {
+	switch data[0] >> 5 {
 	case 0, 1, 3:
 		err := decMode.Unmarshal(data, &hlv.value)
 		if err != nil {
