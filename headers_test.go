@@ -258,6 +258,13 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "header as a byte array",
+			data: []byte{
+				0x80,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

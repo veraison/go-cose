@@ -218,6 +218,15 @@ func TestSignature_UnmarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "signature as a byte array",
+			data: []byte{
+				0x83,
+				0x40, 0xa0, // empty headers
+				0x81, 0x00, // signature
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1554,6 +1563,19 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 				0xd8, 0x62, 0x84, // tag
 				0x40, 0xa0, // empty headers
 				0xf7,       // undefined payload
+				0x81,       // signatures
+				0x83,       // signature 0
+				0x40, 0xa0, // empty headers
+				0x41, 0x00, // signature
+			},
+			wantErr: true,
+		},
+		{
+			name: "payload as a byte array",
+			data: []byte{
+				0xd8, 0x62, 0x84, // tag
+				0x40, 0xa0, // empty headers
+				0x80,       // payload
 				0x81,       // signatures
 				0x83,       // signature 0
 				0x40, 0xa0, // empty headers
