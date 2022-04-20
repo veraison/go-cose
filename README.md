@@ -36,7 +36,7 @@ go get github.com/veraison/go-cose@main
 import "github.com/veraison/go-cose"
 ```
 
-Construct a new COSE_Sign1 message, then sign it using ECDSA w/ 512 and finally marshal it. For example:
+Construct a new COSE_Sign1 message, then sign it using ECDSA w/ SHA-512 and finally marshal it. For example:
 
 ```go
 // create a signer
@@ -51,7 +51,7 @@ msg.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
 // sign message
 _ = msg.Sign(rand.Reader, nil, signer)
 
-// marshall message
+// marshal message
 data, _ := msg.MarshalCBOR()
 ```
 
@@ -98,7 +98,7 @@ These are also executed on every CI job.
 
 go-cose implements several fuzz tests using [Go's native fuzzing](https://go.dev/doc/fuzz).
 
-Fuzzing only requires Go 1.18 or higher, and can be executed as follows:
+Fuzzing requires Go 1.18 or higher, and can be executed as follows:
 
 ```bash
 go test -fuzz=FuzzSign1
