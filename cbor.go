@@ -3,6 +3,7 @@ package cose
 import (
 	"bytes"
 	"errors"
+	"io"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -56,6 +57,8 @@ func init() {
 type byteString []byte
 
 // UnmarshalCBOR decodes data into a "bstr / nil" type.
+// It also ensures the data is of major type 2 since []byte can be alternatively
+// interpreted as an array of bytes.
 //
 // Note: `github.com/fxamacker/cbor/v2` considers the primitive value
 // `undefined` (major type 7, value 23) as nil, which is not recognized by COSE.
@@ -67,13 +70,15 @@ func (s *byteString) UnmarshalCBOR(data []byte) error {
 	if s == nil {
 		return errors.New("cbor: UnmarshalCBOR on nil byteString pointer")
 	}
-	var candidate []byte
-	if err := decModeWithTagsForbidden.Unmarshal(data, &candidate); err != nil {
-		return err
+	if len(data) == 0 {
+		return io.EOF // same error as returned by cbor.Unmarshal()
 	}
-	if candidate == nil && !bytes.Equal(data, []byte{0xf6}) {
-		return errors.New("cbor: non-standard nil value")
+	if bytes.Equal(data, []byte{0xf6}) {
+		*s = nil
+		return nil
 	}
-	*s = candidate
-	return nil
+	if data[0]>>5 != 2 { // major type 2: bstr
+		return errors.New("cbor: require bstr type")
+	}
+	return decModeWithTagsForbidden.Unmarshal(data, (*[]byte)(s))
 }

@@ -57,6 +57,11 @@ func Test_byteString_UnmarshalCBOR(t *testing.T) {
 			data:    []byte{0xc2, 0x40},
 			wantErr: true,
 		},
+		{
+			name:    "array of bytes", // issue #46
+			data:    []byte{0x82, 0x00, 0x1},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
