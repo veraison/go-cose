@@ -15,19 +15,20 @@ The objectives of the `go-cose` library of this doc are
 
 ## Implementation Gaps
 
-Here are the gaps between the current implementation and the objectives:
+Here are the gaps between prior versions of `go-cose` implementation and the objectives:
 
-- The current implementation implements `COSE_Sign` and `COSE_Sign1`. However, the verification process does not follow [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152) and causes [issue #7](https://github.com/veraison/go-cose/issues/7). There are also implementation errors in signing and verification (see [issue #8](https://github.com/veraison/go-cose/issues/8)).
-- The efficiency of the current implementation can be improved with crypto domain knowledge. For instances,
+- Prior versions of `go-cose` implemented `COSE_Sign` and `COSE_Sign1`. However, the verification process did not follow [RFC8152](https://datatracker.ietf.org/doc/html/rfc8152), which had caused issues like [#7](https://github.com/veraison/go-cose/issues/7) and [8](https://github.com/veraison/go-cose/issues/8), which have been fixed in the current implementation.
+- The efficiency of prior versions of `go-cose` can be improved with crypto domain knowledge. For instances,
   - Remove the use of constant time copy in `I2OSP`.
   - Remove the check on `(r,s)` against `n`.
-- The current implementation implements `PS256`, `ES256`, `ES384`, `ES512`, and misses other common algorithms like `PS384`, `PS512`, `EdDSA` (e.g. `Ed25519`).
+- Prior versions of `go-cose` implemented `PS256`, `ES256`, `ES384`, `ES512`, and missed other common algorithms like `PS384`, `PS512`, `EdDSA` (e.g. `Ed25519`).
   - All conventional signature schemes are _signature with appendix_.
   - `RS256`, `RS384`, `RS512`, `ES256K` are marked **NOT RECOMMENDED** by [RFC8812](https://datatracker.ietf.org/doc/html/rfc8812).
-- The current implementation has solid `Signer` and `Verify` structures and can only sign or verify against certain algorithms (see [issue #9](https://github.com/veraison/go-cose/issues/9)). The implementation cannot be extended to have new algorithms or new implementation for existing algorithms.
-- The current implementation is not golang native.
-  - Relies on `cose-rust` for testing and development.
-  - Examples are not shown in `godoc` and are not clear, especially for verification.
+- Prior versions of `go-cose` had solid `Signer` and `Verify` structures and can only sign or verify against certain algorithms (see [issue #9](https://github.com/veraison/go-cose/issues/9)). The implementation cannot be extended to have new algorithms or new implementation for existing algorithms.
+- Prior versions of `go-cose` were not golang native.
+  - Rely on `cose-rust` for testing and development.
+  - Examples were not shown in `godoc` and were not clear, especially for verification.
+  - Not versioned under [SemVer2](https://semver.org/).
 
 ## Proposal
 
