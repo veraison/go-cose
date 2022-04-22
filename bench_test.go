@@ -32,13 +32,7 @@ func (noSigner) Sign(_ io.Reader, digest []byte) ([]byte, error) {
 	return digest, nil
 }
 
-type noVerifier struct{}
-
-func (noVerifier) Algorithm() cose.Algorithm {
-	return cose.AlgorithmES256
-}
-
-func (noVerifier) Verify(_, _ []byte) error {
+func (noSigner) Verify(_, _ []byte) error {
 	return nil
 }
 
@@ -88,7 +82,7 @@ func BenchmarkSign1Message_Verify(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := msg.Verify(nil, noVerifier{})
+		err := msg.Verify(nil, noSigner{})
 		if err != nil {
 			b.Fatal(err)
 		}
