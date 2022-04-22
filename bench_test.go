@@ -22,15 +22,6 @@ func newSign1Message() *cose.Sign1Message {
 	}
 }
 
-type zeroReader struct{}
-
-func (zeroReader) Read(b []byte) (int, error) {
-	for i := range b {
-		b[i] = 0
-	}
-	return len(b), nil
-}
-
 type noSigner struct{}
 
 func (noSigner) Algorithm() cose.Algorithm {
@@ -85,7 +76,7 @@ func BenchmarkSign1Message_Sign(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.Signature = nil
-		err := msg.Sign(zeroReader{}, nil, noSigner{})
+		err := msg.Sign(zeroSource{}, nil, noSigner{})
 		if err != nil {
 			b.Fatal(err)
 		}
