@@ -12,6 +12,9 @@ import (
 )
 
 // This example demonstrates signing and verifying COSE_Sign signatures.
+//
+// The COSE Sign API is EXPERIMENTAL and may be changed or removed in a later
+// release.
 func ExampleSignMessage() {
 	// create a signature holder
 	sigHolder := cose.NewSignature()

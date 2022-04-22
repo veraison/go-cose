@@ -32,12 +32,24 @@ var signaturePrefix = []byte{
 // Signature represents a decoded COSE_Signature.
 //
 // Reference: https://tools.ietf.org/html/rfc8152#section-4.1
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 type Signature struct {
 	Headers   Headers
 	Signature []byte
 }
 
 // NewSignature returns a Signature with header initialized.
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func NewSignature() *Signature {
 	return &Signature{
 		Headers: Headers{
@@ -48,6 +60,12 @@ func NewSignature() *Signature {
 }
 
 // MarshalCBOR encodes Signature into a COSE_Signature object.
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (s *Signature) MarshalCBOR() ([]byte, error) {
 	if s == nil {
 		return nil, errors.New("cbor: MarshalCBOR on nil Signature pointer")
@@ -72,6 +90,12 @@ func (s *Signature) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a COSE_Signature object into Signature.
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (s *Signature) UnmarshalCBOR(data []byte) error {
 	if s == nil {
 		return errors.New("cbor: UnmarshalCBOR on nil Signature pointer")
@@ -110,6 +134,12 @@ func (s *Signature) UnmarshalCBOR(data []byte) error {
 // payload of its parent message.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessage, payload, external []byte) error {
 	if s == nil {
 		return errors.New("signing nil Signature")
@@ -151,6 +181,12 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 // payload of its parent message.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload, external []byte) error {
 	if s == nil {
 		return errors.New("verifying nil Signature")
@@ -251,6 +287,12 @@ var signMessagePrefix = []byte{
 // SignMessage represents a decoded COSE_Sign message.
 //
 // Reference: https://tools.ietf.org/html/rfc8152#section-4.1
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 type SignMessage struct {
 	Headers    Headers
 	Payload    []byte
@@ -258,6 +300,12 @@ type SignMessage struct {
 }
 
 // NewSignMessage returns a SignMessage with header initialized.
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func NewSignMessage() *SignMessage {
 	return &SignMessage{
 		Headers: Headers{
@@ -268,6 +316,12 @@ func NewSignMessage() *SignMessage {
 }
 
 // MarshalCBOR encodes SignMessage into a COSE_Sign_Tagged object.
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (m *SignMessage) MarshalCBOR() ([]byte, error) {
 	if m == nil {
 		return nil, errors.New("cbor: MarshalCBOR on nil SignMessage pointer")
@@ -304,6 +358,12 @@ func (m *SignMessage) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a COSE_Sign_Tagged object into SignMessage.
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 	if m == nil {
 		return errors.New("cbor: UnmarshalCBOR on nil SignMessage pointer")
@@ -352,6 +412,12 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 // See `Signature.Sign()` for advanced signing scenarios.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error {
 	if m == nil {
 		return errors.New("signing nil SignMessage")
@@ -392,6 +458,12 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) e
 // policies.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+//
+// Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+//
 func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error {
 	if m == nil {
 		return errors.New("verifying nil SignMessage")
