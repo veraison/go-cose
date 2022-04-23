@@ -75,6 +75,7 @@ _ = msg.Verify(nil, verifier)
 go-cose supports two different signature structures:
 - [cose.Sign1Message](https://pkg.go.dev/github.com/veraison/go-cose#Sign1Message) implements [COSE_Sign1](https://datatracker.ietf.org/doc/html/rfc8152#section-4.2).
 - [cose.SignMessage](https://pkg.go.dev/github.com/veraison/go-cose#SignMessage) implements [COSE_Sign](https://datatracker.ietf.org/doc/html/rfc8152#section-4.1).
+> :warning: The COSE_Sign API is currently **EXPERIMENTAL** and may be changed or removed in a later release.  In addition, the amount of functional and security testing it has received so far is significantly lower than the COSE_Sign1 API.
 
 ### Built-in Algorithms
 
