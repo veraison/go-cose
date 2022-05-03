@@ -234,6 +234,7 @@ func TestRegisterAlgorithm(t *testing.T) {
 	// Register algorithms concurrently to ensure testing on race mode catches races.
 	var wg sync.WaitGroup
 	wg.Add(3)
+
 	go func() {
 		defer wg.Done()
 		// register existing algorithm (should fail)
