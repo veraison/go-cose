@@ -231,9 +231,29 @@ func TestAlgorithm_computeHash(t *testing.T) {
 func TestRegisterAlgorithm(t *testing.T) {
 	defer resetExtendedAlgorithm()
 
+	// register existing algorithm (should fail)
+	if err := RegisterAlgorithm(AlgorithmES256, "ES256", crypto.SHA256, nil); err != ErrAlgorithmRegistered {
+		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
+	}
+
+	algFoo := Algorithm(-102)
+	// register external algorithm
+	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != nil {
+		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, false)
+	}
+
+	// double register external algorithm (should fail)
+	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != ErrAlgorithmRegistered {
+		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
+	}
+}
+
+func TestRegisterAlgorithm_Concurrent(t *testing.T) {
+	defer resetExtendedAlgorithm()
+
 	// Register algorithms concurrently to ensure testing on race mode catches races.
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
@@ -242,21 +262,11 @@ func TestRegisterAlgorithm(t *testing.T) {
 			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
 		}
 	}()
-
-	algFoo := Algorithm(-102)
 	go func() {
 		defer wg.Done()
 		// register external algorithm
-		if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != nil {
+		if err := RegisterAlgorithm(Algorithm(-102), "foo", 0, nil); err != nil {
 			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, false)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		// double register external algorithm (should fail)
-		if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != ErrAlgorithmRegistered {
-			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
 		}
 	}()
 	wg.Wait()
