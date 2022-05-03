@@ -128,7 +128,7 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 	}
 
 	// check algorithm if present.
-	// `alg` header MUST present if there is no externally supplied data.
+	// `alg` header MUST be present if there is no externally supplied data.
 	alg := signer.Algorithm()
 	err := m.Headers.ensureSigningAlgorithm(alg, external)
 	if err != nil {

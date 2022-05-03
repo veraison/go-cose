@@ -56,13 +56,13 @@ type extAlgorithm struct {
 	Name string
 
 	// Hash is the hash algorithm associated with the algorithm.
-	// If HashFunc presents, Hash is ignored.
-	// If HashFunc does not present and Hash is set to 0, no hash is used.
+	// If HashFunc is present, Hash is ignored.
+	// If HashFunc is not present and Hash is set to 0, no hash is used.
 	Hash crypto.Hash
 
 	// HashFunc is the hash algorithm associated with the algorithm.
 	// HashFunc is preferred in the case that the hash algorithm is not
-	// supported by the golang build-in crypto hashes.
+	// supported by the golang built-in crypto hashes.
 	// For regular scenarios, use Hash instead.
 	HashFunc func() hash.Hash
 }
@@ -137,7 +137,7 @@ func (a Algorithm) newHash() (hash.Hash, error) {
 	return nil, ErrUnavailableHashFunc
 }
 
-// computeHash computing the digest using the hash specified in the algorithm.
+// computeHash computes the digest using the hash specified in the algorithm.
 // Returns the input data if no hash is required for the message.
 func (a Algorithm) computeHash(data []byte) ([]byte, error) {
 	h, err := a.newHash()
@@ -153,14 +153,14 @@ func (a Algorithm) computeHash(data []byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-// RegisterAlgorithm provides extensibility for the cose library to support
+// RegisterAlgorithm provides extensibility for the COSE library to support
 // private algorithms or algorithms not yet registered in IANA.
 // The existing algorithms cannot be re-registered.
 // The parameter `hash` is the hash algorithm associated with the algorithm. If
-// hashFunc presents, hash is ignored. If hashFunc does not present and hash is
+// hashFunc is present, hash is ignored. If hashFunc is not present and hash is
 // set to 0, no hash is used for this algorithm.
 // The parameter `hashFunc` is preferred in the case that the hash algorithm is not
-// supported by the golang build-in crypto hashes.
+// supported by the golang built-in crypto hashes.
 func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc func() hash.Hash) error {
 	if _, ok := alg.hashFunc(); ok {
 		return ErrAlgorithmRegistered

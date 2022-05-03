@@ -36,7 +36,7 @@ func OS2IP(x []byte) *big.Int {
 	return new(big.Int).SetBytes(x)
 }
 
-// ecdsaKeySigner is a ECDSA based signer with golang built-in keys.
+// ecdsaKeySigner is a ECDSA-based signer with golang built-in keys.
 type ecdsaKeySigner struct {
 	alg Algorithm
 	key *ecdsa.PrivateKey
@@ -47,8 +47,9 @@ func (es *ecdsaKeySigner) Algorithm() Algorithm {
 	return es.alg
 }
 
-// Sign signs digest with the private key, possibly using entropy from rand.
-// The resulting signature should follow RFC 8152 section 8.1.
+// Sign signs digest with the private key using entropy from rand.
+// The resulting signature should follow RFC 8152 section 8.1,
+// although it does not follow the recommendation of being deterministic.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func (es *ecdsaKeySigner) Sign(rand io.Reader, digest []byte) ([]byte, error) {
@@ -95,6 +96,8 @@ func (es *ecdsaCryptoSigner) Sign(rand io.Reader, digest []byte) ([]byte, error)
 
 // encodeECDSASignature encodes (r, s) into a signature binary string using the
 // method specified by RFC 8152 section 8.1.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func encodeECDSASignature(curve elliptic.Curve, r, s *big.Int) ([]byte, error) {
 	n := (curve.Params().BitSize + 7) / 8
 	sig := make([]byte, n*2)
@@ -109,6 +112,8 @@ func encodeECDSASignature(curve elliptic.Curve, r, s *big.Int) ([]byte, error) {
 
 // decodeECDSASignature decodes (r, s) from a signature binary string using the
 // method specified by RFC 8152 section 8.1.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func decodeECDSASignature(curve elliptic.Curve, sig []byte) (r, s *big.Int, err error) {
 	n := (curve.Params().BitSize + 7) / 8
 	if len(sig) != n*2 {

@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-// ed25519Signer is a Pure EdDsA based signer with a generic crypto.Signer.
+// ed25519Signer is a Pure EdDSA based signer with a generic crypto.Signer.
 type ed25519Signer struct {
 	key crypto.Signer
 }
@@ -26,7 +26,7 @@ func (es *ed25519Signer) Sign(rand io.Reader, digest []byte) ([]byte, error) {
 	return es.key.Sign(rand, digest, crypto.Hash(0))
 }
 
-// ed25519Verifier is a Pure EdDsA based verifier with golang built-in keys.
+// ed25519Verifier is a Pure EdDSA based verifier with golang built-in keys.
 type ed25519Verifier struct {
 	key ed25519.PublicKey
 }

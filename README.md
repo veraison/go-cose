@@ -44,15 +44,15 @@ privateKey, _ := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 signer, _ := cose.NewSigner(cose.AlgorithmES512, privateKey)
 
 // create message to be signed
-msg := cose.NewSign1Message()
+msgToSign := cose.NewSign1Message()
 msgToSign.Payload = []byte("hello world")
-msg.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
 
 // sign message
-_ = msg.Sign(rand.Reader, nil, signer)
+_ = msgToSign.Sign(rand.Reader, nil, signer)
 
 // marshal message
-data, _ := msg.MarshalCBOR()
+data, _ := msgToSign.MarshalCBOR()
 ```
 
 Verify a raw COSE_Sign1 message. For example:
@@ -89,6 +89,21 @@ go-cose has built-in supports the following algorithms:
 The supported algorithms can be extended at runtime by using [cose.RegisterAlgorithm](https://pkg.go.dev/github.com/veraison/go-cose#RegisterAlgorithm).
 
 [API docs](https://pkg.go.dev/github.com/veraison/go-cose)
+
+### Integer Ranges
+
+CBOR supports integers in the range:
+
+```text
+[-2<sup>64</sup>, -1] ∪ [0, 2<sup>64</sup> - 1]
+```
+
+This does not map onto a single Go integer type.
+
+`go-cose` uses `int64` to encompass both positive and negative values to keep data sizes smaller and easy to use.
+
+The main effect is that integer label values in the [-2<sup>64</sup>, -2<sup>63</sup> - 1] and the [2<sup>63</sup>, 2<sup>64</sup> - 1] ranges, which are nominally valid
+per RFC 8152, are rejected by the go-cose library.
 
 ### Conformance Tests
 
