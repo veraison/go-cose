@@ -143,7 +143,7 @@ func (h ProtectedHeader) Critical() ([]interface{}, error) {
 	return criticalLabels, nil
 }
 
-// ensureCritical ensures all critical headers present in the protected bucket.
+// ensureCritical ensures all critical headers are present in the protected bucket.
 func (h ProtectedHeader) ensureCritical() error {
 	labels, err := h.Critical()
 	if err != nil {

@@ -29,7 +29,7 @@ type Signer interface {
 // Developers are encouraged to implement the `cose.Signer` interface instead of
 // the `crypto.Signer` interface for better performance.
 //
-// All signing keys implementing `crypto.Signer`` with `Public()` outputing a
+// All signing keys implementing `crypto.Signer` with `Public()` returning a
 // public key of type `*rsa.PublicKey`, `*ecdsa.PublicKey`, or
 // `ed25519.PublicKey` are accepted.
 //
@@ -42,7 +42,7 @@ func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
 		}
-		// RFC 8230 6.1 requires RSA keys having a minimun size of 2048 bits.
+		// RFC 8230 6.1 requires RSA keys having a minimum size of 2048 bits.
 		// Reference: https://www.rfc-editor.org/rfc/rfc8230.html#section-6.1
 		if vk.N.BitLen() < 2048 {
 			return nil, errors.New("RSA key must be at least 2048 bits long")
