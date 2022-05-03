@@ -96,7 +96,7 @@ func (es *ecdsaCryptoSigner) Sign(rand io.Reader, digest []byte) ([]byte, error)
 // encodeECDSASignature encodes (r, s) into a signature binary string using the
 // method specified by RFC 8152 section 8.1.
 func encodeECDSASignature(curve elliptic.Curve, r, s *big.Int) ([]byte, error) {
-	n := (curve.Params().BitSize + 7) / 8
+	n := (curve.Params().N.BitLen() + 7) / 8
 	sig := make([]byte, n*2)
 	if err := I2OSP(r, sig[:n]); err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func encodeECDSASignature(curve elliptic.Curve, r, s *big.Int) ([]byte, error) {
 // decodeECDSASignature decodes (r, s) from a signature binary string using the
 // method specified by RFC 8152 section 8.1.
 func decodeECDSASignature(curve elliptic.Curve, sig []byte) (r, s *big.Int, err error) {
-	n := (curve.Params().BitSize + 7) / 8
+	n := (curve.Params().N.BitLen() + 7) / 8
 	if len(sig) != n*2 {
 		return nil, nil, fmt.Errorf("invalid signature length: %d", len(sig))
 	}
