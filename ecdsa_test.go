@@ -164,60 +164,46 @@ func generateTestECDSAKey(t *testing.T) *ecdsa.PrivateKey {
 	return key
 }
 
-func Test_ecdsaKeySigner(t *testing.T) {
-	// generate key
-	alg := AlgorithmES256
-	key := generateTestECDSAKey(t)
+func Test_customCurveKeySigner(t *testing.T) {
+	// https://github.com/veraison/go-cose/issues/59
+	pCustom := *elliptic.P256().Params()
+	pCustom.Name = "P-custom"
+	pCustom.BitSize /= 2
+	key, err := ecdsa.GenerateKey(&pCustom, rand.Reader)
+	if err != nil {
+		t.Fatalf("ecdsa.GenerateKey() error = %v", err)
+	}
+	testSignVerify(t, AlgorithmES256, key, false)
+}
 
+func Test_ecdsaKeySigner(t *testing.T) {
+	key := generateTestECDSAKey(t)
+	testSignVerify(t, AlgorithmES256, key, false)
+}
+
+func Test_ecdsaCryptoSigner(t *testing.T) {
+	wrappedKey := struct {
+		crypto.Signer
+	}{
+		Signer: generateTestECDSAKey(t),
+	}
+	testSignVerify(t, AlgorithmES256, wrappedKey, true)
+}
+
+func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSigner bool) {
 	// set up signer
 	signer, err := NewSigner(alg, key)
 	if err != nil {
 		t.Fatalf("NewSigner() error = %v", err)
 	}
-	if _, ok := signer.(*ecdsaKeySigner); !ok {
-		t.Fatalf("NewSigner() type = %v, want *ecdsaKeySigner", reflect.TypeOf(signer))
-	}
-	if got := signer.Algorithm(); got != alg {
-		t.Fatalf("Algorithm() = %v, want %v", got, alg)
-	}
-
-	// sign / verify round trip
-	// see also conformance_test.go for strict tests.
-	digest, err := alg.computeHash([]byte("hello world"))
-	if err != nil {
-		t.Fatalf("Algorithm.computeHash() error = %v", err)
-	}
-	sig, err := signer.Sign(rand.Reader, digest)
-	if err != nil {
-		t.Fatalf("Sign() error = %v", err)
-	}
-
-	verifier, err := NewVerifier(alg, key.Public())
-	if err != nil {
-		t.Fatalf("NewVerifier() error = %v", err)
-	}
-	if err := verifier.Verify(digest, sig); err != nil {
-		t.Fatalf("Verifier.Verify() error = %v", err)
-	}
-}
-
-func Test_ecdsaCryptoSigner(t *testing.T) {
-	// generate key
-	alg := AlgorithmES256
-	key := generateTestECDSAKey(t)
-
-	// set up signer
-	wrappedKey := struct {
-		crypto.Signer
-	}{
-		Signer: key,
-	}
-	signer, err := NewSigner(alg, wrappedKey)
-	if err != nil {
-		t.Fatalf("NewSigner() error = %v", err)
-	}
-	if _, ok := signer.(*ecdsaCryptoSigner); !ok {
-		t.Fatalf("NewSigner() type = %v, want *ecdsaCryptoSigner", reflect.TypeOf(signer))
+	if isCryptoSigner {
+		if _, ok := signer.(*ecdsaCryptoSigner); !ok {
+			t.Fatalf("NewSigner() type = %v, want *ecdsaCryptoSigner", reflect.TypeOf(signer))
+		}
+	} else {
+		if _, ok := signer.(*ecdsaKeySigner); !ok {
+			t.Fatalf("NewSigner() type = %v, want *ecdsaKeySigner", reflect.TypeOf(signer))
+		}
 	}
 	if got := signer.Algorithm(); got != alg {
 		t.Fatalf("Algorithm() = %v, want %v", got, alg)
