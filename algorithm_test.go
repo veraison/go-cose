@@ -4,12 +4,15 @@ import (
 	"crypto"
 	"crypto/sha256"
 	"reflect"
+	"sync"
 	"testing"
 )
 
 // resetExtendedAlgorithm cleans up extended algorithms
 func resetExtendedAlgorithm() {
+	extMu.Lock()
 	extAlgorithms = nil
+	extMu.Unlock()
 }
 
 func TestAlgorithm_String(t *testing.T) {
@@ -233,8 +236,8 @@ func TestRegisterAlgorithm(t *testing.T) {
 		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
 	}
 
-	// register external algorithm
 	algFoo := Algorithm(-102)
+	// register external algorithm
 	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != nil {
 		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, false)
 	}
@@ -243,4 +246,28 @@ func TestRegisterAlgorithm(t *testing.T) {
 	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != ErrAlgorithmRegistered {
 		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
 	}
+}
+
+func TestRegisterAlgorithm_Concurrent(t *testing.T) {
+	defer resetExtendedAlgorithm()
+
+	// Register algorithms concurrently to ensure testing on race mode catches races.
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		// register existing algorithm (should fail)
+		if err := RegisterAlgorithm(AlgorithmES256, "ES256", crypto.SHA256, nil); err != ErrAlgorithmRegistered {
+			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		// register external algorithm
+		if err := RegisterAlgorithm(Algorithm(-102), "foo", 0, nil); err != nil {
+			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, false)
+		}
+	}()
+	wg.Wait()
 }

@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"hash"
 	"strconv"
+	"sync"
 )
 
 // Algorithms supported by this library.
@@ -67,8 +68,10 @@ type extAlgorithm struct {
 	HashFunc func() hash.Hash
 }
 
-// extAlgorithms contains extended algorithms.
-var extAlgorithms map[Algorithm]extAlgorithm
+var (
+	extAlgorithms map[Algorithm]extAlgorithm
+	extMu         sync.RWMutex
+)
 
 // String returns the name of the algorithm
 func (a Algorithm) String() string {
@@ -90,7 +93,10 @@ func (a Algorithm) String() string {
 		// COSE.
 		return "EdDSA"
 	}
-	if alg, ok := extAlgorithms[a]; ok {
+	extMu.RLock()
+	alg, ok := extAlgorithms[a]
+	extMu.RUnlock()
+	if ok {
 		return alg.Name
 	}
 	return "unknown algorithm value " + strconv.Itoa(int(a))
@@ -118,7 +124,9 @@ func (a Algorithm) hashFunc() (crypto.Hash, bool) {
 func (a Algorithm) newHash() (hash.Hash, error) {
 	h, ok := a.hashFunc()
 	if !ok {
+		extMu.RLock()
 		alg, ok := extAlgorithms[a]
+		extMu.RUnlock()
 		if !ok {
 			return nil, ErrUnknownAlgorithm
 		}
@@ -161,10 +169,13 @@ func (a Algorithm) computeHash(data []byte) ([]byte, error) {
 // set to 0, no hash is used for this algorithm.
 // The parameter `hashFunc` is preferred in the case that the hash algorithm is not
 // supported by the golang built-in crypto hashes.
+// It is safe for concurrent use by multiple goroutines.
 func RegisterAlgorithm(alg Algorithm, name string, hash crypto.Hash, hashFunc func() hash.Hash) error {
 	if _, ok := alg.hashFunc(); ok {
 		return ErrAlgorithmRegistered
 	}
+	extMu.Lock()
+	defer extMu.Unlock()
 	if _, ok := extAlgorithms[alg]; ok {
 		return ErrAlgorithmRegistered
 	}
