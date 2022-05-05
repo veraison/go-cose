@@ -94,9 +94,7 @@ The supported algorithms can be extended at runtime by using [cose.RegisterAlgor
 
 CBOR supports integers in the range:
 
-```text
 [-2<sup>64</sup>, -1] ∪ [0, 2<sup>64</sup> - 1]
-```
 
 This does not map onto a single Go integer type.
 
