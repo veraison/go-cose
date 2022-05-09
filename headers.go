@@ -173,7 +173,7 @@ func (h ProtectedHeader) ensureIV() error {
 	if _, ok := h[HeaderLabelPartialIV]; !ok {
 		return nil
 	}
-	return errors.New("The 'Initialization Vector' and 'Partial Initialization Vector' parameters must not both be present in the protected header")
+	return errors.New("the 'Initialization Vector' and 'Partial Initialization Vector' parameters must not both be present in the protected header")
 }
 
 // UnprotectedHeader contains parameters that are not cryptographically
