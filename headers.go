@@ -16,6 +16,8 @@ const (
 	HeaderLabelCritical          int64 = 2
 	HeaderLabelContentType       int64 = 3
 	HeaderLabelKeyID             int64 = 4
+	HeaderLabelIV                int64 = 5
+	HeaderLabelPartialIV         int64 = 6
 	HeaderLabelCounterSignature  int64 = 7
 	HeaderLabelCounterSignature0 int64 = 9
 	HeaderLabelX5Bag             int64 = 32
@@ -41,6 +43,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 			return nil, err
 		}
 		if err = h.ensureCritical(); err != nil {
+			return nil, err
+		}
+		if err = h.ensureIV(); err != nil {
 			return nil, err
 		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
@@ -81,6 +86,9 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		}
 		candidate := ProtectedHeader(header)
 		if err := candidate.ensureCritical(); err != nil {
+			return err
+		}
+		if err := candidate.ensureIV(); err != nil {
 			return err
 		}
 
@@ -155,6 +163,17 @@ func (h ProtectedHeader) ensureCritical() error {
 		}
 	}
 	return nil
+}
+
+// ensureCritical ensures IV and Partial IV are not both present in the protected bucket.
+func (h ProtectedHeader) ensureIV() error {
+	if _, ok := h[HeaderLabelIV]; !ok {
+		return nil
+	}
+	if _, ok := h[HeaderLabelPartialIV]; !ok {
+		return nil
+	}
+	return errors.New("The 'Initialization Vector' and 'Partial Initialization Vector' parameters must not both be present in the protected header")
 }
 
 // UnprotectedHeader contains parameters that are not cryptographically

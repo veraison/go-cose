@@ -118,6 +118,14 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "iv and partial iv present",
+			h: ProtectedHeader{
+				HeaderLabelIV:        "foo",
+				HeaderLabelPartialIV: "bar",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -262,6 +270,13 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			name: "header as a byte array",
 			data: []byte{
 				0x80,
+			},
+			wantErr: true,
+		},
+		{
+			name: "iv and partial iv present",
+			data: []byte{
+				0x4b, 0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
 			},
 			wantErr: true,
 		},
