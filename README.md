@@ -4,7 +4,15 @@
 [![tests](https://github.com/veraison/go-cose/workflows/ci/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3Aci)
 [![coverage](https://github.com/veraison/go-cose/workflows/cover%20%E2%89%A589%25/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3A%22cover%20%E2%89%A589%25%22)
 
-A [COSE](https://tools.ietf.org/html/rfc8152) library for go.
+A golang library for the [COSE specification][cose-spec]
+
+## Project Status
+
+**Current Release**: [go-cose alpha 1][release-alpha-1] 
+
+While the project is *currently* forked from the  upstream [mozilla/go-cose][mozilla-go-cose] project, the veraison and mozilla maintainers have agreed to decouple the fork, retire the mozilla/go-cose project and focus on [veraison/go-cose][veraison-go-cose] as the active project.
+
+We thank the [mozilla maintainers and contributors][mozilla-contributors] for their great work that formed the base of the [veraison/go-cose][veraison-go-cose] project.
 
 ## Installation
 
@@ -115,3 +123,9 @@ Fuzzing requires Go 1.18 or higher, and can be executed as follows:
 ```bash
 go test -fuzz=FuzzSign1
 ```
+
+[cose-spec]:            https://datatracker.ietf.org/doc/draft-ietf-cose-rfc8152bis-struct/
+[mozilla-contributors]: https://github.com/mozilla-services/go-cose/graphs/contributors
+[mozilla-go-cose]:      http://github.com/mozilla-services/go-cose
+[veraison-go-cose]:     https://github.com/veraison/go-cose
+[release-alpha-1]:      https://github.com/veraison/go-cose/releases/tag/v1.0.0-alpha.1
