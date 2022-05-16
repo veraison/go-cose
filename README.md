@@ -51,16 +51,15 @@ Construct a new COSE_Sign1 message, then sign it using ECDSA w/ SHA-512 and fina
 privateKey, _ := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 signer, _ := cose.NewSigner(cose.AlgorithmES512, privateKey)
 
-// create message to be signed
-msgToSign := cose.NewSign1Message()
-msgToSign.Payload = []byte("hello world")
-msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+// create message header
+headers := cose.Headers{
+    Protected: cose.ProtectedHeader{
+        cose.HeaderLabelAlgorithm: cose.AlgorithmES512,
+    },
+}
 
-// sign message
-_ = msgToSign.Sign(rand.Reader, nil, signer)
-
-// marshal message
-data, _ := msgToSign.MarshalCBOR()
+// sign and marshal message
+sig, _ := cose.Sign1(rand.Reader, signer, headers, []byte("hello world"), nil)
 ```
 
 Verify a raw COSE_Sign1 message. For example:
