@@ -45,8 +45,8 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		if err = h.ensureCritical(); err != nil {
 			return nil, err
 		}
-		if err = h.ensureIV(); err != nil {
-			return nil, err
+		if err = ensureHeaderIV(h); err != nil {
+			return nil, fmt.Errorf("protected header: %w", err)
 		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
 		if err != nil {
@@ -88,8 +88,8 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		if err := candidate.ensureCritical(); err != nil {
 			return err
 		}
-		if err := candidate.ensureIV(); err != nil {
-			return err
+		if err := ensureHeaderIV(candidate); err != nil {
+			return fmt.Errorf("protected header: %w", err)
 		}
 
 		// cast to type Algorithm if `alg` presents
@@ -165,17 +165,6 @@ func (h ProtectedHeader) ensureCritical() error {
 	return nil
 }
 
-// ensureCritical ensures IV and Partial IV are not both present in the protected bucket.
-func (h ProtectedHeader) ensureIV() error {
-	if _, ok := h[HeaderLabelIV]; !ok {
-		return nil
-	}
-	if _, ok := h[HeaderLabelPartialIV]; !ok {
-		return nil
-	}
-	return errors.New("the 'Initialization Vector' and 'Partial Initialization Vector' parameters must not both be present in the protected header")
-}
-
 // UnprotectedHeader contains parameters that are not cryptographically
 // protected.
 type UnprotectedHeader map[interface{}]interface{}
@@ -188,6 +177,9 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 	}
 	if err := validateHeaderLabel(h); err != nil {
 		return nil, err
+	}
+	if err := ensureHeaderIV(h); err != nil {
+		return nil, fmt.Errorf("unprotected header: %w", err)
 	}
 	return encMode.Marshal(map[interface{}]interface{}(h))
 }
@@ -214,6 +206,9 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	var header map[interface{}]interface{}
 	if err := decMode.Unmarshal(data, &header); err != nil {
 		return err
+	}
+	if err := ensureHeaderIV(header); err != nil {
+		return fmt.Errorf("unprotected header: %w", err)
 	}
 	*h = header
 	return nil
@@ -348,6 +343,19 @@ func (h *Headers) ensureVerificationAlgorithm(alg Algorithm, external []byte) er
 		}
 	}
 	return err
+}
+
+// ensureHeaderIV ensures IV and Partial IV are not both present in the header.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func ensureHeaderIV(h map[interface{}]interface{}) error {
+	if _, ok := h[HeaderLabelIV]; !ok {
+		return nil
+	}
+	if _, ok := h[HeaderLabelPartialIV]; !ok {
+		return nil
+	}
+	return errors.New("the 'Initialization Vector' and 'Partial Initialization Vector' parameters must not both be present")
 }
 
 // validateHeaderLabel validates if all header labels are integers or strings.

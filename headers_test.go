@@ -532,6 +532,14 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "iv and partial iv present",
+			h: UnprotectedHeader{
+				HeaderLabelIV:        "foo",
+				HeaderLabelPartialIV: "bar",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -629,6 +637,13 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			name: "int map key too large",
 			data: []byte{
 				0xa1, 0x3b, 0x83, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+			},
+			wantErr: true,
+		},
+		{
+			name: "iv and partial iv present",
+			data: []byte{
+				0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
 			},
 			wantErr: true,
 		},
