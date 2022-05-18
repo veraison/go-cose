@@ -236,9 +236,5 @@ func Sign1(rand io.Reader, signer Signer, header Headers, payload []byte, extern
 	if err != nil {
 		return nil, err
 	}
-	sig, err := msg.MarshalCBOR()
-	if err != nil {
-		return nil, err
-	}
-	return sig, nil
+	return msg.MarshalCBOR()
 }
