@@ -227,9 +227,9 @@ func (m *Sign1Message) digestToBeSigned(alg Algorithm, external []byte) ([]byte,
 // This method is a wrapper of `Sign1Message.Sign()`.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func Sign1(rand io.Reader, signer Signer, header Headers, payload []byte, external []byte) ([]byte, error) {
+func Sign1(rand io.Reader, signer Signer, headers Headers, payload []byte, external []byte) ([]byte, error) {
 	msg := Sign1Message{
-		Headers: header,
+		Headers: headers,
 		Payload: payload,
 	}
 	err := msg.Sign(rand, external, signer)
