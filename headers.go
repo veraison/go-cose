@@ -267,6 +267,23 @@ type Headers struct {
 	Unprotected UnprotectedHeader
 }
 
+// marshal encoded both headers.
+// It returns RawProtected and RawUnprotected if those are set.
+func (h *Headers) marshal() (cbor.RawMessage, cbor.RawMessage, error) {
+	if err := h.ensureIV(); err != nil {
+		return nil, nil, err
+	}
+	protected, err := h.MarshalProtected()
+	if err != nil {
+		return nil, nil, err
+	}
+	unprotected, err := h.MarshalUnprotected()
+	if err != nil {
+		return nil, nil, err
+	}
+	return protected, unprotected, nil
+}
+
 // MarshalProtected encodes the protected header.
 // RawProtected is returned if it is not set to nil.
 func (h *Headers) MarshalProtected() ([]byte, error) {
@@ -293,6 +310,9 @@ func (h *Headers) UnmarshalFromRaw() error {
 	}
 	if err := decMode.Unmarshal(h.RawUnprotected, &h.Unprotected); err != nil {
 		return fmt.Errorf("cbor: invalid unprotected header: %w", err)
+	}
+	if err := h.ensureIV(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -345,17 +365,36 @@ func (h *Headers) ensureVerificationAlgorithm(alg Algorithm, external []byte) er
 	return err
 }
 
+// ensureIV ensures IV and Partial IV are not both present
+// in the protected and unprotected headers.
+// It does not check if they are both present within one header,
+// as it will be checked later on.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func (h *Headers) ensureIV() error {
+	if hasLabel(h.Protected, HeaderLabelIV) && hasLabel(h.Unprotected, HeaderLabelPartialIV) {
+		return errors.New("IV (protected) and PartialIV (unprotected) parameters must not both be present")
+	}
+	if hasLabel(h.Protected, HeaderLabelPartialIV) && hasLabel(h.Unprotected, HeaderLabelIV) {
+		return errors.New("IV (unprotected) and PartialIV (protected) parameters must not both be present")
+	}
+	return nil
+}
+
+// hasLabel returns true if h contains label.
+func hasLabel(h map[interface{}]interface{}, label interface{}) bool {
+	_, ok := h[label]
+	return ok
+}
+
 // ensureHeaderIV ensures IV and Partial IV are not both present in the header.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
 func ensureHeaderIV(h map[interface{}]interface{}) error {
-	if _, ok := h[HeaderLabelIV]; !ok {
-		return nil
+	if hasLabel(h, HeaderLabelIV) && hasLabel(h, HeaderLabelPartialIV) {
+		return errors.New("IV and PartialIV parameters must not both be present")
 	}
-	if _, ok := h[HeaderLabelPartialIV]; !ok {
-		return nil
-	}
-	return errors.New("the 'Initialization Vector' and 'Partial Initialization Vector' parameters must not both be present")
+	return nil
 }
 
 // validateHeaderLabel validates if all header labels are integers or strings.

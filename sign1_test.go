@@ -130,6 +130,40 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "protected has IV and unprotected has PartialIV error",
+			m: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+						HeaderLabelIV:        "",
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelPartialIV: "",
+					},
+				},
+				Payload:   []byte("foo"),
+				Signature: []byte("bar"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "protected has PartialIV and unprotected has IV error",
+			m: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+						HeaderLabelPartialIV: "",
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelIV: "",
+					},
+				},
+				Payload:   []byte("foo"),
+				Signature: []byte("bar"),
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -321,6 +355,30 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0x40, 0xa0, // empty headers
 				0xf6,       // nil payload
 				0x81, 0x00, // signature
+			},
+			wantErr: true,
+		},
+		{
+			name: "protected has IV and unprotected has PartialIV",
+			data: []byte{
+				0xd2, // tag
+				0x84,
+				0x46, 0xa1, 0x5, 0x63, 0x66, 0x6f, 0x6f, // protected
+				0xa1, 0x6, 0x63, 0x62, 0x61, 0x72, // unprotected
+				0xf6,                   // payload
+				0x43, 0x62, 0x61, 0x72, // signature
+			},
+			wantErr: true,
+		},
+		{
+			name: "protected has PartialIV and unprotected has IV",
+			data: []byte{
+				0xd2, // tag
+				0x84,
+				0x46, 0xa1, 0x6, 0x63, 0x66, 0x6f, 0x6f, // protected
+				0xa1, 0x5, 0x63, 0x62, 0x61, 0x72, // unprotected
+				0xf6,                   // payload
+				0x43, 0x62, 0x61, 0x72, // signature
 			},
 			wantErr: true,
 		},
