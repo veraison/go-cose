@@ -1,7 +1,6 @@
 package cose_test
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -170,21 +169,4 @@ func ExampleSign1() {
 	_ = sig // further process on sig
 	// Output:
 	// message signed
-}
-
-// getSignatureAndPublicKey is a helping function for ExampleSign1Message_Verify().
-func getSignatureAndPublicKey() ([]byte, crypto.PublicKey) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	if err != nil {
-		panic(err)
-	}
-	signer, err := cose.NewSigner(cose.AlgorithmES512, privateKey)
-	if err != nil {
-		panic(err)
-	}
-	sig, err := cose.Sign1(rand.Reader, signer, cose.Headers{}, []byte("hello world"), nil)
-	if err != nil {
-		panic(err)
-	}
-	return sig, privateKey.Public()
 }
