@@ -73,11 +73,7 @@ func (s *Signature) MarshalCBOR() ([]byte, error) {
 	if len(s.Signature) == 0 {
 		return nil, ErrEmptySignature
 	}
-	protected, err := s.Headers.MarshalProtected()
-	if err != nil {
-		return nil, err
-	}
-	unprotected, err := s.Headers.MarshalUnprotected()
+	protected, unprotected, err := s.Headers.marshal()
 	if err != nil {
 		return nil, err
 	}
@@ -329,11 +325,7 @@ func (m *SignMessage) MarshalCBOR() ([]byte, error) {
 	if len(m.Signatures) == 0 {
 		return nil, ErrNoSignatures
 	}
-	protected, err := m.Headers.MarshalProtected()
-	if err != nil {
-		return nil, err
-	}
-	unprotected, err := m.Headers.MarshalUnprotected()
+	protected, unprotected, err := m.Headers.marshal()
 	if err != nil {
 		return nil, err
 	}

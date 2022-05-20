@@ -16,6 +16,8 @@ const (
 	HeaderLabelCritical          int64 = 2
 	HeaderLabelContentType       int64 = 3
 	HeaderLabelKeyID             int64 = 4
+	HeaderLabelIV                int64 = 5
+	HeaderLabelPartialIV         int64 = 6
 	HeaderLabelCounterSignature  int64 = 7
 	HeaderLabelCounterSignature0 int64 = 9
 	HeaderLabelX5Bag             int64 = 32
@@ -42,6 +44,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		}
 		if err = h.ensureCritical(); err != nil {
 			return nil, err
+		}
+		if err = ensureHeaderIV(h); err != nil {
+			return nil, fmt.Errorf("protected header: %w", err)
 		}
 		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
 		if err != nil {
@@ -82,6 +87,9 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		candidate := ProtectedHeader(header)
 		if err := candidate.ensureCritical(); err != nil {
 			return err
+		}
+		if err := ensureHeaderIV(candidate); err != nil {
+			return fmt.Errorf("protected header: %w", err)
 		}
 
 		// cast to type Algorithm if `alg` presents
@@ -170,6 +178,9 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 	if err := validateHeaderLabel(h); err != nil {
 		return nil, err
 	}
+	if err := ensureHeaderIV(h); err != nil {
+		return nil, fmt.Errorf("unprotected header: %w", err)
+	}
 	return encMode.Marshal(map[interface{}]interface{}(h))
 }
 
@@ -195,6 +206,9 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	var header map[interface{}]interface{}
 	if err := decMode.Unmarshal(data, &header); err != nil {
 		return err
+	}
+	if err := ensureHeaderIV(header); err != nil {
+		return fmt.Errorf("unprotected header: %w", err)
 	}
 	*h = header
 	return nil
@@ -253,6 +267,23 @@ type Headers struct {
 	Unprotected UnprotectedHeader
 }
 
+// marshal encoded both headers.
+// It returns RawProtected and RawUnprotected if those are set.
+func (h *Headers) marshal() (cbor.RawMessage, cbor.RawMessage, error) {
+	if err := h.ensureIV(); err != nil {
+		return nil, nil, err
+	}
+	protected, err := h.MarshalProtected()
+	if err != nil {
+		return nil, nil, err
+	}
+	unprotected, err := h.MarshalUnprotected()
+	if err != nil {
+		return nil, nil, err
+	}
+	return protected, unprotected, nil
+}
+
 // MarshalProtected encodes the protected header.
 // RawProtected is returned if it is not set to nil.
 func (h *Headers) MarshalProtected() ([]byte, error) {
@@ -279,6 +310,9 @@ func (h *Headers) UnmarshalFromRaw() error {
 	}
 	if err := decMode.Unmarshal(h.RawUnprotected, &h.Unprotected); err != nil {
 		return fmt.Errorf("cbor: invalid unprotected header: %w", err)
+	}
+	if err := h.ensureIV(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -329,6 +363,38 @@ func (h *Headers) ensureVerificationAlgorithm(alg Algorithm, external []byte) er
 		}
 	}
 	return err
+}
+
+// ensureIV ensures IV and Partial IV are not both present
+// in the protected and unprotected headers.
+// It does not check if they are both present within one header,
+// as it will be checked later on.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func (h *Headers) ensureIV() error {
+	if hasLabel(h.Protected, HeaderLabelIV) && hasLabel(h.Unprotected, HeaderLabelPartialIV) {
+		return errors.New("IV (protected) and PartialIV (unprotected) parameters must not both be present")
+	}
+	if hasLabel(h.Protected, HeaderLabelPartialIV) && hasLabel(h.Unprotected, HeaderLabelIV) {
+		return errors.New("IV (unprotected) and PartialIV (protected) parameters must not both be present")
+	}
+	return nil
+}
+
+// hasLabel returns true if h contains label.
+func hasLabel(h map[interface{}]interface{}, label interface{}) bool {
+	_, ok := h[label]
+	return ok
+}
+
+// ensureHeaderIV ensures IV and Partial IV are not both present in the header.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func ensureHeaderIV(h map[interface{}]interface{}) error {
+	if hasLabel(h, HeaderLabelIV) && hasLabel(h, HeaderLabelPartialIV) {
+		return errors.New("IV and PartialIV parameters must not both be present")
+	}
+	return nil
 }
 
 // validateHeaderLabel validates if all header labels are integers or strings.
