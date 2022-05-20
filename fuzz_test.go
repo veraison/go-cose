@@ -129,15 +129,19 @@ func FuzzSign1(f *testing.F) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		msg, err := cose.Sign1(rand.Reader, signer, hdr, payload, external)
+		msg := cose.Sign1Message{
+			Headers: cose.Headers{Protected: hdr},
+			Payload: payload,
+		}
+		err = msg.Sign(rand.Reader, external, signer)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = cose.Verify1(msg, external, verifier)
+		err = msg.Verify(external, verifier)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = cose.Verify1(msg, append(external, []byte{0}...), verifier)
+		err = msg.Verify(append(external, []byte{0}...), verifier)
 		if err == nil {
 			t.Fatal("verification error expected")
 		}
