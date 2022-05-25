@@ -10,9 +10,9 @@ A golang library for the [COSE specification][cose-spec]
 
 **Current Release**: [go-cose alpha 1][release-alpha-1] 
 
-While the project is *currently* forked from the  upstream [mozilla/go-cose][mozilla-go-cose] project, the veraison and mozilla maintainers have agreed to decouple the fork, retire the mozilla/go-cose project and focus on [veraison/go-cose][veraison-go-cose] as the active project.
+The project was *initially* forked from the  upstream [mozilla-services/go-cose][mozilla-go-cose] project, however the Veraison and Mozilla maintainers have agreed to retire the mozilla-services/go-cose project and focus on [veraison/go-cose][veraison-go-cose] as the active project.
 
-We thank the [mozilla maintainers and contributors][mozilla-contributors] for their great work that formed the base of the [veraison/go-cose][veraison-go-cose] project.
+We thank the [Mozilla maintainers and contributors][mozilla-contributors] for their great work that formed the base of the [veraison/go-cose][veraison-go-cose] project.
 
 ## Installation
 
