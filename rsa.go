@@ -19,7 +19,7 @@ func (rs *rsaSigner) Algorithm() Algorithm {
 	return rs.alg
 }
 
-// Sign signs digest with the private key, possibly using entropy from rand.
+// Sign signs digest with the private key, using entropy from rand.
 // The resulting signature should follow RFC 8152 section 8.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
