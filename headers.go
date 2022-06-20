@@ -160,7 +160,8 @@ func (h ProtectedHeader) ensureCritical() error {
 	for _, label := range labels {
 		switch label.(type) {
 		case int, int8, int16, int32, int64,
-			uint, uint8, uint16, uint32, uint64, string:
+			uint, uint8, uint16, uint32, uint64,
+			string:
 			// all ok.
 		default:
 			return fmt.Errorf("critical header label: require int / tstr type, got '%T': %v", label, label)
