@@ -104,6 +104,13 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "critical header contains non-label element",
+			h: ProtectedHeader{
+				HeaderLabelCritical: []interface{}{[]uint8{}},
+			},
+			wantErr: true,
+		},
+		{
 			name: "duplicated key",
 			h: ProtectedHeader{
 				int8(42):  "foo",
@@ -235,6 +242,13 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			name: "missing header marked as critical",
 			data: []byte{
 				0x44, 0xa1, 0x02, 0x81, 0x03,
+			},
+			wantErr: true,
+		},
+		{
+			name: "critical header contains non-label element",
+			data: []byte{
+				0x44, 0xa1, 0x2, 0x81, 0x40,
 			},
 			wantErr: true,
 		},
