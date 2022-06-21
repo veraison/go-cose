@@ -54,7 +54,7 @@ func (rv *rsaVerifier) Algorithm() Algorithm {
 func (rv *rsaVerifier) Verify(digest []byte, signature []byte) error {
 	hash, ok := rv.alg.hashFunc()
 	if !ok {
-		return ErrVerification
+		return ErrInvalidAlgorithm
 	}
 	if err := rsa.VerifyPSS(rv.key, hash, digest, signature, &rsa.PSSOptions{
 		SaltLength: rsa.PSSSaltLengthEqualsHash, // defined in RFC 8230 sec 2
