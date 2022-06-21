@@ -158,6 +158,10 @@ func (h ProtectedHeader) ensureCritical() error {
 		return err
 	}
 	for _, label := range labels {
+		_, ok := normalizeLabel(label)
+		if !ok {
+			return fmt.Errorf("critical header label: require int / tstr type, got '%T': %v", label, label)
+		}
 		if _, ok := h[label]; !ok {
 			return fmt.Errorf("missing critical header: %v", label)
 		}
@@ -405,30 +409,9 @@ func ensureHeaderIV(h map[interface{}]interface{}) error {
 func validateHeaderLabel(h map[interface{}]interface{}) error {
 	existing := make(map[interface{}]struct{})
 	for label := range h {
-		switch v := label.(type) {
-		case int:
-			label = int64(v)
-		case int8:
-			label = int64(v)
-		case int16:
-			label = int64(v)
-		case int32:
-			label = int64(v)
-		case int64:
-			label = int64(v)
-		case uint:
-			label = int64(v)
-		case uint8:
-			label = int64(v)
-		case uint16:
-			label = int64(v)
-		case uint32:
-			label = int64(v)
-		case uint64:
-			label = int64(v)
-		case string:
-			// no conversion
-		default:
+		var ok bool
+		label, ok = normalizeLabel(label)
+		if !ok {
 			return errors.New("cbor: header label: require int / tstr type")
 		}
 		if _, ok := existing[label]; ok {
@@ -438,6 +421,38 @@ func validateHeaderLabel(h map[interface{}]interface{}) error {
 		}
 	}
 	return nil
+}
+
+// normalizeLabel tries to cast label into a int64 or a string.
+// Returns (nil, false) if the label type is not valid.
+func normalizeLabel(label interface{}) (interface{}, bool) {
+	switch v := label.(type) {
+	case int:
+		label = int64(v)
+	case int8:
+		label = int64(v)
+	case int16:
+		label = int64(v)
+	case int32:
+		label = int64(v)
+	case int64:
+		label = int64(v)
+	case uint:
+		label = int64(v)
+	case uint8:
+		label = int64(v)
+	case uint16:
+		label = int64(v)
+	case uint32:
+		label = int64(v)
+	case uint64:
+		label = int64(v)
+	case string:
+		// no conversion
+	default:
+		return nil, false
+	}
+	return label, true
 }
 
 // headerLabelValidator is used to validate the header label of a COSE header.
