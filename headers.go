@@ -215,7 +215,7 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if err := ensureNoCritical(header); err != nil {
-		return fmt.Errorf("unprotected header: %w")
+		return fmt.Errorf("unprotected header: %w", err)
 	}
 	if err := ensureHeaderIV(header); err != nil {
 		return fmt.Errorf("unprotected header: %w", err)
