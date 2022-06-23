@@ -183,7 +183,7 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 		return nil, err
 	}
 	if err := ensureNoCritical(h); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unprotected header: %w", err)
 	}
 	if err := ensureHeaderIV(h); err != nil {
 		return nil, fmt.Errorf("unprotected header: %w", err)
@@ -215,7 +215,7 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 		return err
 	}
 	if err := ensureNoCritical(header); err != nil {
-		return err
+		return fmt.Errorf("unprotected header: %w")
 	}
 	if err := ensureHeaderIV(header); err != nil {
 		return fmt.Errorf("unprotected header: %w", err)
@@ -412,7 +412,7 @@ func ensureHeaderIV(h map[interface{}]interface{}) error {
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
 func ensureNoCritical(h map[interface{}]interface{}) error {
 	if hasLabel(h, HeaderLabelCritical) {
-		return errors.New("unprotected header: crit parameter must be places in the protected header")
+		return errors.New("unexpected crit parameter found")
 	}
 	return nil
 }
