@@ -554,6 +554,13 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "critical present",
+			h: UnprotectedHeader{
+				HeaderLabelCritical: []string{"foo"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -658,6 +665,14 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			name: "iv and partial iv present",
 			data: []byte{
 				0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
+			},
+			wantErr: true,
+		},
+		{
+			name: "critical present",
+			data: []byte{
+				0xa1,                                     // map
+				0x02, 0x82, 0x03, 0x63, 0x66, 0x6f, 0x6f, // crit
 			},
 			wantErr: true,
 		},

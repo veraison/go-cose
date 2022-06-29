@@ -182,6 +182,9 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 	if err := validateHeaderLabel(h); err != nil {
 		return nil, err
 	}
+	if err := ensureNoCritical(h); err != nil {
+		return nil, fmt.Errorf("unprotected header: %w", err)
+	}
 	if err := ensureHeaderIV(h); err != nil {
 		return nil, fmt.Errorf("unprotected header: %w", err)
 	}
@@ -210,6 +213,9 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	var header map[interface{}]interface{}
 	if err := decMode.Unmarshal(data, &header); err != nil {
 		return err
+	}
+	if err := ensureNoCritical(header); err != nil {
+		return fmt.Errorf("unprotected header: %w", err)
 	}
 	if err := ensureHeaderIV(header); err != nil {
 		return fmt.Errorf("unprotected header: %w", err)
@@ -397,6 +403,16 @@ func hasLabel(h map[interface{}]interface{}, label interface{}) bool {
 func ensureHeaderIV(h map[interface{}]interface{}) error {
 	if hasLabel(h, HeaderLabelIV) && hasLabel(h, HeaderLabelPartialIV) {
 		return errors.New("IV and PartialIV parameters must not both be present")
+	}
+	return nil
+}
+
+// ensureNoCritical ensures crit parameter is not present in the header.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
+func ensureNoCritical(h map[interface{}]interface{}) error {
+	if hasLabel(h, HeaderLabelCritical) {
+		return errors.New("unexpected crit parameter found")
 	}
 	return nil
 }
