@@ -4,7 +4,7 @@ This document provides the details on the veraison/go-cose security policy and d
 
 ## Supported Versions
 
-[go-cose][go-cose] is currently is in active development, moving to a [1.0.0 release][v1.0.0-milestone]. The latest pre-release will be supported until 1.0.0 is released. As 1.0.0 is released, pre-release references will need to be redirected 1.0.0.
+[go-cose][go-cose] is currently is in active development, moving to a [1.0.0 release][v1.0.0-milestone]. The latest pre-release will be supported until 1.0.0 is released. As 1.0.0 is released, pre-release references will need to be redirected to 1.0.0.
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -15,7 +15,7 @@ This document provides the details on the veraison/go-cose security policy and d
 We’re extremely grateful for security researchers and users who report vulnerabilities
 to the [veraison/go-cose][go-cose] community. All reports are thoroughly investigated by a set of [veraison/go-cose maintainers][go-cose-maintainers].
 
-To make a report please email the private security list at <a href="mailto:test@example.com?subject=go-cose Security Notification">go-cose-security@googlegroups.com</a> with details using the following template:
+To make a report please email the private security list at <a href="mailto:go-cose-security@googlegroups.com?subject=go-cose Security Notification">go-cose-security@googlegroups.com</a> with details using the following template:
 
 ### Reporting Template
 
@@ -37,13 +37,13 @@ Information on who to contact for additional information
 
 ### When To Send a Report
 
-You think you have found a vulnerability in th [veraison/go-cose][go-cose] project or a dependency of a Veraison project. This can be any of the repositories on the [Veraison GitHub organization](https://github.com/veraison).
+You think you have found a vulnerability in the [veraison/go-cose][go-cose] project.
 
 ### Security Vulnerability Response
 
 Each report will be reviewed and receipt acknowledged in a timely manner. This will set off the security review process detailed below.
 
-Any vulnerability information shared with the security team stays within the Veraison project and will not be shared with others unless it is necessary to fix the issue. Information is shared only on a need to know basis.
+Any vulnerability information shared with the security team stays within the [veraison/go-cose][go-cose] project and will not be shared with others unless it is necessary to fix the issue. Information is shared only on a need to know basis.
 
 We ask that vulnerability reporter(s) act in good faith by not disclosing the issue to others. And we strive to act in good faith by acting swiftly, and by justly crediting the vulnerability reporter(s) in writing (see [Public Disclosure](#public-disclosure)).
 
@@ -63,7 +63,7 @@ The security team is made up of a subset of the Veraison project maintainers who
 
 ### Responsibilities
 
-* Members MUST be active project maintainers on active (non-deprecated) Veraison projects as defined in [the governance](governance/governance.md)
+* Members MUST be active project maintainers on active (non-deprecated) Veraison projects as defined in the [governance](https://github.com/veraison/community/blob/main/GOVERNANCE.md)
 * Members SHOULD engage in each reported vulnerability, at a minimum to make sure it is being handled
 * Members MUST keep the vulnerability details private and only share on a need to know basis
 
@@ -71,7 +71,7 @@ The security team is made up of a subset of the Veraison project maintainers who
 
 New members are required to be active maintainers of Veraison projects who are willing to perform the responsibilities outlined above. The security team is a subset of the maintainers across Veraison sub-projects. Members can step down at any time and may join at any time.
 
-If at any time a security team member is found to be no longer be an active maintainer on active Veraison sub-projects, this individual will be removed from the security team.
+If at any time a security team member is found to be no longer an active maintainer on active Veraison sub-projects, this individual will be removed from the security team.
 
 ## Patch and Release Team
 
