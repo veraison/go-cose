@@ -1,19 +1,43 @@
 # Security Process and Policy
 
-This document provides the details on the Veraison security policy and details the processes
-surrounding security handling including a how to guide on reporting a security vulnerability
-for anything within the Veraison organization.
+This document provides the details on the veraison/go-cose security policy and details the processes surrounding security handling.
+
+## Supported Versions
+
+[go-cose][go-cose] is currently is in active development, moving to a [1.0.0 release][v1.0.0-milestone]. The latest pre-release will be supported until 1.0.0 is released. As 1.0.0 is released, pre-release references will need to be redirected 1.0.0.
+
+| Version | Supported          |
+| ------- | ------------------ |
+| [v1.0.0-alpha1][v1.0.0-alpha1-release]  | :green_check_mark: |
 
 ## Report A Vulnerability
 
 We’re extremely grateful for security researchers and users who report vulnerabilities
-to the Veraison community. All reports are thoroughly investigated by a set of Veraison maintainers.
+to the [veraison/go-cose][go-cose] community. All reports are thoroughly investigated by a set of [veraison/go-cose maintainers][go-cose-maintainers].
 
-To make a report please email the private security list at ___@___ with the details.
+To make a report please email the private security list at <a href="mailto:test@example.com?subject=go-cose Security Notification">go-cose-security@googlegroups.com</a> with details using the following template:
 
-### When To Send A Report
+### Reporting Template
 
-You think you have found a vulnerability in a Veraison project or a dependency of a Veraison project. This can be any of the repositories on the [Veraison GitHub organization](https://github.com/veraison).
+```console
+[TO:]:     go-cose-security@googlegroups.com
+[SUBJECT]: go-cose Security Notification
+[BODY]:
+Release: v1.0.0-alpha.1
+
+Summary:
+A quick summary of the issue
+
+Impact:
+Details on how to reproduce the security issue.
+
+Contact:
+Information on who to contact for additional information
+```
+
+### When To Send a Report
+
+You think you have found a vulnerability in th [veraison/go-cose][go-cose] project or a dependency of a Veraison project. This can be any of the repositories on the [Veraison GitHub organization](https://github.com/veraison).
 
 ### Security Vulnerability Response
 
@@ -55,6 +79,12 @@ When a vulnerability comes in and is acknowledged, a team - including maintainer
 
 ## Disclosures
 
-Vulnerability disclosures are published as **TBD**. The disclosures will contain an overview, details about the vulnerability, a fix for the vulnerability that will typically be an update, and optionally a workaround if one is available.
+Vulnerability disclosures are published to [security-advisories][security-advisories]. The disclosures will contain an overview, details about the vulnerability, a fix for the vulnerability that will typically be an update, and optionally a workaround if one is available.
 
 Disclosures will be published on the same day as a release fixing the vulnerability after the release is published.
+
+[go-cose]:                https://github.com/veraison/go-cose
+[security-advisories]:    https://github.com/veraison/go-cose/security/advisories
+[v1.0.0-alpha1-release]:  https://github.com/veraison/go-cose/releases/tag/v1.0.0-alpha.1
+[v1.0.0-milestone]:       https://github.com/veraison/go-cose/milestone/2
+[go-cose-maintainers]:    https://github.com/veraison/community/blob/main/OWNERS
