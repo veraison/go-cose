@@ -110,6 +110,12 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 }
 
 // Sign signs a Sign1Message using the provided Signer.
+// The signature is stored in m.Signature.
+//
+// Note that m.Signature is only valid as long as m.Headers.Protected and
+// m.Payload remain unchanged after calling this method.
+// It is possible to modify m.Headers.Unprotected after signing,
+// i.e., add counter signatures or timestamps.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error {
