@@ -19,4 +19,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Run tests
-      run: go test -race -v .
+      run: go test -race -v -coverprofile=coverage.txt .
+    - name: Upload coverage to codecov.io
+      uses: codecov/codecov-action@v3
