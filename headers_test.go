@@ -45,25 +45,25 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "various types of integer label",
 			h: ProtectedHeader{
-				uint(1):   0,
-				uint8(2):  0,
-				uint16(3): 0,
-				uint32(4): 0,
-				uint64(5): 0,
-				int(-1):   0,
-				int8(-2):  0,
-				int16(-3): 0,
-				int32(-4): 0,
-				int64(-5): 0,
+				uint(10):   0,
+				uint8(11):  0,
+				uint16(12): 0,
+				uint32(13): 0,
+				uint64(14): 0,
+				int(-1):    0,
+				int8(-2):   0,
+				int16(-3):  0,
+				int32(-4):  0,
+				int64(-5):  0,
 			},
 			want: []byte{
 				0x55, // bstr
 				0xaa, // map
-				0x01, 0x00,
-				0x02, 0x00,
-				0x03, 0x00,
-				0x04, 0x00,
-				0x05, 0x00,
+				0x0a, 0x00,
+				0x0b, 0x00,
+				0x0c, 0x00,
+				0x0d, 0x00,
+				0x0e, 0x00,
 				0x20, 0x00,
 				0x21, 0x00,
 				0x22, 0x00,
@@ -128,8 +128,8 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "iv and partial iv present",
 			h: ProtectedHeader{
-				HeaderLabelIV:        "foo",
-				HeaderLabelPartialIV: "bar",
+				HeaderLabelIV:        []byte("foo"),
+				HeaderLabelPartialIV: []byte("bar"),
 			},
 			wantErr: true,
 		},
@@ -476,11 +476,11 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "valid header",
 			h: UnprotectedHeader{
-				HeaderLabelKeyID: "foobar",
+				HeaderLabelAlgorithm: "foobar",
 			},
 			want: []byte{
 				0xa1,                                     // map
-				0x04,                                     // kid
+				0x01,                                     // alg
 				0x66, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, // foobar
 			},
 		},
@@ -497,24 +497,24 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "various types of integer label",
 			h: UnprotectedHeader{
-				uint(1):   0,
-				uint8(2):  0,
-				uint16(3): 0,
-				uint32(4): 0,
-				uint64(5): 0,
-				int(-1):   0,
-				int8(-2):  0,
-				int16(-3): 0,
-				int32(-4): 0,
-				int64(-5): 0,
+				uint(10):   0,
+				uint8(11):  0,
+				uint16(12): 0,
+				uint32(13): 0,
+				uint64(14): 0,
+				int(-1):    0,
+				int8(-2):   0,
+				int16(-3):  0,
+				int32(-4):  0,
+				int64(-5):  0,
 			},
 			want: []byte{
 				0xaa, // map
-				0x01, 0x00,
-				0x02, 0x00,
-				0x03, 0x00,
-				0x04, 0x00,
-				0x05, 0x00,
+				0x0a, 0x00,
+				0x0b, 0x00,
+				0x0c, 0x00,
+				0x0d, 0x00,
+				0x0e, 0x00,
 				0x20, 0x00,
 				0x21, 0x00,
 				0x22, 0x00,
@@ -549,8 +549,8 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "iv and partial iv present",
 			h: UnprotectedHeader{
-				HeaderLabelIV:        "foo",
-				HeaderLabelPartialIV: "bar",
+				HeaderLabelIV:        []byte("foo"),
+				HeaderLabelPartialIV: []byte("bar"),
 			},
 			wantErr: true,
 		},
@@ -587,11 +587,11 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			name: "valid header",
 			data: []byte{
 				0xa1,                                     // map
-				0x04,                                     // kid
+				0x01,                                     // alg
 				0x66, 0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72, // foobar
 			},
 			want: UnprotectedHeader{
-				HeaderLabelKeyID: "foobar",
+				HeaderLabelAlgorithm: "foobar",
 			},
 		},
 		{
@@ -800,10 +800,10 @@ func TestHeaders_MarshalUnprotected(t *testing.T) {
 					HeaderLabelAlgorithm: AlgorithmES256,
 				},
 				Unprotected: UnprotectedHeader{
-					HeaderLabelKeyID: 42,
+					HeaderLabelContentType: 42,
 				},
 			},
-			want: []byte{0xa1, 0x04, 0x18, 0x2a},
+			want: []byte{0xa1, 0x03, 0x18, 0x2a},
 		},
 		{
 			name: "invalid protected header",
@@ -857,7 +857,7 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 			name: "valid raw header",
 			h: Headers{
 				RawProtected:   []byte{0x43, 0xa1, 0x01, 0x26},
-				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 			},
 			want: Headers{
 				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
@@ -866,7 +866,7 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 				},
 				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
 				Unprotected: UnprotectedHeader{
-					HeaderLabelKeyID: 42,
+					HeaderLabelContentType: 42,
 				},
 			},
 		},
@@ -877,9 +877,9 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 				Protected: ProtectedHeader{
 					HeaderLabelAlgorithm: AlgorithmES512,
 				},
-				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+				RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 				Unprotected: UnprotectedHeader{
-					HeaderLabelKeyID: 43,
+					HeaderLabelContentType: 43,
 				},
 			},
 			want: Headers{

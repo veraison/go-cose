@@ -18,7 +18,7 @@ func ExampleSignMessage() {
 	// create a signature holder
 	sigHolder := cose.NewSignature()
 	sigHolder.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
-	sigHolder.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
+	sigHolder.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
 
 	// create message to be signed
 	msgToSign := cose.NewSignMessage()
@@ -84,7 +84,7 @@ func ExampleSign1Message() {
 	msgToSign := cose.NewSign1Message()
 	msgToSign.Payload = []byte("hello world")
 	msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
-	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = 1
+	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
 
 	// create a signer
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
@@ -157,7 +157,7 @@ func ExampleSign1() {
 			cose.HeaderLabelAlgorithm: cose.AlgorithmES512,
 		},
 		Unprotected: cose.UnprotectedHeader{
-			cose.HeaderLabelKeyID: 1,
+			cose.HeaderLabelKeyID: []byte("1"),
 		},
 	}
 	sig, err := cose.Sign1(rand.Reader, signer, headers, []byte("hello world"), nil)
