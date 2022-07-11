@@ -2,7 +2,7 @@
 
 [![go.dev](https://pkg.go.dev/badge/github.com/veraison/go-cose.svg)](https://pkg.go.dev/github.com/veraison/go-cose)
 [![tests](https://github.com/veraison/go-cose/workflows/ci/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3Aci)
-[![coverage](https://github.com/veraison/go-cose/workflows/cover%20%E2%89%A589%25/badge.svg)](https://github.com/veraison/go-cose/actions?query=workflow%3A%22cover%20%E2%89%A589%25%22)
+[![codecov](https://codecov.io/gh/veraison/go-cose/branch/main/graph/badge.svg?token=SL18TCTC03)](https://codecov.io/gh/veraison/go-cose)
 
 A golang library for the [COSE specification][cose-spec]
 
