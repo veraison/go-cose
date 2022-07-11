@@ -25,7 +25,7 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelContentType: 42,
 					},
 				},
 				Signature: []byte("bar"),
@@ -33,7 +33,7 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 			want: []byte{
 				0x83,                   // array of size 3
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x62, 0x61, 0x72, // signature
 			},
 		},
@@ -50,7 +50,7 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelContentType: 42,
 					},
 				},
 				Signature: nil,
@@ -65,7 +65,7 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelContentType: 42,
 					},
 				},
 				Signature: []byte{},
@@ -80,7 +80,7 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: make(chan bool),
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelContentType: 42,
 					},
 				},
 				Signature: []byte("bar"),
@@ -95,7 +95,7 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: make(chan bool),
+						"foo": make(chan bool),
 					},
 				},
 				Signature: []byte("bar"),
@@ -108,10 +108,10 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 				Headers: Headers{
 					Protected: ProtectedHeader{
 						HeaderLabelAlgorithm: AlgorithmES256,
-						HeaderLabelIV:        "",
+						HeaderLabelIV:        []byte(""),
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelPartialIV: "",
+						HeaderLabelPartialIV: []byte(""),
 					},
 				},
 				Signature: []byte("bar"),
@@ -124,10 +124,10 @@ func TestSignature_MarshalCBOR(t *testing.T) {
 				Headers: Headers{
 					Protected: ProtectedHeader{
 						HeaderLabelAlgorithm: AlgorithmES256,
-						HeaderLabelPartialIV: "",
+						HeaderLabelPartialIV: []byte(""),
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelIV: "",
+						HeaderLabelIV: []byte(""),
 					},
 				},
 				Signature: []byte("bar"),
@@ -171,7 +171,7 @@ func TestSignature_UnmarshalCBOR(t *testing.T) {
 			data: []byte{
 				0x83,
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x62, 0x61, 0x72, // signature
 			},
 			want: Signature{
@@ -180,9 +180,9 @@ func TestSignature_UnmarshalCBOR(t *testing.T) {
 					Protected: ProtectedHeader{
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
-					RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+					RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: int64(42),
+						HeaderLabelContentType: int64(42),
 					},
 				},
 				Signature: []byte("bar"),
@@ -329,7 +329,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -352,7 +352,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -375,7 +375,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -398,7 +398,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -545,7 +545,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -567,7 +567,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -589,7 +589,7 @@ func TestSignature_Sign(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -641,7 +641,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 						HeaderLabelAlgorithm: algorithmMock,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -665,7 +665,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 						HeaderLabelAlgorithm: algorithmMock,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -689,7 +689,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 						HeaderLabelAlgorithm: algorithmMock,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -713,7 +713,7 @@ func TestSignature_Sign_Internal(t *testing.T) {
 						HeaderLabelAlgorithm: algorithmMock,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			},
@@ -1029,7 +1029,7 @@ func TestSignature_Verify(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 			}
@@ -1077,7 +1077,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelContentType: 42,
 							},
 						},
 						Signature: []byte("foo"),
@@ -1106,7 +1106,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 				0x82,                   // signatures
 				0x83,                   // signature 0
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x66, 0x6f, 0x6f, // signature
 				0x83,                         // signature 1
 				0x44, 0xa1, 0x01, 0x38, 0x26, // protected
@@ -1133,7 +1133,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelContentType: 42,
 							},
 						},
 						Signature: []byte("foo"),
@@ -1154,7 +1154,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 				0x81,                   // signatures
 				0x83,                   // signature 0
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x66, 0x6f, 0x6f, // signature
 			},
 		},
@@ -1214,7 +1214,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelContentType: 42,
 							},
 						},
 						Signature: []byte("foo"),
@@ -1234,7 +1234,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 				0x81,                   // signatures
 				0x83,                   // signature 0
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x66, 0x6f, 0x6f, // signature
 			},
 		},
@@ -1246,7 +1246,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: make(chan bool),
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: 42,
+						HeaderLabelKeyID: []byte("42"),
 					},
 				},
 				Payload: []byte("foo"),
@@ -1271,7 +1271,7 @@ func TestSignMessage_MarshalCBOR(t *testing.T) {
 						HeaderLabelAlgorithm: AlgorithmES256,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelKeyID: make(chan bool),
+						"foo": make(chan bool),
 					},
 				},
 				Payload: []byte("foo"),
@@ -1339,7 +1339,7 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 				0x82,                   // signatures
 				0x83,                   // signature 0
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x66, 0x6f, 0x6f, // signature
 				0x83,                         // signature 1
 				0x44, 0xa1, 0x01, 0x38, 0x26, // protected
@@ -1373,9 +1373,9 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 							Protected: ProtectedHeader{
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
-							RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+							RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: int64(42),
+								HeaderLabelContentType: int64(42),
 							},
 						},
 						Signature: []byte("foo"),
@@ -1410,7 +1410,7 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 				0x81,                   // signatures
 				0x83,                   // signature 0
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x66, 0x6f, 0x6f, // signature
 			},
 			want: SignMessage{
@@ -1440,9 +1440,9 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 							Protected: ProtectedHeader{
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
-							RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+							RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: int64(42),
+								HeaderLabelContentType: int64(42),
 							},
 						},
 						Signature: []byte("foo"),
@@ -1465,7 +1465,7 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 				0x81,                   // signatures
 				0x83,                   // signature 0
 				0x43, 0xa1, 0x01, 0x26, // protected
-				0xa1, 0x04, 0x18, 0x2a, // unprotected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
 				0x43, 0x66, 0x6f, 0x6f, // signature
 			},
 			want: SignMessage{
@@ -1495,9 +1495,9 @@ func TestSignMessage_UnmarshalCBOR(t *testing.T) {
 							Protected: ProtectedHeader{
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
-							RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
+							RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: int64(42),
+								HeaderLabelContentType: int64(42),
 							},
 						},
 						Signature: []byte("foo"),
@@ -1699,7 +1699,7 @@ func TestSignMessage_Sign(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelKeyID: []byte("42"),
 							},
 						},
 					},
@@ -1734,7 +1734,7 @@ func TestSignMessage_Sign(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelKeyID: []byte("42"),
 							},
 						},
 					},
@@ -1769,7 +1769,7 @@ func TestSignMessage_Sign(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelKeyID: []byte("42"),
 							},
 						},
 					},
@@ -1804,7 +1804,7 @@ func TestSignMessage_Sign(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelKeyID: []byte("42"),
 							},
 						},
 					},
@@ -2121,7 +2121,7 @@ func TestSignMessage_Verify(t *testing.T) {
 								HeaderLabelAlgorithm: AlgorithmES256,
 							},
 							Unprotected: UnprotectedHeader{
-								HeaderLabelKeyID: 42,
+								HeaderLabelKeyID: []byte("42"),
 							},
 						},
 					},
@@ -2170,7 +2170,7 @@ func TestSignMessage_Verify(t *testing.T) {
 							HeaderLabelAlgorithm: AlgorithmES256,
 						},
 						Unprotected: UnprotectedHeader{
-							HeaderLabelKeyID: 42,
+							HeaderLabelKeyID: []byte("42"),
 						},
 					},
 				},
