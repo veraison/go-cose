@@ -133,6 +133,13 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "invalid content type value",
+			h: ProtectedHeader{
+				HeaderLabelContentType: []byte("foo"),
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -800,7 +807,7 @@ func TestHeaders_MarshalUnprotected(t *testing.T) {
 					HeaderLabelAlgorithm: AlgorithmES256,
 				},
 				Unprotected: UnprotectedHeader{
-					HeaderLabelContentType: 42,
+					HeaderLabelContentType: uint8(42),
 				},
 			},
 			want: []byte{0xa1, 0x03, 0x18, 0x2a},
@@ -866,7 +873,7 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 				},
 				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
 				Unprotected: UnprotectedHeader{
-					HeaderLabelContentType: 42,
+					HeaderLabelContentType: int8(42),
 				},
 			},
 		},
@@ -879,7 +886,7 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 				},
 				RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
 				Unprotected: UnprotectedHeader{
-					HeaderLabelContentType: 43,
+					HeaderLabelContentType: int16(43),
 				},
 			},
 			want: Headers{
