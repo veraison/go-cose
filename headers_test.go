@@ -134,9 +134,30 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid content type value",
+			name: "content type is string",
 			h: ProtectedHeader{
 				HeaderLabelContentType: []byte("foo"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "content type is negative int8",
+			h: ProtectedHeader{
+				HeaderLabelContentType: int8(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "content type is negative int16",
+			h: ProtectedHeader{
+				HeaderLabelContentType: int16(-1),
+			},
+			wantErr: true,
+		},
+		{
+			name: "content type is negative int32",
+			h: ProtectedHeader{
+				HeaderLabelContentType: int32(-1),
 			},
 			wantErr: true,
 		},
