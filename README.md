@@ -110,18 +110,22 @@ per RFC 8152, are rejected by the go-cose library.
 
 ### Conformance Tests
 
-go-cose runs the [GlueCOSE](https://github.com/gluecose/test-vectors) test suite on every local `go test` execution.
+`go-cose` runs the [GlueCOSE](https://github.com/gluecose/test-vectors) test suite on every local `go test` execution.
 These are also executed on every CI job.
 
 ### Fuzz Tests
 
-go-cose implements several fuzz tests using [Go's native fuzzing](https://go.dev/doc/fuzz).
+`go-cose` implements several fuzz tests using [Go's native fuzzing](https://go.dev/doc/fuzz).
 
 Fuzzing requires Go 1.18 or higher, and can be executed as follows:
 
 ```bash
 go test -fuzz=FuzzSign1
 ```
+
+### Security Reviews
+
+`go-cose` undergoes periodic security review. The security review reports are located [here](https://github.com/veraison/go-cose/tree/main/reports)
 
 [cose-spec]:            https://datatracker.ietf.org/doc/draft-ietf-cose-rfc8152bis-struct/
 [mozilla-contributors]: https://github.com/mozilla-services/go-cose/graphs/contributors
