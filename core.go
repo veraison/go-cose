@@ -215,10 +215,10 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 	}
 
 	switch key := v.PublicKey.(type) {
-	case *rsa.PublicKey:
+	case rsa.PublicKey:
 		hashFunc := v.Alg.HashFunc
 
-		err = rsa.VerifyPSS(key, hashFunc, digest, signature, &rsa.PSSOptions{
+		err = rsa.VerifyPSS(&key, hashFunc, digest, signature, &rsa.PSSOptions{
 			SaltLength: rsa.PSSSaltLengthEqualsHash,
 			Hash:       hashFunc,
 		})
@@ -226,7 +226,7 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 			return errors.Errorf("verification failed rsa.VerifyPSS err %s", err)
 		}
 		return nil
-	case *ecdsa.PublicKey:
+	case ecdsa.PublicKey:
 		if v.Alg.privateKeyECDSACurve == nil {
 			return errors.Errorf("Could not find an elliptic curve for the ecdsa algorithm")
 		}
@@ -248,7 +248,7 @@ func (v *Verifier) Verify(digest []byte, signature []byte) (err error) {
 		r := big.NewInt(0).SetBytes(signature[:algKeyBytesSize])
 		s := big.NewInt(0).SetBytes(signature[algKeyBytesSize:])
 
-		ok := ecdsa.Verify(key, digest, r, s)
+		ok := ecdsa.Verify(&key, digest, r, s)
 		if ok {
 			return nil
 		}
