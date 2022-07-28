@@ -125,7 +125,7 @@ go test -fuzz=FuzzSign1
 
 ### Security Reviews
 
-`go-cose` undergoes periodic security review. The security review reports are located [here](https://github.com/veraison/go-cose/tree/main/reports)
+`go-cose` undergoes periodic security review. The security review reports are located [here](./reports)
 
 [cose-spec]:            https://datatracker.ietf.org/doc/draft-ietf-cose-rfc8152bis-struct/
 [mozilla-contributors]: https://github.com/mozilla-services/go-cose/graphs/contributors
