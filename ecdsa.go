@@ -151,9 +151,6 @@ func (ev *ecdsaVerifier) Verify(content []byte, signature []byte) error {
 	// compute digest
 	digest, err := ev.alg.computeHash(content)
 	if err != nil {
-		if err != ErrUnavailableHashFunc {
-			return ErrVerification
-		}
 		return err
 	}
 
