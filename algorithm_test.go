@@ -1,33 +1,11 @@
 package cose
 
 import (
-	"crypto"
-	"crypto/sha256"
 	"reflect"
-	"sync"
 	"testing"
 )
 
-// resetExtendedAlgorithm cleans up extended algorithms
-func resetExtendedAlgorithm() {
-	extMu.Lock()
-	extAlgorithms = nil
-	extMu.Unlock()
-}
-
 func TestAlgorithm_String(t *testing.T) {
-	defer resetExtendedAlgorithm()
-
-	// register extended algorithms
-	algFoo := Algorithm(-102)
-	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != nil {
-		t.Fatalf("RegisterAlgorithm() = %v", err)
-	}
-	algBar := Algorithm(-98)
-	if err := RegisterAlgorithm(algBar, "bar", 0, nil); err != nil {
-		t.Fatalf("RegisterAlgorithm() = %v", err)
-	}
-
 	// run tests
 	tests := []struct {
 		name string
@@ -70,16 +48,6 @@ func TestAlgorithm_String(t *testing.T) {
 			want: "EdDSA",
 		},
 		{
-			name: "extended algorithm: foo",
-			alg:  algFoo,
-			want: "foo",
-		},
-		{
-			name: "extended algorithm: bar",
-			alg:  algBar,
-			want: "bar",
-		},
-		{
 			name: "unknown algorithm",
 			alg:  0,
 			want: "unknown algorithm value 0",
@@ -95,26 +63,6 @@ func TestAlgorithm_String(t *testing.T) {
 }
 
 func TestAlgorithm_computeHash(t *testing.T) {
-	defer resetExtendedAlgorithm()
-
-	// register extended algorithms
-	algFoo := Algorithm(-102)
-	if err := RegisterAlgorithm(algFoo, "foo", crypto.SHA256, nil); err != nil {
-		t.Fatalf("RegisterAlgorithm() = %v", err)
-	}
-	algBar := Algorithm(-98)
-	if err := RegisterAlgorithm(algBar, "bar", 0, sha256.New); err != nil {
-		t.Fatalf("RegisterAlgorithm() = %v", err)
-	}
-	algPlain := Algorithm(-112)
-	if err := RegisterAlgorithm(algPlain, "plain", 0, nil); err != nil {
-		t.Fatalf("RegisterAlgorithm() = %v", err)
-	}
-	algUnavailableHash := Algorithm(-117)
-	if err := RegisterAlgorithm(algUnavailableHash, "unknown hash", 42, nil); err != nil {
-		t.Fatalf("RegisterAlgorithm() = %v", err)
-	}
-
 	// run tests
 	data := []byte("hello world")
 	tests := []struct {
@@ -178,39 +126,13 @@ func TestAlgorithm_computeHash(t *testing.T) {
 			},
 		},
 		{
-			name: "Ed25519",
-			alg:  AlgorithmEd25519,
-			want: data,
-		},
-		{
-			name: "extended algorithm with crypto.Hash",
-			alg:  algFoo,
-			want: []byte{
-				0xb9, 0x4d, 0x27, 0xb9, 0x93, 0x4d, 0x3e, 0x08, 0xa5, 0x2e, 0x52, 0xd7, 0xda, 0x7d, 0xab, 0xfa,
-				0xc4, 0x84, 0xef, 0xe3, 0x7a, 0x53, 0x80, 0xee, 0x90, 0x88, 0xf7, 0xac, 0xe2, 0xef, 0xcd, 0xe9,
-			},
-		},
-		{
-			name: "extended algorithm with hashFunc",
-			alg:  algBar,
-			want: []byte{
-				0xb9, 0x4d, 0x27, 0xb9, 0x93, 0x4d, 0x3e, 0x08, 0xa5, 0x2e, 0x52, 0xd7, 0xda, 0x7d, 0xab, 0xfa,
-				0xc4, 0x84, 0xef, 0xe3, 0x7a, 0x53, 0x80, 0xee, 0x90, 0x88, 0xf7, 0xac, 0xe2, 0xef, 0xcd, 0xe9,
-			},
-		},
-		{
-			name: "extended algorithm without hash",
-			alg:  algPlain,
-			want: data,
+			name:    "Ed25519",
+			alg:     AlgorithmEd25519,
+			wantErr: ErrUnavailableHashFunc,
 		},
 		{
 			name:    "unknown algorithm",
 			alg:     0,
-			wantErr: ErrUnknownAlgorithm,
-		},
-		{
-			name:    "unknown hash",
-			alg:     algUnavailableHash,
 			wantErr: ErrUnavailableHashFunc,
 		},
 	}
@@ -226,48 +148,4 @@ func TestAlgorithm_computeHash(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestRegisterAlgorithm(t *testing.T) {
-	defer resetExtendedAlgorithm()
-
-	// register existing algorithm (should fail)
-	if err := RegisterAlgorithm(AlgorithmES256, "ES256", crypto.SHA256, nil); err != ErrAlgorithmRegistered {
-		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
-	}
-
-	algFoo := Algorithm(-102)
-	// register external algorithm
-	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != nil {
-		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, false)
-	}
-
-	// double register external algorithm (should fail)
-	if err := RegisterAlgorithm(algFoo, "foo", 0, nil); err != ErrAlgorithmRegistered {
-		t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
-	}
-}
-
-func TestRegisterAlgorithm_Concurrent(t *testing.T) {
-	defer resetExtendedAlgorithm()
-
-	// Register algorithms concurrently to ensure testing on race mode catches races.
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		// register existing algorithm (should fail)
-		if err := RegisterAlgorithm(AlgorithmES256, "ES256", crypto.SHA256, nil); err != ErrAlgorithmRegistered {
-			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, ErrAlgorithmRegistered)
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		// register external algorithm
-		if err := RegisterAlgorithm(Algorithm(-102), "foo", 0, nil); err != nil {
-			t.Errorf("RegisterAlgorithm() error = %v, wantErr %v", err, false)
-		}
-	}()
-	wg.Wait()
 }
