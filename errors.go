@@ -12,6 +12,5 @@ var (
 	ErrMissingPayload        = errors.New("missing payload")
 	ErrNoSignatures          = errors.New("no signatures attached")
 	ErrUnavailableHashFunc   = errors.New("hash function is not available")
-	ErrUnknownAlgorithm      = errors.New("unknown algorithm")
 	ErrVerification          = errors.New("verification error")
 )

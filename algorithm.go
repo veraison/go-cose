@@ -2,7 +2,6 @@ package cose
 
 import (
 	"crypto"
-	"hash"
 	"strconv"
 )
 
@@ -75,50 +74,32 @@ func (a Algorithm) String() string {
 
 // hashFunc returns the hash associated with the algorithm supported by this
 // library.
-func (a Algorithm) hashFunc() (crypto.Hash, bool) {
+func (a Algorithm) hashFunc() crypto.Hash {
 	switch a {
 	case AlgorithmPS256, AlgorithmES256:
-		return crypto.SHA256, true
+		return crypto.SHA256
 	case AlgorithmPS384, AlgorithmES384:
-		return crypto.SHA384, true
+		return crypto.SHA384
 	case AlgorithmPS512, AlgorithmES512:
-		return crypto.SHA512, true
-	case AlgorithmEd25519:
-		return 0, true
+		return crypto.SHA512
+	default:
+		return 0
 	}
-	return 0, false
-}
-
-// newHash returns a new hash instance for computing the digest specified in the
-// algorithm.
-// Returns nil if no hash is required for the message.
-func (a Algorithm) newHash() (hash.Hash, error) {
-	h, ok := a.hashFunc()
-	if !ok {
-		return nil, ErrUnknownAlgorithm
-	}
-	if h == 0 {
-		// no hash required
-		return nil, nil
-	}
-	if h.Available() {
-		return h.New(), nil
-	}
-	return nil, ErrUnavailableHashFunc
 }
 
 // computeHash computes the digest using the hash specified in the algorithm.
-// Returns the input data if no hash is required for the message.
 func (a Algorithm) computeHash(data []byte) ([]byte, error) {
-	h, err := a.newHash()
-	if err != nil {
+	return computeHash(a.hashFunc(), data)
+}
+
+// computeHash computes the digest using the given hash.
+func computeHash(h crypto.Hash, data []byte) ([]byte, error) {
+	if !h.Available() {
+		return nil, ErrUnavailableHashFunc
+	}
+	hh := h.New()
+	if _, err := hh.Write(data); err != nil {
 		return nil, err
 	}
-	if h == nil {
-		return data, nil
-	}
-	if _, err := h.Write(data); err != nil {
-		return nil, err
-	}
-	return h.Sum(nil), nil
+	return hh.Sum(nil), nil
 }

@@ -24,11 +24,8 @@ func (rs *rsaSigner) Algorithm() Algorithm {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
 func (rs *rsaSigner) Sign(rand io.Reader, content []byte) ([]byte, error) {
-	hash, ok := rs.alg.hashFunc()
-	if !ok {
-		return nil, ErrInvalidAlgorithm
-	}
-	digest, err := rs.alg.computeHash(content)
+	hash := rs.alg.hashFunc()
+	digest, err := computeHash(hash, content)
 	if err != nil {
 		return nil, err
 	}
@@ -57,11 +54,8 @@ func (rv *rsaVerifier) Algorithm() Algorithm {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
 func (rv *rsaVerifier) Verify(content []byte, signature []byte) error {
-	hash, ok := rv.alg.hashFunc()
-	if !ok {
-		return ErrInvalidAlgorithm
-	}
-	digest, err := rv.alg.computeHash(content)
+	hash := rv.alg.hashFunc()
+	digest, err := computeHash(hash, content)
 	if err != nil {
 		return err
 	}
