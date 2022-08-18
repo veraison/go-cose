@@ -14,11 +14,12 @@ type Verifier interface {
 	// Algorithm returns the signing algorithm associated with the public key.
 	Algorithm() Algorithm
 
-	// Verify verifies digest with the public key, returning nil for success.
+	// Verify verifies message content with the public key, returning nil for
+	// success.
 	// Otherwise, it returns ErrVerification.
 	//
 	// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
-	Verify(digest, signature []byte) error
+	Verify(content, signature []byte) error
 }
 
 // NewVerifier returns a verifier with a given public key.
