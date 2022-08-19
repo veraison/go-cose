@@ -14,7 +14,7 @@ func newSign1Message() *cose.Sign1Message {
 				cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
 			},
 			Unprotected: cose.UnprotectedHeader{
-				cose.HeaderLabelKeyID: 1,
+				cose.HeaderLabelKeyID: []byte{0x01},
 			},
 		},
 		Payload:   make([]byte, 100),
