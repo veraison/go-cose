@@ -211,11 +211,11 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 
 	// sign / verify round trip
 	// see also conformance_test.go for strict tests.
-	digest, err := alg.computeHash([]byte("hello world"))
+	content := []byte("hello world")
 	if err != nil {
 		t.Fatalf("Algorithm.computeHash() error = %v", err)
 	}
-	sig, err := signer.Sign(rand.Reader, digest)
+	sig, err := signer.Sign(rand.Reader, content)
 	if err != nil {
 		t.Fatalf("Sign() error = %v", err)
 	}
@@ -224,7 +224,7 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 	if err != nil {
 		t.Fatalf("NewVerifier() error = %v", err)
 	}
-	if err := verifier.Verify(digest, sig); err != nil {
+	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("Verifier.Verify() error = %v", err)
 	}
 }
@@ -235,7 +235,7 @@ func Test_ecdsaVerifier_Verify_Success(t *testing.T) {
 	key := generateTestECDSAKey(t)
 
 	// generate a valid signature
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 
 	// set up verifier
 	verifier, err := NewVerifier(alg, key.Public())
@@ -250,7 +250,7 @@ func Test_ecdsaVerifier_Verify_Success(t *testing.T) {
 	}
 
 	// verify round trip
-	if err := verifier.Verify(digest, sig); err != nil {
+	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("ecdsaVerifier.Verify() error = %v", err)
 	}
 }
@@ -261,7 +261,7 @@ func Test_ecdsaVerifier_Verify_AlgorithmMismatch(t *testing.T) {
 	key := generateTestECDSAKey(t)
 
 	// generate a valid signature
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 
 	// set up verifier with a different algorithm
 	verifier := &ecdsaVerifier{
@@ -270,7 +270,7 @@ func Test_ecdsaVerifier_Verify_AlgorithmMismatch(t *testing.T) {
 	}
 
 	// verification should fail on algorithm mismatch
-	if err := verifier.Verify(digest, sig); err != ErrVerification {
+	if err := verifier.Verify(content, sig); err != ErrVerification {
 		t.Fatalf("ecdsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 	}
 }
@@ -281,7 +281,7 @@ func Test_ecdsaVerifier_Verify_KeyMismatch(t *testing.T) {
 	key := generateTestECDSAKey(t)
 
 	// generate a valid signature
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 
 	// set up verifier with a different key / new key
 	key = generateTestECDSAKey(t)
@@ -291,7 +291,7 @@ func Test_ecdsaVerifier_Verify_KeyMismatch(t *testing.T) {
 	}
 
 	// verification should fail on key mismatch
-	if err := verifier.Verify(digest, sig); err != ErrVerification {
+	if err := verifier.Verify(content, sig); err != ErrVerification {
 		t.Fatalf("ecdsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 	}
 }
@@ -302,7 +302,7 @@ func Test_ecdsaVerifier_Verify_InvalidSignature(t *testing.T) {
 	key := generateTestECDSAKey(t)
 
 	// generate a valid signature with a tampered one
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 	tamperedSig := make([]byte, len(sig))
 	copy(tamperedSig, sig)
 	tamperedSig[0]++
@@ -341,7 +341,7 @@ func Test_ecdsaVerifier_Verify_InvalidSignature(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := verifier.Verify(digest, tt.signature); err != ErrVerification {
+			if err := verifier.Verify(content, tt.signature); err != ErrVerification {
 				t.Errorf("ecdsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 			}
 		})
