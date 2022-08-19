@@ -153,7 +153,7 @@ func (s *Signature) Sign(rand io.Reader, signer Signer, protected cbor.RawMessag
 	}
 
 	// sign the message
-	toBeSigned, err := s.toBeSigned(alg, protected, payload, external)
+	toBeSigned, err := s.toBeSigned(protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 	}
 
 	// verify the message
-	toBeSigned, err := s.toBeSigned(alg, protected, payload, external)
+	toBeSigned, err := s.toBeSigned(protected, payload, external)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (s *Signature) Verify(verifier Verifier, protected cbor.RawMessage, payload
 // toBeSigned constructs Sig_structure, computes and returns ToBeSigned.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (s *Signature) toBeSigned(alg Algorithm, bodyProtected cbor.RawMessage, payload, external []byte) ([]byte, error) {
+func (s *Signature) toBeSigned(bodyProtected cbor.RawMessage, payload, external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
 	//
 	//   Sig_structure = [

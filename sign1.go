@@ -138,7 +138,7 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 	}
 
 	// sign the message
-	toBeSigned, err := m.toBeSigned(alg, external)
+	toBeSigned, err := m.toBeSigned(external)
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 	}
 
 	// verify the message
-	toBeSigned, err := m.toBeSigned(alg, external)
+	toBeSigned, err := m.toBeSigned(external)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 // toBeSigned constructs Sig_structure, computes and returns ToBeSigned.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *Sign1Message) toBeSigned(alg Algorithm, external []byte) ([]byte, error) {
+func (m *Sign1Message) toBeSigned(external []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
 	//
 	//   Sig_structure = [
