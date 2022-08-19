@@ -1,6 +1,10 @@
 package cose
 
 import (
+	"crypto"
+	"crypto/sha256"
+	"hash"
+	"io"
 	"reflect"
 	"testing"
 )
@@ -147,5 +151,38 @@ func TestAlgorithm_computeHash(t *testing.T) {
 				t.Errorf("Algorithm.computeHash() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+type badHash struct{}
+
+func badHashNew() hash.Hash {
+	return &badHash{}
+}
+
+func (*badHash) Write(p []byte) (n int, err error) {
+	return 0, io.EOF
+}
+
+func (*badHash) Sum(b []byte) []byte {
+	return b
+}
+
+func (*badHash) Reset() {}
+
+func (*badHash) Size() int {
+	return 0
+}
+func (*badHash) BlockSize() int {
+	return 0
+}
+
+func Test_computeHash(t *testing.T) {
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+
+	_, err := computeHash(crypto.SHA256, nil)
+	if err != io.EOF {
+		t.Fatalf("computeHash() error = %v, wantErr %v", err, io.EOF)
 	}
 }

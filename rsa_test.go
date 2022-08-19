@@ -1,8 +1,10 @@
 package cose
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"reflect"
 	"testing"
 )
@@ -46,6 +48,26 @@ func Test_rsaSigner(t *testing.T) {
 	}
 	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("Verifier.Verify() error = %v", err)
+	}
+}
+
+func Test_rsaSigner_SignHashFailure(t *testing.T) {
+	// generate key
+	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
+
+	// set up signer
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+
+	// sign with bad hash implementation
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	content := []byte("hello world")
+	if _, err = signer.Sign(rand.Reader, content); err == nil {
+		t.Fatalf("Sign() error = nil, wantErr true")
 	}
 }
 
@@ -165,5 +187,27 @@ func Test_rsaVerifier_Verify_InvalidSignature(t *testing.T) {
 				t.Errorf("rsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 			}
 		})
+	}
+}
+
+func Test_rsaVerifier_Verify_HashFailure(t *testing.T) {
+	// generate key
+	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
+
+	// generate a valid signature
+	content, sig := signTestData(t, alg, key)
+
+	// set up verifier
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// verify with bad hash implementation
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	if err := verifier.Verify(content, sig); err == nil {
+		t.Fatalf("rsaVerifier.Verify() error = nil, wantErr true")
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/asn1"
 	"errors"
 	"io"
@@ -290,6 +291,24 @@ func Test_ecdsaBadCryptoSigner_BadSignature(t *testing.T) {
 	testSignFailure(t, AlgorithmES256, badSigner)
 }
 
+func Test_ecdsaKeySigner_SignHashFailure(t *testing.T) {
+	key := generateTestECDSAKey(t)
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	testSignFailure(t, AlgorithmES256, key)
+}
+
+func Test_ecdsaCryptoSigner_SignHashFailure(t *testing.T) {
+	wrappedKey := struct {
+		crypto.Signer
+	}{
+		Signer: generateTestECDSAKey(t),
+	}
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	testSignFailure(t, AlgorithmES256, wrappedKey)
+}
+
 func testSignFailure(t *testing.T, alg Algorithm, key crypto.Signer) {
 	signer, err := NewSigner(alg, key)
 	if err != nil {
@@ -297,8 +316,7 @@ func testSignFailure(t *testing.T, alg Algorithm, key crypto.Signer) {
 	}
 
 	content := []byte("hello world")
-	_, err = signer.Sign(rand.Reader, content)
-	if err == nil {
+	if _, err = signer.Sign(rand.Reader, content); err == nil {
 		t.Fatalf("Sign() error = nil, wantErr true")
 	}
 }
@@ -419,5 +437,27 @@ func Test_ecdsaVerifier_Verify_InvalidSignature(t *testing.T) {
 				t.Errorf("ecdsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 			}
 		})
+	}
+}
+
+func Test_ecdsaVerifier_Verify_HashFailure(t *testing.T) {
+	// generate key
+	alg := AlgorithmES256
+	key := generateTestECDSAKey(t)
+
+	// generate a valid signature
+	content, sig := signTestData(t, alg, key)
+
+	// set up verifier
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// verify with bad hash implementation
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	if err := verifier.Verify(content, sig); err == nil {
+		t.Fatalf("ecdsaVerifier.Verify() error = nil, wantErr true")
 	}
 }
