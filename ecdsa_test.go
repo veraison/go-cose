@@ -5,6 +5,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/asn1"
+	"errors"
+	"io"
 	"math/big"
 	"reflect"
 	"testing"
@@ -212,9 +215,6 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 	// sign / verify round trip
 	// see also conformance_test.go for strict tests.
 	content := []byte("hello world")
-	if err != nil {
-		t.Fatalf("Algorithm.computeHash() error = %v", err)
-	}
 	sig, err := signer.Sign(rand.Reader, content)
 	if err != nil {
 		t.Fatalf("Sign() error = %v", err)
@@ -226,6 +226,80 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 	}
 	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("Verifier.Verify() error = %v", err)
+	}
+}
+
+type ecdsaBadCryptoSigner struct {
+	crypto.Signer
+	signature []byte
+	err       error
+}
+
+func (s *ecdsaBadCryptoSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
+	return s.signature, s.err
+}
+
+func Test_ecdsaBadCryptoSigner_SignFailure(t *testing.T) {
+	badSigner := &ecdsaBadCryptoSigner{
+		Signer: generateTestECDSAKey(t),
+		err:    errors.New("sign failure"),
+	}
+	testSignFailure(t, AlgorithmES256, badSigner)
+}
+
+func Test_ecdsaBadCryptoSigner_BadSignature(t *testing.T) {
+	key := generateTestECDSAKey(t)
+
+	// nil signature
+	badSigner := &ecdsaBadCryptoSigner{
+		Signer:    key,
+		signature: nil,
+	}
+	testSignFailure(t, AlgorithmES256, badSigner)
+
+	// malformed signature: bad r
+	sig, err := asn1.Marshal(struct {
+		R, S *big.Int
+	}{
+		R: big.NewInt(-1),
+		S: big.NewInt(1),
+	})
+	if err != nil {
+		t.Fatalf("asn1.Marshal() error = %v", err)
+	}
+	badSigner = &ecdsaBadCryptoSigner{
+		Signer:    key,
+		signature: sig,
+	}
+	testSignFailure(t, AlgorithmES256, badSigner)
+
+	// malformed signature: bad s
+	sig, err = asn1.Marshal(struct {
+		R, S *big.Int
+	}{
+		R: big.NewInt(1),
+		S: big.NewInt(-1),
+	})
+	if err != nil {
+		t.Fatalf("asn1.Marshal() error = %v", err)
+	}
+	badSigner = &ecdsaBadCryptoSigner{
+		Signer:    key,
+		signature: sig,
+	}
+	testSignFailure(t, AlgorithmES256, badSigner)
+}
+
+func testSignFailure(t *testing.T, alg Algorithm, key crypto.Signer) {
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+
+	content := []byte("hello world")
+	_, err = signer.Sign(rand.Reader, content)
+	if err == nil {
+		t.Fatalf("Sign() error = nil, wantErr true")
 	}
 }
 
