@@ -147,18 +147,18 @@ func newMockSigner(t *testing.T) *mockSigner {
 	}
 }
 
-func (m *mockSigner) setup(digest, sig []byte) {
-	m.m[hex.EncodeToString(digest)] = hex.EncodeToString(sig) // deep copy
+func (m *mockSigner) setup(content, sig []byte) {
+	m.m[hex.EncodeToString(content)] = hex.EncodeToString(sig) // deep copy
 }
 
 func (m *mockSigner) Algorithm() Algorithm {
 	return algorithmMock
 }
 
-func (m *mockSigner) Sign(rand io.Reader, digest []byte) ([]byte, error) {
-	sigHex, ok := m.m[hex.EncodeToString(digest)]
+func (m *mockSigner) Sign(rand io.Reader, content []byte) ([]byte, error) {
+	sigHex, ok := m.m[hex.EncodeToString(content)]
 	if !ok {
-		m.t.Fatalf("mockSigner: not setup: %v", digest)
+		m.t.Fatalf("mockSigner: not setup: %v", content)
 	}
 	sig, err := hex.DecodeString(sigHex)
 	if err != nil {
