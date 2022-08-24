@@ -2,7 +2,6 @@ package cose
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/rand"
 	"reflect"
 	"testing"
@@ -671,20 +670,13 @@ func TestSign1Message_Sign_Internal(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hash := crypto.SHA256
-			RegisterAlgorithm(algorithmMock, "Mock", hash, nil)
-			defer resetExtendedAlgorithm()
-
 			sig := make([]byte, 64)
 			_, err := rand.Read(sig)
 			if err != nil {
 				t.Fatalf("rand.Read() error = %v", err)
 			}
-			h := hash.New()
-			h.Write(tt.toBeSigned)
-			digest := h.Sum(nil)
 			signer := newMockSigner(t)
-			signer.setup(digest, sig)
+			signer.setup(tt.toBeSigned, sig)
 
 			msg := tt.msg
 			if err := msg.Sign(rand.Reader, tt.external, signer); err != nil {

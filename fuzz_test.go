@@ -58,6 +58,9 @@ func FuzzSign1Message_UnmarshalCBOR(f *testing.F) {
 			return false
 		}
 		b1, err := enc.Marshal(tmp)
+		if err != nil {
+			return false
+		}
 		return bytes.Equal(b, b1)
 	}
 	f.Fuzz(func(t *testing.T, b []byte) {

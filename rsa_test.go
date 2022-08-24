@@ -1,8 +1,10 @@
 package cose
 
 import (
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"reflect"
 	"testing"
 )
@@ -34,11 +36,8 @@ func Test_rsaSigner(t *testing.T) {
 
 	// sign / verify round trip
 	// see also conformance_test.go for strict tests.
-	digest, err := alg.computeHash([]byte("hello world"))
-	if err != nil {
-		t.Fatalf("Algorithm.computeHash() error = %v", err)
-	}
-	sig, err := signer.Sign(rand.Reader, digest)
+	content := []byte("hello world")
+	sig, err := signer.Sign(rand.Reader, content)
 	if err != nil {
 		t.Fatalf("Sign() error = %v", err)
 	}
@@ -47,8 +46,28 @@ func Test_rsaSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewVerifier() error = %v", err)
 	}
-	if err := verifier.Verify(digest, sig); err != nil {
+	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("Verifier.Verify() error = %v", err)
+	}
+}
+
+func Test_rsaSigner_SignHashFailure(t *testing.T) {
+	// generate key
+	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
+
+	// set up signer
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+
+	// sign with bad hash implementation
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	content := []byte("hello world")
+	if _, err = signer.Sign(rand.Reader, content); err == nil {
+		t.Fatalf("Sign() error = nil, wantErr true")
 	}
 }
 
@@ -58,7 +77,7 @@ func Test_rsaVerifier_Verify_Success(t *testing.T) {
 	key := generateTestRSAKey(t)
 
 	// generate a valid signature
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 
 	// set up verifier
 	verifier, err := NewVerifier(alg, key.Public())
@@ -73,7 +92,7 @@ func Test_rsaVerifier_Verify_Success(t *testing.T) {
 	}
 
 	// verify round trip
-	if err := verifier.Verify(digest, sig); err != nil {
+	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("rsaVerifier.Verify() error = %v", err)
 	}
 }
@@ -84,7 +103,7 @@ func Test_rsaVerifier_Verify_AlgorithmMismatch(t *testing.T) {
 	key := generateTestRSAKey(t)
 
 	// generate a valid signature
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 
 	// set up verifier with a different algorithm
 	verifier := &rsaVerifier{
@@ -93,7 +112,7 @@ func Test_rsaVerifier_Verify_AlgorithmMismatch(t *testing.T) {
 	}
 
 	// verification should fail on algorithm mismatch
-	if err := verifier.Verify(digest, sig); err != ErrVerification {
+	if err := verifier.Verify(content, sig); err != ErrVerification {
 		t.Fatalf("rsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 	}
 }
@@ -104,7 +123,7 @@ func Test_rsaVerifier_Verify_KeyMismatch(t *testing.T) {
 	key := generateTestRSAKey(t)
 
 	// generate a valid signature
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 
 	// set up verifier with a different key / new key
 	key = generateTestRSAKey(t)
@@ -114,7 +133,7 @@ func Test_rsaVerifier_Verify_KeyMismatch(t *testing.T) {
 	}
 
 	// verification should fail on key mismatch
-	if err := verifier.Verify(digest, sig); err != ErrVerification {
+	if err := verifier.Verify(content, sig); err != ErrVerification {
 		t.Fatalf("rsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 	}
 }
@@ -125,7 +144,7 @@ func Test_rsaVerifier_Verify_InvalidSignature(t *testing.T) {
 	key := generateTestRSAKey(t)
 
 	// generate a valid signature with a tampered one
-	digest, sig := signTestData(t, alg, key)
+	content, sig := signTestData(t, alg, key)
 	tamperedSig := make([]byte, len(sig))
 	copy(tamperedSig, sig)
 	tamperedSig[0]++
@@ -164,9 +183,31 @@ func Test_rsaVerifier_Verify_InvalidSignature(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := verifier.Verify(digest, tt.signature); err != ErrVerification {
+			if err := verifier.Verify(content, tt.signature); err != ErrVerification {
 				t.Errorf("rsaVerifier.Verify() error = %v, wantErr %v", err, ErrVerification)
 			}
 		})
+	}
+}
+
+func Test_rsaVerifier_Verify_HashFailure(t *testing.T) {
+	// generate key
+	alg := AlgorithmPS256
+	key := generateTestRSAKey(t)
+
+	// generate a valid signature
+	content, sig := signTestData(t, alg, key)
+
+	// set up verifier
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// verify with bad hash implementation
+	crypto.RegisterHash(crypto.SHA256, badHashNew)
+	defer crypto.RegisterHash(crypto.SHA256, sha256.New)
+	if err := verifier.Verify(content, sig); err == nil {
+		t.Fatalf("rsaVerifier.Verify() error = nil, wantErr true")
 	}
 }

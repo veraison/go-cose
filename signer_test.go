@@ -10,16 +10,13 @@ import (
 	"testing"
 )
 
-func signTestData(t *testing.T, alg Algorithm, key crypto.Signer) (digest, sig []byte) {
+func signTestData(t *testing.T, alg Algorithm, key crypto.Signer) (content, sig []byte) {
 	signer, err := NewSigner(alg, key)
 	if err != nil {
 		t.Fatalf("NewSigner() error = %v", err)
 	}
-	digest, err = alg.computeHash([]byte("hello world"))
-	if err != nil {
-		t.Fatalf("Algorithm.computeHash() error = %v", err)
-	}
-	sig, err = signer.Sign(rand.Reader, digest)
+	content = []byte("hello world")
+	sig, err = signer.Sign(rand.Reader, content)
 	if err != nil {
 		t.Fatalf("Sign() error = %v", err)
 	}
@@ -147,18 +144,18 @@ func newMockSigner(t *testing.T) *mockSigner {
 	}
 }
 
-func (m *mockSigner) setup(digest, sig []byte) {
-	m.m[hex.EncodeToString(digest)] = hex.EncodeToString(sig) // deep copy
+func (m *mockSigner) setup(content, sig []byte) {
+	m.m[hex.EncodeToString(content)] = hex.EncodeToString(sig) // deep copy
 }
 
 func (m *mockSigner) Algorithm() Algorithm {
 	return algorithmMock
 }
 
-func (m *mockSigner) Sign(rand io.Reader, digest []byte) ([]byte, error) {
-	sigHex, ok := m.m[hex.EncodeToString(digest)]
+func (m *mockSigner) Sign(rand io.Reader, content []byte) ([]byte, error) {
+	sigHex, ok := m.m[hex.EncodeToString(content)]
 	if !ok {
-		m.t.Fatalf("mockSigner: not setup: %v", digest)
+		m.t.Fatalf("mockSigner: not setup: %v", content)
 	}
 	sig, err := hex.DecodeString(sigHex)
 	if err != nil {
