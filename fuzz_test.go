@@ -21,6 +21,12 @@ import (
 	"github.com/veraison/go-cose"
 )
 
+var supportedAlgorithms = [...]cose.Algorithm{
+	cose.AlgorithmPS256, cose.AlgorithmPS384, cose.AlgorithmPS512,
+	cose.AlgorithmES256, cose.AlgorithmES384, cose.AlgorithmES512,
+	cose.AlgorithmEd25519,
+}
+
 func FuzzSign1Message_UnmarshalCBOR(f *testing.F) {
 	testdata, err := os.ReadDir("testdata")
 	if err != nil {
@@ -110,6 +116,18 @@ func FuzzSign1(f *testing.F) {
 			f.Add(hdr, mustHexToBytes(tc.Sign1.Payload), mustHexToBytes(tc.Sign1.External))
 		}
 	}
+	// Generating new keys consumes a lot of memory,
+	// to the point that the host can decide to kill the fuzzing execution
+	// when the memory is low.
+	// We can avoid this by always reusing the same signer and verifier for a given algorithm.
+	signverif := make(map[cose.Algorithm]signVerifier, len(supportedAlgorithms))
+	for _, alg := range supportedAlgorithms {
+		signverif[alg], err = newSignerWithEphemeralKey(alg)
+		if err != nil {
+			f.Fatal(err)
+		}
+	}
+
 	f.Fuzz(func(t *testing.T, hdr_data, payload, external []byte) {
 		hdr := make(cose.ProtectedHeader)
 		err := hdr.UnmarshalCBOR(hdr_data)
@@ -120,40 +138,36 @@ func FuzzSign1(f *testing.F) {
 		if err != nil {
 			return
 		}
-		pkey, err := newSignerWithEphemeralKey(alg)
-		if err != nil {
+		sv, ok := signverif[alg]
+		if !ok {
 			return
-		}
-		signer, err := cose.NewSigner(alg, pkey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		verifier, err := cose.NewVerifier(alg, pkey.Public())
-		if err != nil {
-			t.Fatal(err)
 		}
 		msg := cose.Sign1Message{
 			Headers: cose.Headers{Protected: hdr},
 			Payload: payload,
 		}
-		err = msg.Sign(rand.Reader, external, signer)
+		err = msg.Sign(rand.Reader, external, sv.signer)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = msg.Verify(external, verifier)
+		err = msg.Verify(external, sv.verifier)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = msg.Verify(append(external, []byte{0}...), verifier)
+		err = msg.Verify(append(external, []byte{0}...), sv.verifier)
 		if err == nil {
 			t.Fatal("verification error expected")
 		}
 	})
 }
 
-func newSignerWithEphemeralKey(alg cose.Algorithm) (crypto.Signer, error) {
+type signVerifier struct {
+	signer   cose.Signer
+	verifier cose.Verifier
+}
+
+func newSignerWithEphemeralKey(alg cose.Algorithm) (sv signVerifier, err error) {
 	var key crypto.Signer
-	var err error
 	switch alg {
 	case cose.AlgorithmPS256:
 		key, err = rsa.GenerateKey(rand.Reader, 2048)
@@ -170,10 +184,15 @@ func newSignerWithEphemeralKey(alg cose.Algorithm) (crypto.Signer, error) {
 	case cose.AlgorithmEd25519:
 		_, key, err = ed25519.GenerateKey(rand.Reader)
 	default:
-		return nil, cose.ErrAlgorithmNotSupported
+		err = cose.ErrAlgorithmNotSupported
 	}
 	if err != nil {
-		return nil, err
+		return
 	}
-	return key, nil
+	sv.signer, err = cose.NewSigner(alg, key)
+	if err != nil {
+		return
+	}
+	sv.verifier, err = cose.NewVerifier(alg, key.Public())
+	return
 }
