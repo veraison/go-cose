@@ -40,40 +40,97 @@ go get github.com/veraison/go-cose@main
 
 ## Usage
 
+### Signing and Verification
+
 ```go
 import "github.com/veraison/go-cose"
 ```
 
-Construct a new COSE_Sign1 message, then sign it using ECDSA w/ SHA-512 and finally marshal it. For example:
+Construct a new COSE_Sign1 message, then sign it using ECDSA w/ SHA-256 and finally marshal it. For example:
 
 ```go
-// create a signer
-privateKey, _ := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-signer, _ := cose.NewSigner(cose.AlgorithmES512, privateKey)
+package main
 
-// create message header
-headers := cose.Headers{
-    Protected: cose.ProtectedHeader{
-        cose.HeaderLabelAlgorithm: cose.AlgorithmES512,
-    },
+import (
+    "crypto/ecdsa"
+    "crypto/elliptic"
+    "crypto/rand"
+    _ "crypto/sha256"
+
+    "github.com/veraison/go-cose"
+)
+
+func SignP256(data []byte) ([]byte, error) {
+    // create a signer
+    privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+    if err != nil {
+        return nil, err
+    }
+    signer, err := cose.NewSigner(cose.AlgorithmES256, privateKey)
+    if err != nil {
+        return nil, err
+    }
+
+    // create message header
+    headers := cose.Headers{
+        Protected: cose.ProtectedHeader{
+            cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
+        },
+    }
+
+    // sign and marshal message
+    return cose.Sign1(rand.Reader, signer, headers, data, nil)
 }
-
-// sign and marshal message
-sig, _ := cose.Sign1(rand.Reader, signer, headers, []byte("hello world"), nil)
 ```
 
 Verify a raw COSE_Sign1 message. For example:
 
 ```go
-// create a verifier from a trusted private key
-publicKey := privateKey.Public()
-verifier, _ := cose.NewVerifier(cose.AlgorithmES512, publicKey)
+package main
 
-// create a sign message from a raw COSE_Sign1 payload
-var msg cose.Sign1Message
-_ = msg.UnmarshalCBOR(raw)
-_ = msg.Verify(nil, verifier)
+import (
+    "crypto"
+    _ "crypto/sha256"
+
+    "github.com/veraison/go-cose"
+)
+
+func VerifyP256(publicKey crypto.PublicKey, sig []byte) error {
+    // create a verifier from a trusted private key
+    verifier, err := cose.NewVerifier(cose.AlgorithmES512, publicKey)
+    if err != nil {
+        return err
+    }
+
+    // create a sign message from a raw COSE_Sign1 payload
+    var msg cose.Sign1Message
+    if err = msg.UnmarshalCBOR(sig); err != nil {
+        return err
+    }
+    return msg.Verify(nil, verifier)
+}
 ```
+
+See [example_test.go](./example_test.go) for more examples.
+
+### About hashing
+
+`go-cose` does not import any hash package by its own to avoid linking unnecessary algorithms to the final binary.
+It is the the responsibility of the `go-cose` user to make the necessary hash functions available at runtime, i.e.,
+by using a blank import:
+
+```go
+import (
+    _ "crypto/sha256"
+    _ "crypto/sha512"
+)
+```
+
+These are the required packages for each built-in cose.Algorithm:
+
+- cose.AlgorithmPS256, cose.AlgorithmES256: `crypto/sha256`
+- cose.AlgorithmPS384, cose.AlgorithmPS512, cose.AlgorithmES384, cose.AlgorithmES512: `crypto/sha512`
+- cose.AlgorithmEd25519: none
 
 ## Features
 
