@@ -97,7 +97,7 @@ import (
 
 func VerifyP256(publicKey crypto.PublicKey, sig []byte) error {
     // create a verifier from a trusted private key
-    verifier, err := cose.NewVerifier(cose.AlgorithmES512, publicKey)
+    verifier, err := cose.NewVerifier(cose.AlgorithmES256, publicKey)
     if err != nil {
         return err
     }
