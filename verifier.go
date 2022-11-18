@@ -46,6 +46,9 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrAlgorithmMismatch)
 		}
+		if !vk.Curve.IsOnCurve(vk.X, vk.Y) {
+			return nil, errors.New("public key point is not on curve")
+		}
 		return &ecdsaVerifier{
 			alg: alg,
 			key: vk,
