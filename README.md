@@ -14,6 +14,11 @@ The project was *initially* forked from the  upstream [mozilla-services/go-cose]
 
 We thank the [Mozilla maintainers and contributors][mozilla-contributors] for their great work that formed the base of the [veraison/go-cose][veraison-go-cose] project.
 
+## Code of Conduct
+
+This project has adopted the [Contributor Covenant Code of Conduct](https://github.com/veraison/.github/blob/main/CODE_OF_CONDUCT.md).
+
+
 ## Installation
 
 go-cose is compatible with modern Go releases in module mode, with Go installed:
