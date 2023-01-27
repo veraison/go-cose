@@ -3,11 +3,31 @@ package cose
 import (
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
+	"math/big"
 	"reflect"
 	"testing"
 )
+
+func mustBase64ToBigInt(s string) *big.Int {
+	val, err := base64.RawURLEncoding.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return new(big.Int).SetBytes(val)
+}
+
+func generateBogusECKey() *ecdsa.PublicKey {
+	return &ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		// x-coord is not on curve p-256
+		X: mustBase64ToBigInt("MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqx7D4"),
+		Y: mustBase64ToBigInt("4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"),
+	}
+}
 
 func TestNewVerifier(t *testing.T) {
 	// generate ecdsa key
@@ -24,6 +44,9 @@ func TestNewVerifier(t *testing.T) {
 	} else {
 		rsaKeyLowEntropy = &key.PublicKey
 	}
+
+	// craft an EC public key with the x-coord not on curve
+	ecdsaKeyPointNotOnCurve := generateBogusECKey()
 
 	// run tests
 	tests := []struct {
@@ -86,6 +109,12 @@ func TestNewVerifier(t *testing.T) {
 		{
 			name:    "unknown algorithm",
 			alg:     0,
+			wantErr: true,
+		},
+		{
+			name:    "bogus ecdsa public key (point not on curve)",
+			alg:     AlgorithmES256,
+			key:     ecdsaKeyPointNotOnCurve,
 			wantErr: true,
 		},
 	}

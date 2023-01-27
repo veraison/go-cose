@@ -5,9 +5,9 @@
   "key": {
     "kty": "EC",
     "crv": "P-256",
-    "x": "usWxHK2PmfnHKwXPS54m0kTcGJ90UiglWiGahtagnv8",
-    "y": "IBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4",
-    "d": "V8kgd2ZBRuh2dgyVINBUqpPDr7BOMGcF22CQMIUHtNM"
+    "x": "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+    "y": "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+    "d": "jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
   },
   "alg": "ES256",
   "sign1::sign": {
