@@ -14,10 +14,24 @@ The project was *initially* forked from the  upstream [mozilla-services/go-cose]
 
 We thank the [Mozilla maintainers and contributors][mozilla-contributors] for their great work that formed the base of the [veraison/go-cose][veraison-go-cose] project.
 
+## Community
+
+The [veraison/go-cose](https://github.com/veraison/go-cose) project is an open source community effort.
+
+You can reach the go-cose community via::
+
+- [Mailing List](veraison-project@confidentialcomputing.io)
+- Bi-weekly meetings: 08:00-09:00 Pacific
+  - [Zoom meeting link](https://us02web.zoom.us/j/81054434992?pwd=YjNBU21seU5VcGdtVXY3VHVjS251Zz09)
+  - [Calendar ics link](https://zoom.us/meeting/tZUtcu2srT8jE9YFubXn-lC9upuwUiiev52G/ics)
+- [Meeting Notes](https://veraison.zulipchat.com/#narrow/stream/317999-go-cose-meetings)
+- [Meeting Recordings](https://www.youtube.com/@go-cose-community3000)
+
+Participation in the go-cose community is governed by the Veraison [CODE_OF_CONDUCT.md](https://github.com/veraison/.github/blob/main/CODE_OF_CONDUCT.md) and [GOVERNANCE.md](https://github.com/veraison/community/blob/main/GOVERNANCE.md)
+
 ## Code of Conduct
 
 This project has adopted the [Contributor Covenant Code of Conduct](https://github.com/veraison/.github/blob/main/CODE_OF_CONDUCT.md).
-
 
 ## Installation
 
