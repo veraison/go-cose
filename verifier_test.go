@@ -54,7 +54,7 @@ func TestNewVerifier(t *testing.T) {
 		alg     Algorithm
 		key     crypto.PublicKey
 		want    Verifier
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "ecdsa key verifier",
@@ -66,10 +66,10 @@ func TestNewVerifier(t *testing.T) {
 			},
 		},
 		{
-			name:    "ecdsa key mismatch",
+			name:    "ecdsa invalid public key",
 			alg:     AlgorithmES256,
 			key:     rsaKey,
-			wantErr: true,
+			wantErr: "ES256: invalid public key",
 		},
 		{
 			name: "ed25519 verifier",
@@ -80,10 +80,10 @@ func TestNewVerifier(t *testing.T) {
 			},
 		},
 		{
-			name:    "ed25519 key mismatch",
+			name:    "ed25519 invalid public key",
 			alg:     AlgorithmEd25519,
 			key:     rsaKey,
-			wantErr: true,
+			wantErr: "EdDSA: invalid public key",
 		},
 		{
 			name: "rsa verifier",
@@ -95,33 +95,36 @@ func TestNewVerifier(t *testing.T) {
 			},
 		},
 		{
-			name:    "rsa key mismatch",
+			name:    "rsa invalid public key",
 			alg:     AlgorithmPS256,
 			key:     ecdsaKey,
-			wantErr: true,
+			wantErr: "PS256: invalid public key",
 		},
 		{
 			name:    "rsa key under minimum entropy",
 			alg:     AlgorithmPS256,
 			key:     rsaKeyLowEntropy,
-			wantErr: true,
+			wantErr: "RSA key must be at least 2048 bits long",
 		},
 		{
 			name:    "unknown algorithm",
 			alg:     0,
-			wantErr: true,
+			wantErr: "algorithm not supported",
 		},
 		{
 			name:    "bogus ecdsa public key (point not on curve)",
 			alg:     AlgorithmES256,
 			key:     ecdsaKeyPointNotOnCurve,
-			wantErr: true,
+			wantErr: "public key point is not on curve",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewVerifier(tt.alg, tt.key)
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("NewVerifier() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("NewVerifier() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
