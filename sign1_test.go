@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"reflect"
 	"testing"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 func TestSign1Message_MarshalCBOR(t *testing.T) {
@@ -836,4 +838,67 @@ func TestSign1Message_Verify(t *testing.T) {
 			t.Error("Sign1Message.Verify() error = nil, wantErr true")
 		}
 	})
+}
+
+// TestSign1Message_Verify_issue119: non-minimal protected header length
+func TestSign1Message_Verify_issue119(t *testing.T) {
+	// generate key and set up signer / verifier
+	alg := AlgorithmES256
+	key := generateTestECDSAKey(t)
+	signer, err := NewSigner(alg, key)
+	if err != nil {
+		t.Fatalf("NewSigner() error = %v", err)
+	}
+	verifier, err := NewVerifier(alg, key.Public())
+	if err != nil {
+		t.Fatalf("NewVerifier() error = %v", err)
+	}
+
+	// generate message and sign
+	msg := &Sign1Message{
+		Headers: Headers{
+			Protected: ProtectedHeader{
+				HeaderLabelAlgorithm: AlgorithmES256,
+			},
+		},
+		Payload: []byte("hello"),
+	}
+	if err := msg.Sign(rand.Reader, nil, signer); err != nil {
+		t.Fatalf("Sign1Message.Sign() error = %v", err)
+	}
+	data, err := msg.MarshalCBOR()
+	if err != nil {
+		t.Fatalf("Sign1Message.MarshalCBOR() error = %v", err)
+	}
+
+	// decanonicalize protected header
+	decanonicalize := func(data []byte) ([]byte, error) {
+		var content sign1Message
+		if err := decModeWithTagsForbidden.Unmarshal(data[1:], &content); err != nil {
+			return nil, err
+		}
+
+		protected := make([]byte, len(content.Protected)+1)
+		copy(protected[2:], content.Protected[1:])
+		protected[0] = 0x58
+		protected[1] = content.Protected[0] & 0x1f
+		content.Protected = protected
+
+		return encMode.Marshal(cbor.Tag{
+			Number:  CBORTagSign1Message,
+			Content: content,
+		})
+	}
+	if data, err = decanonicalize(data); err != nil {
+		t.Fatalf("fail to decanonicalize: %v", err)
+	}
+
+	// verify message
+	var decoded Sign1Message
+	if err = decoded.UnmarshalCBOR(data); err != nil {
+		t.Fatalf("Sign1Message.UnmarshalCBOR() error = %v", err)
+	}
+	if err := decoded.Verify(nil, verifier); err != nil {
+		t.Fatalf("Sign1Message.Verify() error = %v", err)
+	}
 }
