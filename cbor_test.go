@@ -2,7 +2,10 @@ package cose
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
+
+	"github.com/fxamacker/cbor/v2"
 )
 
 func Test_byteString_UnmarshalCBOR(t *testing.T) {
@@ -71,6 +74,133 @@ func Test_byteString_UnmarshalCBOR(t *testing.T) {
 			}
 			if !bytes.Equal(got, tt.want) {
 				t.Errorf("byteString.UnmarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_deterministicBinaryString(t *testing.T) {
+	gen := func(initial []byte, size int) []byte {
+		data := make([]byte, size+len(initial))
+		copy(data, initial)
+		return data
+	}
+	tests := []struct {
+		name    string
+		data    cbor.RawMessage
+		want    cbor.RawMessage
+		wantErr bool
+	}{
+		{
+			name:    "empty input",
+			data:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "not bstr",
+			data:    []byte{0x00},
+			wantErr: true,
+		},
+		{
+			name: "short length",
+			data: gen([]byte{0x57}, 23),
+			want: gen([]byte{0x57}, 23),
+		},
+		{
+			name: "optimal uint8 length",
+			data: gen([]byte{0x58, 0x18}, 24),
+			want: gen([]byte{0x58, 0x18}, 24),
+		},
+		{
+			name: "non-optimal uint8 length",
+			data: gen([]byte{0x58, 0x17}, 23),
+			want: gen([]byte{0x57}, 23),
+		},
+		{
+			name: "optimal uint16 length",
+			data: gen([]byte{0x59, 0x01, 0x00}, 256),
+			want: gen([]byte{0x59, 0x01, 0x00}, 256),
+		},
+		{
+			name: "non-optimal uint16 length, target short",
+			data: gen([]byte{0x59, 0x00, 0x17}, 23),
+			want: gen([]byte{0x57}, 23),
+		},
+		{
+			name: "non-optimal uint16 length, target uint8",
+			data: gen([]byte{0x59, 0x00, 0x18}, 24),
+			want: gen([]byte{0x58, 0x18}, 24),
+		},
+		{
+			name: "optimal uint32 length",
+			data: gen([]byte{0x5a, 0x00, 0x01, 0x00, 0x00}, 65536),
+			want: gen([]byte{0x5a, 0x00, 0x01, 0x00, 0x00}, 65536),
+		},
+		{
+			name: "non-optimal uint32 length, target short",
+			data: gen([]byte{0x5a, 0x00, 0x00, 0x00, 0x17}, 23),
+			want: gen([]byte{0x57}, 23),
+		},
+		{
+			name: "non-optimal uint32 length, target uint8",
+			data: gen([]byte{0x5a, 0x00, 0x00, 0x00, 0x18}, 24),
+			want: gen([]byte{0x58, 0x18}, 24),
+		},
+		{
+			name: "non-optimal uint32 length, target uint16",
+			data: gen([]byte{0x5a, 0x00, 0x00, 0x01, 0x00}, 256),
+			want: gen([]byte{0x59, 0x01, 0x00}, 256),
+		},
+		{
+			name: "non-optimal uint64 length, target short",
+			data: gen([]byte{0x5b,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x17,
+			}, 23),
+			want: gen([]byte{0x57}, 23),
+		},
+		{
+			name: "non-optimal uint64 length, target uint8",
+			data: gen([]byte{0x5b,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x18,
+			}, 24),
+			want: gen([]byte{0x58, 0x18}, 24),
+		},
+		{
+			name: "non-optimal uint64 length, target uint16",
+			data: gen([]byte{0x5b,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x01, 0x00,
+			}, 256),
+			want: gen([]byte{0x59, 0x01, 0x00}, 256),
+		},
+		{
+			name: "non-optimal uint64 length, target uint32",
+			data: gen([]byte{0x5b,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x01, 0x00, 0x00,
+			}, 65536),
+			want: gen([]byte{0x5a, 0x00, 0x01, 0x00, 0x00}, 65536),
+		},
+		{
+			name: "early EOF",
+			data: gen([]byte{0x5b,
+				0x01, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+			}, 42),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := deterministicBinaryString(tt.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("deterministicBinaryString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("deterministicBinaryString() = %v, want %v", got, tt.want)
 			}
 		})
 	}
