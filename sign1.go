@@ -199,6 +199,10 @@ func (m *Sign1Message) toBeSigned(external []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	protected, err = deterministicBinaryString(protected)
+	if err != nil {
+		return nil, err
+	}
 	if external == nil {
 		external = []byte{}
 	}
