@@ -902,3 +902,66 @@ func TestSign1Message_Verify_issue119(t *testing.T) {
 		t.Fatalf("Sign1Message.Verify() error = %v", err)
 	}
 }
+
+func TestSign1Message_toBeSigned(t *testing.T) {
+	tests := []struct {
+		name     string
+		m        *Sign1Message
+		external []byte
+		want     []byte
+		wantErr  bool
+	}{
+		{
+			name: "valid message",
+			m: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+				},
+				Payload: []byte("hello world"),
+			},
+			want: []byte{
+				0x84,                                                             // array type
+				0x6a, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x31, // context
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // protected
+				0x40,                                                                   // external
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "invalid protected header",
+			m: &Sign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						1.5: nil,
+					},
+				},
+				Payload: []byte{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid raw protected header",
+			m: &Sign1Message{
+				Headers: Headers{
+					RawProtected: []byte{0x00},
+				},
+				Payload: []byte{},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.m.toBeSigned(tt.external)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Sign1Message.toBeSigned() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Sign1Message.toBeSigned() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
