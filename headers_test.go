@@ -10,7 +10,7 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		name    string
 		h       ProtectedHeader
 		want    []byte
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid header",
@@ -78,21 +78,21 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 					value int
 				}{}: 42,
 			},
-			wantErr: true,
+			wantErr: "protected header: header label: require int / tstr type",
 		},
 		{
 			name: "empty critical",
 			h: ProtectedHeader{
 				HeaderLabelCritical: []interface{}{},
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: empty crit header",
 		},
 		{
 			name: "invalid critical",
 			h: ProtectedHeader{
 				HeaderLabelCritical: 42,
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: invalid crit header",
 		},
 		{
 			name: "missing header marked as critical",
@@ -101,14 +101,14 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 					HeaderLabelContentType,
 				},
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: missing critical header: 3",
 		},
 		{
 			name: "critical header contains non-label element",
 			h: ProtectedHeader{
 				HeaderLabelCritical: []interface{}{[]uint8{}},
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: require int / tstr type, got '[]uint8': []",
 		},
 		{
 			name: "duplicated key",
@@ -116,14 +116,14 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 				int8(42):  "foo",
 				int64(42): "bar",
 			},
-			wantErr: true,
+			wantErr: "protected header: header label: duplicated label: 42",
 		},
 		{
 			name: "un-marshalable content",
 			h: ProtectedHeader{
 				"foo": make(chan bool),
 			},
-			wantErr: true,
+			wantErr: "cbor: unsupported type: chan bool",
 		},
 		{
 			name: "iv and partial iv present",
@@ -131,41 +131,44 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 				HeaderLabelIV:        []byte("foo"),
 				HeaderLabelPartialIV: []byte("bar"),
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: IV and PartialIV: parameters must not both be present",
 		},
 		{
 			name: "content type is string",
 			h: ProtectedHeader{
 				HeaderLabelContentType: []byte("foo"),
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: content type: require tstr / uint type",
 		},
 		{
 			name: "content type is negative int8",
 			h: ProtectedHeader{
 				HeaderLabelContentType: int8(-1),
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: content type: require tstr / uint type",
 		},
 		{
 			name: "content type is negative int16",
 			h: ProtectedHeader{
 				HeaderLabelContentType: int16(-1),
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: content type: require tstr / uint type",
 		},
 		{
 			name: "content type is negative int32",
 			h: ProtectedHeader{
 				HeaderLabelContentType: int32(-1),
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: content type: require tstr / uint type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.MarshalCBOR()
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("ProtectedHeader.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("ProtectedHeader.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -181,7 +184,7 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 		name    string
 		data    []byte
 		want    ProtectedHeader
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid header",
@@ -216,117 +219,121 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 		{
 			name:    "nil CBOR data",
 			data:    nil,
-			wantErr: true,
+			wantErr: "EOF",
 		},
 		{
 			name:    "empty CBOR data",
 			data:    []byte{},
-			wantErr: true,
+			wantErr: "EOF",
 		},
 		{
 			name:    "bad CBOR data",
 			data:    []byte{0x00, 0x01, 0x02, 0x04},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name:    "nil bstr",
 			data:    []byte{0xf6},
-			wantErr: true,
+			wantErr: "cbor: nil protected header",
 		},
 		{
 			name:    "non-map header",
 			data:    []byte{0x41, 0x00},
-			wantErr: true,
+			wantErr: "cbor: protected header: require map type",
 		},
 		{
 			name: "invalid header label type: bstr type",
 			data: []byte{
 				0x43, 0xa1, 0x40, 0x00,
 			},
-			wantErr: true,
+			wantErr: "cbor: header label: require int / tstr type",
 		},
 		{
 			name: "invalid header label type: major type 7: simple value", // issue #38
 			data: []byte{
 				0x43, 0xa1, 0xf3, 0x00,
 			},
-			wantErr: true,
+			wantErr: "cbor: header label: require int / tstr type",
 		},
 		{
 			name: "empty critical",
 			data: []byte{
 				0x43, 0xa1, 0x02, 0x80,
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: empty crit header",
 		},
 		{
 			name: "invalid critical",
 			data: []byte{
 				0x43, 0xa1, 0x02, 0x00,
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: invalid crit header",
 		},
 		{
 			name: "missing header marked as critical",
 			data: []byte{
 				0x44, 0xa1, 0x02, 0x81, 0x03,
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: missing critical header: 3",
 		},
 		{
 			name: "critical header contains non-label element",
 			data: []byte{
 				0x44, 0xa1, 0x2, 0x81, 0x40,
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: crit: require int / tstr type, got '[]uint8': []",
 		},
 		{
 			name: "duplicated key",
 			data: []byte{
 				0x45, 0xa2, 0x01, 0x00, 0x01, 0x00,
 			},
-			wantErr: true,
+			wantErr: "cbor: found duplicate map key \"1\" at map element index 1",
 		},
 		{
 			name: "incomplete CBOR data",
 			data: []byte{
 				0x45,
 			},
-			wantErr: true,
+			wantErr: "unexpected EOF",
 		},
 		{
 			name: "invalid map value",
 			data: []byte{
 				0x46, 0xa1, 0x00, 0xa1, 0x00, 0x4f, 0x01,
 			},
-			wantErr: true,
+			wantErr: "unexpected EOF",
 		},
 		{
 			name: "int map key too large",
 			data: []byte{
 				0x4b, 0xa1, 0x3b, 0x83, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
 			},
-			wantErr: true,
+			wantErr: "cbor: header label: int key must not be higher than 1<<63 - 1",
 		},
 		{
 			name: "header as a byte array",
 			data: []byte{
 				0x80,
 			},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name: "iv and partial iv present",
 			data: []byte{
 				0x4b, 0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: IV: require bstr type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got ProtectedHeader
-			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
+			err := got.UnmarshalCBOR(tt.data)
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("ProtectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("ProtectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -430,7 +437,7 @@ func TestProtectedHeader_Critical(t *testing.T) {
 		name    string
 		h       ProtectedHeader
 		want    []interface{}
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid header",
@@ -470,20 +477,23 @@ func TestProtectedHeader_Critical(t *testing.T) {
 			h: ProtectedHeader{
 				HeaderLabelCritical: []interface{}{},
 			},
-			wantErr: true,
+			wantErr: "empty crit header",
 		},
 		{
 			name: "invalid critical",
 			h: ProtectedHeader{
 				HeaderLabelCritical: 42,
 			},
-			wantErr: true,
+			wantErr: "invalid crit header",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.Critical()
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("ProtectedHeader.Critical() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("ProtectedHeader.Critical() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -499,7 +509,7 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		name    string
 		h       UnprotectedHeader
 		want    []byte
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid header",
@@ -557,7 +567,7 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 					value int
 				}{}: 42,
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header label: require int / tstr type",
 		},
 		{
 			name: "duplicated key",
@@ -565,14 +575,14 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 				int8(42):  "foo",
 				int64(42): "bar",
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header label: duplicated label: 42",
 		},
 		{
 			name: "un-marshalable content",
 			h: UnprotectedHeader{
 				"foo": make(chan bool),
 			},
-			wantErr: true,
+			wantErr: "cbor: unsupported type: chan bool",
 		},
 		{
 			name: "iv and partial iv present",
@@ -580,20 +590,23 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 				HeaderLabelIV:        []byte("foo"),
 				HeaderLabelPartialIV: []byte("bar"),
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header parameter: IV and PartialIV: parameters must not both be present",
 		},
 		{
 			name: "critical present",
 			h: UnprotectedHeader{
 				HeaderLabelCritical: []string{"foo"},
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header parameter: crit: not allowed",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.MarshalCBOR()
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("UnprotectedHeader.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("UnprotectedHeader.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -609,7 +622,7 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 		name    string
 		data    []byte
 		want    UnprotectedHeader
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid header",
@@ -630,71 +643,71 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 		{
 			name:    "nil CBOR data",
 			data:    nil,
-			wantErr: true,
+			wantErr: "cbor: nil unprotected header",
 		},
 		{
 			name:    "empty CBOR data",
 			data:    []byte{},
-			wantErr: true,
+			wantErr: "cbor: unprotected header: missing type",
 		},
 		{
 			name:    "bad CBOR data",
 			data:    []byte{0x00, 0x01, 0x02, 0x04},
-			wantErr: true,
+			wantErr: "cbor: unprotected header: require map type",
 		},
 		{
 			name:    "non-map header",
 			data:    []byte{0x00},
-			wantErr: true,
+			wantErr: "cbor: unprotected header: require map type",
 		},
 		{
 			name: "invalid header label type: bstr type",
 			data: []byte{
 				0xa1, 0x40, 0x00,
 			},
-			wantErr: true,
+			wantErr: "cbor: header label: require int / tstr type",
 		},
 		{
 			name: "invalid header label type: major type 7: simple value", // issue #38
 			data: []byte{
 				0xa1, 0xf3, 0x00,
 			},
-			wantErr: true,
+			wantErr: "cbor: header label: require int / tstr type",
 		},
 		{
 			name: "duplicated key",
 			data: []byte{
 				0xa2, 0x01, 0x00, 0x01, 0x00,
 			},
-			wantErr: true,
+			wantErr: "cbor: found duplicate map key \"1\" at map element index 1",
 		},
 		{
 			name: "incomplete CBOR data",
 			data: []byte{
 				0xa5,
 			},
-			wantErr: true,
+			wantErr: "unexpected EOF",
 		},
 		{
 			name: "invalid map value",
 			data: []byte{
 				0xa1, 0x00, 0xa1, 0x00, 0x4f, 0x01,
 			},
-			wantErr: true,
+			wantErr: "unexpected EOF",
 		},
 		{
 			name: "int map key too large",
 			data: []byte{
 				0xa1, 0x3b, 0x83, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
 			},
-			wantErr: true,
+			wantErr: "cbor: header label: int key must not be higher than 1<<63 - 1",
 		},
 		{
 			name: "iv and partial iv present",
 			data: []byte{
 				0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header parameter: IV: require bstr type",
 		},
 		{
 			name: "critical present",
@@ -702,13 +715,17 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 				0xa1,                                     // map
 				0x02, 0x82, 0x03, 0x63, 0x66, 0x6f, 0x6f, // crit
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header parameter: crit: not allowed",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got UnprotectedHeader
-			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
+			err := got.UnmarshalCBOR(tt.data)
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("UnprotectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("UnprotectedHeader.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -724,7 +741,7 @@ func TestHeaders_MarshalProtected(t *testing.T) {
 		name    string
 		h       Headers
 		want    []byte
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "pre-marshaled protected header",
@@ -771,13 +788,16 @@ func TestHeaders_MarshalProtected(t *testing.T) {
 					HeaderLabelKeyID: 42,
 				},
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: alg: require int / tstr type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.MarshalProtected()
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("Headers.MarshalProtected() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("Headers.MarshalProtected() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -793,7 +813,7 @@ func TestHeaders_MarshalUnprotected(t *testing.T) {
 		name    string
 		h       Headers
 		want    []byte
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "pre-marshaled protected header",
@@ -843,13 +863,16 @@ func TestHeaders_MarshalUnprotected(t *testing.T) {
 					HeaderLabelKeyID: make(chan bool),
 				},
 			},
-			wantErr: true,
+			wantErr: "unprotected header: header parameter: kid: require bstr type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.MarshalUnprotected()
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("Headers.MarshalUnprotected() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
 				t.Errorf("Headers.MarshalUnprotected() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -865,21 +888,21 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 		name    string
 		h       Headers
 		want    Headers
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "nil raw protected header",
 			h: Headers{
 				RawUnprotected: []byte{0xa1, 0x04, 0x18, 0x2a},
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid protected header: EOF",
 		},
 		{
 			name: "nil raw unprotected header",
 			h: Headers{
 				RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid unprotected header: EOF",
 		},
 		{
 			name: "valid raw header",
@@ -925,8 +948,13 @@ func TestHeaders_UnmarshalFromRaw(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.h
-			if err := got.UnmarshalFromRaw(); (err != nil) != tt.wantErr {
+			err := got.UnmarshalFromRaw()
+			if err != nil && (err.Error() != tt.wantErr) {
 				t.Errorf("Headers.UnmarshalFromRaw() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && tt.wantErr != "" {
+				t.Errorf("Headers.UnmarshalFromRaw() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}

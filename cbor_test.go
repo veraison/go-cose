@@ -20,7 +20,7 @@ func Test_byteString_UnmarshalCBOR(t *testing.T) {
 		name    string
 		data    []byte
 		want    byteString
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid string",
@@ -40,33 +40,36 @@ func Test_byteString_UnmarshalCBOR(t *testing.T) {
 		{
 			name:    "undefined string",
 			data:    []byte{0xf7},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name:    "nil CBOR data",
 			data:    nil,
-			wantErr: true,
+			wantErr: "EOF",
 		},
 		{
 			name:    "empty CBOR data",
 			data:    []byte{},
-			wantErr: true,
+			wantErr: "EOF",
 		},
 		{
 			name:    "tagged string",
 			data:    []byte{0xc2, 0x40},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name:    "array of bytes", // issue #46
 			data:    []byte{0x82, 0x00, 0x1},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got byteString
-			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
+			err := got.UnmarshalCBOR(tt.data)
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("byteString.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("byteString.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !bytes.Equal(got, tt.want) {

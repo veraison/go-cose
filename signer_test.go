@@ -48,7 +48,7 @@ func TestNewSigner(t *testing.T) {
 		alg     Algorithm
 		key     crypto.Signer
 		want    Signer
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "ecdsa key signer",
@@ -73,7 +73,7 @@ func TestNewSigner(t *testing.T) {
 			name:    "ecdsa key mismatch",
 			alg:     AlgorithmES256,
 			key:     rsaKey,
-			wantErr: true,
+			wantErr: "ES256: invalid public key",
 		},
 		{
 			name: "ed25519 signer",
@@ -87,7 +87,7 @@ func TestNewSigner(t *testing.T) {
 			name:    "ed25519 key mismatch",
 			alg:     AlgorithmEd25519,
 			key:     rsaKey,
-			wantErr: true,
+			wantErr: "EdDSA: invalid public key",
 		},
 		{
 			name: "rsa signer",
@@ -102,24 +102,27 @@ func TestNewSigner(t *testing.T) {
 			name:    "rsa key mismatch",
 			alg:     AlgorithmPS256,
 			key:     ecdsaKey,
-			wantErr: true,
+			wantErr: "PS256: invalid public key",
 		},
 		{
 			name:    "rsa key under minimum entropy",
 			alg:     AlgorithmPS256,
 			key:     rsaKeyLowEntropy,
-			wantErr: true,
+			wantErr: "RSA key must be at least 2048 bits long",
 		},
 		{
 			name:    "unknown algorithm",
 			alg:     0,
-			wantErr: true,
+			wantErr: "algorithm not supported",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewSigner(tt.alg, tt.key)
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("NewSigner() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("NewSigner() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
