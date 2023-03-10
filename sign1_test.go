@@ -14,7 +14,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 		name    string
 		m       *Sign1Message
 		want    []byte
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid message",
@@ -42,7 +42,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 		{
 			name:    "nil message",
 			m:       nil,
-			wantErr: true,
+			wantErr: "cbor: MarshalCBOR on nil Sign1Message pointer",
 		},
 		{
 			name: "nil payload",
@@ -81,7 +81,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 				Payload:   []byte("foo"),
 				Signature: nil,
 			},
-			wantErr: true,
+			wantErr: "empty signature",
 		},
 		{
 			name: "empty signature",
@@ -97,7 +97,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 				Payload:   nil,
 				Signature: []byte{},
 			},
-			wantErr: true,
+			wantErr: "empty signature",
 		},
 		{
 			name: "invalid protected header",
@@ -113,7 +113,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 				Payload:   []byte("foo"),
 				Signature: []byte("bar"),
 			},
-			wantErr: true,
+			wantErr: "protected header: header parameter: alg: require int / tstr type",
 		},
 		{
 			name: "invalid unprotected header",
@@ -129,7 +129,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 				Payload:   []byte("foo"),
 				Signature: []byte("bar"),
 			},
-			wantErr: true,
+			wantErr: "cbor: unsupported type: chan bool",
 		},
 		{
 			name: "protected has IV and unprotected has PartialIV error",
@@ -146,7 +146,7 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 				Payload:   []byte("foo"),
 				Signature: []byte("bar"),
 			},
-			wantErr: true,
+			wantErr: "IV (protected) and PartialIV (unprotected) parameters must not both be present",
 		},
 		{
 			name: "protected has PartialIV and unprotected has IV error",
@@ -163,13 +163,17 @@ func TestSign1Message_MarshalCBOR(t *testing.T) {
 				Payload:   []byte("foo"),
 				Signature: []byte("bar"),
 			},
-			wantErr: true,
+			wantErr: "IV (unprotected) and PartialIV (protected) parameters must not both be present",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.m.MarshalCBOR()
-			if (err != nil) != tt.wantErr {
+
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("Sign1Message.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("Sign1Message.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -195,7 +199,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 		name    string
 		data    []byte
 		want    Sign1Message
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name: "valid message",
@@ -250,17 +254,17 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 		{
 			name:    "nil CBOR data",
 			data:    nil,
-			wantErr: true,
+			wantErr: "cbor: invalid COSE_Sign1_Tagged object",
 		},
 		{
 			name:    "empty CBOR data",
 			data:    []byte{},
-			wantErr: true,
+			wantErr: "cbor: invalid COSE_Sign1_Tagged object",
 		},
 		{
 			name:    "invalid message with valid prefix", // issue #29
 			data:    []byte{0xd2, 0x84, 0xf7, 0xf7, 0xf7, 0xf7},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name: "tagged signature", // issue #30
@@ -270,7 +274,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6,             // nil payload
 				0xcb, 0xa1, 0x00, // tagged signature
 			},
-			wantErr: true,
+			wantErr: "cbor: CBOR tag isn't allowed",
 		},
 		{
 			name: "nil signature",
@@ -280,7 +284,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6, // payload
 				0xf6, // nil signature
 			},
-			wantErr: true,
+			wantErr: "empty signature",
 		},
 		{
 			name: "empty signature",
@@ -290,7 +294,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6, // payload
 				0x40, // empty signature
 			},
-			wantErr: true,
+			wantErr: "empty signature",
 		},
 		{
 			name: "mismatch tag",
@@ -300,14 +304,14 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6,       // payload
 				0x41, 0x00, //  signature
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid COSE_Sign1_Tagged object",
 		},
 		{
 			name: "mismatch type",
 			data: []byte{
 				0xd2, 0x40,
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid COSE_Sign1_Tagged object",
 		},
 		{
 			name: "smaller array size",
@@ -316,7 +320,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0x40, 0xa0, // empty headers
 				0xf6, // payload
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid COSE_Sign1_Tagged object",
 		},
 		{
 			name: "larger array size",
@@ -327,7 +331,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0x41, 0x00, // signature
 				0x40,
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid COSE_Sign1_Tagged object",
 		},
 		{
 			name: "undefined payload",
@@ -337,7 +341,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf7,       // undefined payload
 				0x41, 0x00, // signature
 			},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name: "payload as a byte array",
@@ -347,7 +351,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0x80,       // payload
 				0x41, 0x00, // signature
 			},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name: "signature as a byte array",
@@ -357,7 +361,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6,       // nil payload
 				0x81, 0x00, // signature
 			},
-			wantErr: true,
+			wantErr: "cbor: require bstr type",
 		},
 		{
 			name: "protected has IV and unprotected has PartialIV",
@@ -369,7 +373,7 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6,                   // payload
 				0x43, 0x62, 0x61, 0x72, // signature
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid protected header: protected header: header parameter: IV: require bstr type",
 		},
 		{
 			name: "protected has PartialIV and unprotected has IV",
@@ -381,13 +385,17 @@ func TestSign1Message_UnmarshalCBOR(t *testing.T) {
 				0xf6,                   // payload
 				0x43, 0x62, 0x61, 0x72, // signature
 			},
-			wantErr: true,
+			wantErr: "cbor: invalid protected header: protected header: header parameter: Partial IV: require bstr type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got Sign1Message
-			if err := got.UnmarshalCBOR(tt.data); (err != nil) != tt.wantErr {
+			err := got.UnmarshalCBOR(tt.data)
+			if (err != nil) && (err.Error() != tt.wantErr) {
+				t.Errorf("Sign1Message.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("Sign1Message.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -418,7 +426,7 @@ func TestSign1Message_Sign(t *testing.T) {
 		msg              *Sign1Message
 		externalOnSign   []byte
 		externalOnVerify []byte
-		wantErr          bool
+		wantErr          string
 		check            func(t *testing.T, m *Sign1Message)
 	}{
 		{
@@ -495,7 +503,7 @@ func TestSign1Message_Sign(t *testing.T) {
 				},
 				Payload: nil,
 			},
-			wantErr: true,
+			wantErr: "missing payload",
 		},
 		{
 			name: "mismatch algorithm",
@@ -507,7 +515,7 @@ func TestSign1Message_Sign(t *testing.T) {
 				},
 				Payload: []byte("hello world"),
 			},
-			wantErr: true,
+			wantErr: "algorithm mismatch: signer ES256: header ES512",
 		},
 		{
 			name: "missing algorithm",
@@ -532,7 +540,7 @@ func TestSign1Message_Sign(t *testing.T) {
 				},
 				Payload: []byte("hello world"),
 			},
-			wantErr: true,
+			wantErr: "algorithm not found",
 		},
 		{
 			name: "missing algorithm with externally supplied data",
@@ -554,22 +562,25 @@ func TestSign1Message_Sign(t *testing.T) {
 				Payload:   []byte("hello world"),
 				Signature: []byte("foobar"),
 			},
-			wantErr: true,
+			wantErr: "Sign1Message signature already has signature bytes",
 		},
 		{
 			name:    "nil message",
 			msg:     nil,
-			wantErr: true,
+			wantErr: "signing nil Sign1Message",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.msg.Sign(rand.Reader, tt.externalOnSign, signer)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Sign1Message.Sign() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+
 			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("Sign1Message.Sign() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				return
+			} else if tt.wantErr != "" {
+				t.Errorf("Sign1Message.Sign() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if tt.check != nil {
@@ -712,7 +723,7 @@ func TestSign1Message_Verify(t *testing.T) {
 		externalOnSign   []byte
 		externalOnVerify []byte
 		tamper           func(m *Sign1Message) *Sign1Message
-		wantErr          bool
+		wantErr          string
 	}{
 		{
 			name: "round trip on valid message",
@@ -721,7 +732,7 @@ func TestSign1Message_Verify(t *testing.T) {
 			name:             "external mismatch",
 			externalOnSign:   []byte("foo"),
 			externalOnVerify: []byte("bar"),
-			wantErr:          true,
+			wantErr:          "verification error",
 		},
 		{
 			name:             "mixed nil / empty external",
@@ -733,7 +744,7 @@ func TestSign1Message_Verify(t *testing.T) {
 			tamper: func(m *Sign1Message) *Sign1Message {
 				return nil
 			},
-			wantErr: true,
+			wantErr: "verifying nil Sign1Message",
 		},
 		{
 			name: "strip signature",
@@ -741,7 +752,7 @@ func TestSign1Message_Verify(t *testing.T) {
 				m.Signature = nil
 				return m
 			},
-			wantErr: true,
+			wantErr: "empty signature",
 		},
 		{
 			name: "empty signature",
@@ -749,7 +760,7 @@ func TestSign1Message_Verify(t *testing.T) {
 				m.Signature = []byte{}
 				return m
 			},
-			wantErr: true,
+			wantErr: "empty signature",
 		},
 		{
 			name: "tamper protected header",
@@ -757,7 +768,7 @@ func TestSign1Message_Verify(t *testing.T) {
 				m.Headers.Protected["foo"] = "bar"
 				return m
 			},
-			wantErr: true,
+			wantErr: "verification error",
 		},
 		{
 			name: "tamper unprotected header",
@@ -765,7 +776,6 @@ func TestSign1Message_Verify(t *testing.T) {
 				m.Headers.Unprotected["foo"] = "bar"
 				return m
 			},
-			wantErr: false, // allowed
 		},
 		{
 			name: "tamper payload",
@@ -773,7 +783,7 @@ func TestSign1Message_Verify(t *testing.T) {
 				m.Payload = []byte("foobar")
 				return m
 			},
-			wantErr: true,
+			wantErr: "verification error",
 		},
 		{
 			name: "tamper signature",
@@ -781,7 +791,7 @@ func TestSign1Message_Verify(t *testing.T) {
 				m.Signature[0]++
 				return m
 			},
-			wantErr: true,
+			wantErr: "verification error",
 		},
 	}
 	for _, tt := range tests {
@@ -809,7 +819,10 @@ func TestSign1Message_Verify(t *testing.T) {
 			}
 
 			// verify message
-			if err := msg.Verify(tt.externalOnVerify, verifier); (err != nil) != tt.wantErr {
+			err := msg.Verify(tt.externalOnVerify, verifier)
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("Sign1Message.Verify() error = %v, wantErr %v", err, tt.wantErr)
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("Sign1Message.Verify() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

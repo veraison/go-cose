@@ -20,31 +20,31 @@ func TestI2OSP(t *testing.T) {
 		x       *big.Int
 		buf     []byte
 		want    []byte
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name:    "negative int",
 			x:       big.NewInt(-1),
 			buf:     make([]byte, 2),
-			wantErr: true,
+			wantErr: "I2OSP: negative integer",
 		},
 		{
 			name:    "integer too large #1",
 			x:       big.NewInt(1),
 			buf:     make([]byte, 0),
-			wantErr: true,
+			wantErr: "I2OSP: integer too large",
 		},
 		{
 			name:    "integer too large #2",
 			x:       big.NewInt(256),
 			buf:     make([]byte, 0),
-			wantErr: true,
+			wantErr: "I2OSP: integer too large",
 		},
 		{
 			name:    "integer too large #3",
 			x:       big.NewInt(1 << 24),
 			buf:     make([]byte, 3),
-			wantErr: true,
+			wantErr: "I2OSP: integer too large",
 		},
 		{
 			name: "zero length string",
@@ -98,11 +98,15 @@ func TestI2OSP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := I2OSP(tt.x, tt.buf)
-			if (err != nil) != tt.wantErr {
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("I2OSP() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
 				t.Errorf("I2OSP() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got := tt.buf; !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+
+			if got := tt.buf; (tt.wantErr == "") && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("I2OSP() = %v, want %v", got, tt.want)
 			}
 		})
