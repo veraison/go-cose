@@ -35,9 +35,7 @@ body:
     attributes:
       label: "What is the areas you would like to add the new feature to?"
       options: 
-        - Notation CLI
-        - Notation-Core-Go Library
-        - Notation-Go Library
+        - Go-COSE Library
   - type: textarea
     id: problem
     validations:
