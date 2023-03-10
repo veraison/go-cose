@@ -2189,3 +2189,85 @@ func TestSignMessage_Verify(t *testing.T) {
 		}
 	})
 }
+
+func TestSignature_toBeSigned(t *testing.T) {
+	tests := []struct {
+		name      string
+		s         *Signature
+		protected cbor.RawMessage
+		payload   []byte
+		external  []byte
+		want      []byte
+		wantErr   bool
+	}{
+		{
+			name: "valid signature",
+			s: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+				},
+			},
+			protected: []byte{0x40, 0xa1, 0x00, 0x00},
+			payload:   []byte("hello world"),
+			want: []byte{
+				0x85,                                                       // array type
+				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
+				0x40, 0xa1, 0x00, 0x00, // body_protected
+				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
+				0x40,                                                                   // external
+				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
+			},
+		},
+		{
+			name: "invalid body protected header",
+			s: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES512,
+					},
+				},
+			},
+			protected: []byte{0x00},
+			payload:   []byte{},
+			wantErr:   true,
+		},
+		{
+			name: "invalid sign protected header",
+			s: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						1.5: nil,
+					},
+				},
+			},
+			protected: []byte{0x40},
+			payload:   []byte{},
+			wantErr:   true,
+		},
+		{
+			name: "invalid raw sign protected header",
+			s: &Signature{
+				Headers: Headers{
+					RawProtected: []byte{0x00},
+				},
+			},
+			protected: []byte{0x40},
+			payload:   []byte{},
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.s.toBeSigned(tt.protected, tt.payload, tt.external)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Signature.toBeSigned() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Signature.toBeSigned() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
