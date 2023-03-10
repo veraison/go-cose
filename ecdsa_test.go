@@ -101,6 +101,9 @@ func TestI2OSP(t *testing.T) {
 			if err != nil && (err.Error() != tt.wantErr) {
 				t.Errorf("I2OSP() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			} else if err == nil && (tt.wantErr != "") {
+				t.Errorf("I2OSP() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 
 			if got := tt.buf; (tt.wantErr == "") && !reflect.DeepEqual(got, tt.want) {
