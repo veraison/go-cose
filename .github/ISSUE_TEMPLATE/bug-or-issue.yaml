@@ -63,14 +63,14 @@ body:
       required: true
     attributes:
       label: Describe your environment 
-      description: "Notation installation method (e.g. wget, curl, brew, apt-get, yum, chocolate, MSI) if applicable / OS version / Shell type (e.g. zsh, bash, cmd.exe, Bash on Windows) / Golang version if applicable"
+      description: "Installation method (e.g. wget, curl, brew, apt-get, yum, chocolate, MSI) if applicable / OS version / Shell type (e.g. zsh, bash, cmd.exe, Bash on Windows) / Golang version if applicable"
   - type: textarea
     id: version
     validations:
       required: true
     attributes:
-      label: What is the version of your Notation CLI or Notation Library?
-      description: "For the CLI, you can use the command `notation version` to get it. For the libraries check the `go.mod` file."
+      label: What is the version of your Go-COSE Library?
+      description: "For the libraries check the `go.mod` file."
   - type: markdown
     attributes:
       value: |
