@@ -38,7 +38,7 @@ type Signer interface {
 // implement `crypto.Signer`.
 func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 	switch alg {
-	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512:
+	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512, AlgorithmRS256:
 		vk, ok := key.Public().(*rsa.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)

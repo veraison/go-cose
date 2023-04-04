@@ -23,6 +23,7 @@ import (
 
 var supportedAlgorithms = [...]cose.Algorithm{
 	cose.AlgorithmPS256, cose.AlgorithmPS384, cose.AlgorithmPS512,
+	cose.AlgorithmRS256,
 	cose.AlgorithmES256, cose.AlgorithmES384, cose.AlgorithmES512,
 	cose.AlgorithmEd25519,
 }
@@ -175,6 +176,8 @@ func newSignerWithEphemeralKey(alg cose.Algorithm) (sv signVerifier, err error) 
 		key, err = rsa.GenerateKey(rand.Reader, 3072)
 	case cose.AlgorithmPS512:
 		key, err = rsa.GenerateKey(rand.Reader, 4096)
+	case cose.AlgorithmRS256:
+		key, err = rsa.GenerateKey(rand.Reader, 2048)
 	case cose.AlgorithmES256:
 		key, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	case cose.AlgorithmES384:

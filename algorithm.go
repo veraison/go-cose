@@ -22,6 +22,10 @@ const (
 	// Requires an available crypto.SHA512.
 	AlgorithmPS512 Algorithm = -39
 
+	// RSASSA-PKCS1-v1_5 using SHA-256 by RFC 8812.
+	// Requires an available crypto.SHA256.
+	AlgorithmRS256 Algorithm = -257
+
 	// ECDSA w/ SHA-256 by RFC 8152.
 	// Requires an available crypto.SHA256.
 	AlgorithmES256 Algorithm = -7
@@ -57,6 +61,8 @@ func (a Algorithm) String() string {
 		return "PS384"
 	case AlgorithmPS512:
 		return "PS512"
+	case AlgorithmRS256:
+		return "RS256"
 	case AlgorithmES256:
 		return "ES256"
 	case AlgorithmES384:
@@ -76,7 +82,7 @@ func (a Algorithm) String() string {
 // library.
 func (a Algorithm) hashFunc() crypto.Hash {
 	switch a {
-	case AlgorithmPS256, AlgorithmES256:
+	case AlgorithmPS256, AlgorithmES256, AlgorithmRS256:
 		return crypto.SHA256
 	case AlgorithmPS384, AlgorithmES384:
 		return crypto.SHA384

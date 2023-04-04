@@ -27,7 +27,7 @@ type Verifier interface {
 // `*ecdsa.PublicKey`, and `ed25519.PublicKey` are accepted.
 func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 	switch alg {
-	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512:
+	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512, AlgorithmRS256:
 		vk, ok := key.(*rsa.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)

@@ -32,6 +32,11 @@ func TestAlgorithm_String(t *testing.T) {
 			want: "PS512",
 		},
 		{
+			name: "RS256",
+			alg:  AlgorithmRS256,
+			want: "RS256",
+		},
+		{
 			name: "ES256",
 			alg:  AlgorithmES256,
 			want: "ES256",

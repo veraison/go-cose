@@ -6,7 +6,8 @@ import (
 	"io"
 )
 
-// rsaSigner is a RSASSA-PSS based signer with a generic crypto.Signer.
+// rsaSigner is an RSA signer with a generic crypto.Signer.
+// It suports RSASSA-PSS as well as RSASSA PKCS1 v1.5
 //
 // Reference: https://www.rfc-editor.org/rfc/rfc8230.html#section-2
 type rsaSigner struct {
@@ -29,13 +30,21 @@ func (rs *rsaSigner) Sign(rand io.Reader, content []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rs.key.Sign(rand, digest, &rsa.PSSOptions{
-		SaltLength: rsa.PSSSaltLengthEqualsHash, // defined in RFC 8230 sec 2
-		Hash:       hash,
-	})
+	var opts crypto.SignerOpts
+	switch rs.alg {
+	case AlgorithmRS256:
+		opts = hash
+	default:
+		opts = &rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthEqualsHash, // defined in RFC 8230 sec 2
+			Hash:       hash,
+		}
+	}
+	return rs.key.Sign(rand, digest, opts)
 }
 
-// rsaVerifier is a RSASSA-PSS based verifier with golang built-in keys.
+// rsaVerifier is an RSA verifier with golang built-in keys.
+// It suports RSASSA-PSS as well as RSASSA PKCS #1 v1.5
 //
 // Reference: https://www.rfc-editor.org/rfc/rfc8230.html#section-2
 type rsaVerifier struct {
@@ -59,10 +68,17 @@ func (rv *rsaVerifier) Verify(content []byte, signature []byte) error {
 	if err != nil {
 		return err
 	}
-	if err := rsa.VerifyPSS(rv.key, hash, digest, signature, &rsa.PSSOptions{
-		SaltLength: rsa.PSSSaltLengthEqualsHash, // defined in RFC 8230 sec 2
-	}); err != nil {
-		return ErrVerification
+	switch rv.alg {
+	case AlgorithmRS256:
+		if err := rsa.VerifyPKCS1v15(rv.key, hash, digest, signature); err != nil {
+			return ErrVerification
+		}
+	default:
+		if err := rsa.VerifyPSS(rv.key, hash, digest, signature, &rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthEqualsHash, // defined in RFC 8230 sec 2
+		}); err != nil {
+			return ErrVerification
+		}
 	}
 	return nil
 }

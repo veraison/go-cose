@@ -95,6 +95,15 @@ func TestNewVerifier(t *testing.T) {
 			},
 		},
 		{
+			name: "rsa pkcs1 verifier",
+			alg:  AlgorithmRS256,
+			key:  rsaKey,
+			want: &rsaVerifier{
+				alg: AlgorithmRS256,
+				key: rsaKey,
+			},
+		},
+		{
 			name:    "rsa invalid public key",
 			alg:     AlgorithmPS256,
 			key:     ecdsaKey,
