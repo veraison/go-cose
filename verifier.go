@@ -22,9 +22,21 @@ type Verifier interface {
 	Verify(content, signature []byte) error
 }
 
+// DigestVerifier is an interface for public keys to verify digested COSE signatures.
+type DigestVerifier interface {
+	Verifier
+
+	// VerifyDigest verifies message digest with the public key, returning nil
+	// for success.
+	// Otherwise, it returns ErrVerification.
+	VerifyDigest(digest, signature []byte) error
+}
+
 // NewVerifier returns a verifier with a given public key.
 // Only golang built-in crypto public keys of type `*rsa.PublicKey`,
 // `*ecdsa.PublicKey`, and `ed25519.PublicKey` are accepted.
+//
+// The returned signer for rsa and ecdsa keys also implements `cose.DigestSigner`.
 func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 	switch alg {
 	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512:

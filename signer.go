@@ -23,6 +23,16 @@ type Signer interface {
 	Sign(rand io.Reader, content []byte) ([]byte, error)
 }
 
+// DigestSigner is an interface for private keys to sign digested COSE signatures.
+type DigestSigner interface {
+	Signer
+
+	// SignDigest signs message digest with the private key, possibly using
+	// entropy from rand.
+	// The resulting signature should follow RFC 8152 section 8.
+	SignDigest(rand io.Reader, digest []byte) ([]byte, error)
+}
+
 // NewSigner returns a signer with a given signing key.
 // The signing key can be a golang built-in crypto private key, a key in HSM, or
 // a remote KMS.
@@ -33,6 +43,8 @@ type Signer interface {
 // All signing keys implementing `crypto.Signer` with `Public()` returning a
 // public key of type `*rsa.PublicKey`, `*ecdsa.PublicKey`, or
 // `ed25519.PublicKey` are accepted.
+//
+// The returned signer for rsa and ecdsa keys also implements `cose.DigestSigner`.
 //
 // Note: `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and `ed25519.PrivateKey`
 // implement `crypto.Signer`.
