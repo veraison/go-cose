@@ -139,7 +139,7 @@ func ExampleSign1Message() {
 	// verification error as expected
 }
 
-// This example demonstrates signing COSE_Sign1 signatures using Sign1().
+// This example demonstrates signing COSE_Sign1_Tagged signatures using Sign1().
 func ExampleSign1() {
 	// create a signer
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
@@ -161,6 +161,38 @@ func ExampleSign1() {
 		},
 	}
 	sig, err := cose.Sign1(rand.Reader, signer, headers, []byte("hello world"), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("message signed")
+	_ = sig // further process on sig
+	// Output:
+	// message signed
+}
+
+// This example demonstrates signing COSE_Sign1 signatures using Sign1Untagged().
+func ExampleSign1Untagged() {
+	// create a signer
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES512, privateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// sign message
+	headers := cose.Headers{
+		Protected: cose.ProtectedHeader{
+			cose.HeaderLabelAlgorithm: cose.AlgorithmES512,
+		},
+		Unprotected: cose.UnprotectedHeader{
+			cose.HeaderLabelKeyID: []byte("1"),
+		},
+	}
+	sig, err := cose.Sign1Untagged(rand.Reader, signer, headers, []byte("hello world"), nil)
 	if err != nil {
 		panic(err)
 	}
