@@ -319,11 +319,18 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			wantErr: "cbor: require bstr type",
 		},
 		{
-			name: "iv and partial iv present",
+			name: "iv must be bstr",
 			data: []byte{
-				0x4b, 0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
+				0x46, 0xa1, 0x5, 0x63, 0x66, 0x6f, 0x6f,
 			},
 			wantErr: "protected header: header parameter: IV: require bstr type",
+		},
+		{
+			name: "partial iv must be bstr",
+			data: []byte{
+				0x46, 0xa1, 0x6, 0x63, 0x62, 0x61, 0x72,
+			},
+			wantErr: "protected header: header parameter: Partial IV: require bstr type",
 		},
 	}
 	for _, tt := range tests {
@@ -703,11 +710,18 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			wantErr: "cbor: header label: int key must not be higher than 1<<63 - 1",
 		},
 		{
-			name: "iv and partial iv present",
+			name: "iv must be bstr",
 			data: []byte{
-				0xa2, 0x5, 0x63, 0x66, 0x6f, 0x6f, 0x6, 0x63, 0x62, 0x61, 0x72,
+				0xa1, 0x5, 0x63, 0x66, 0x6f, 0x6f,
 			},
 			wantErr: "unprotected header: header parameter: IV: require bstr type",
+		},
+		{
+			name: "partial iv must be bstr",
+			data: []byte{
+				0xa1, 0x6, 0x63, 0x62, 0x61, 0x72,
+			},
+			wantErr: "unprotected header: header parameter: Partial IV: require bstr type",
 		},
 		{
 			name: "critical present",
