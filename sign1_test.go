@@ -978,3 +978,143 @@ func TestSign1Message_toBeSigned(t *testing.T) {
 		})
 	}
 }
+
+func TestUntaggedSign1Message_MarshalCBOR(t *testing.T) {
+	tests := []struct {
+		name    string
+		m       *UntaggedSign1Message
+		want    []byte
+		wantErr string
+	}{
+		{
+			name: "valid message",
+			m: &UntaggedSign1Message{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelContentType: 42,
+					},
+				},
+				Payload:   []byte("foo"),
+				Signature: []byte("bar"),
+			},
+			want: []byte{
+				0x84,
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // payload
+				0x43, 0x62, 0x61, 0x72, // signature
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.m.MarshalCBOR()
+
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("UntaggedSign1Message.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
+				t.Errorf("UntaggedSign1Message.MarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("UntaggedSign1Message.MarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUntaggedSign1Message_UnmarshalCBOR(t *testing.T) {
+	// test others
+	tests := []struct {
+		name    string
+		data    []byte
+		want    UntaggedSign1Message
+		wantErr string
+	}{
+		{
+			name: "valid message",
+			data: []byte{
+				0x84,
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // payload
+				0x43, 0x62, 0x61, 0x72, // signature
+			},
+			want: UntaggedSign1Message{
+				Headers: Headers{
+					RawProtected: []byte{0x43, 0xa1, 0x01, 0x26},
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: AlgorithmES256,
+					},
+					RawUnprotected: []byte{0xa1, 0x03, 0x18, 0x2a},
+					Unprotected: UnprotectedHeader{
+						HeaderLabelContentType: int64(42),
+					},
+				},
+				Payload:   []byte("foo"),
+				Signature: []byte("bar"),
+			},
+		},
+		{
+			name: "tagged message",
+			data: []byte{
+				0xd2, // tag
+				0x84,
+				0x43, 0xa1, 0x01, 0x26, // protected
+				0xa1, 0x03, 0x18, 0x2a, // unprotected
+				0x43, 0x66, 0x6f, 0x6f, // payload
+				0x43, 0x62, 0x61, 0x72, // signature
+			},
+			wantErr: "cbor: invalid COSE_Sign1 object",
+		},
+		{
+			name:    "empty data",
+			data:    []byte{},
+			wantErr: "cbor: zero length data",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got UntaggedSign1Message
+			err := got.UnmarshalCBOR(tt.data)
+			if (err != nil) && (err.Error() != tt.wantErr) {
+				t.Errorf("Sign1Message.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			} else if err == nil && (tt.wantErr != "") {
+				t.Errorf("Sign1Message.UnmarshalCBOR() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Sign1Message.UnmarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUntaggedSign1Message_nil(t *testing.T) {
+	var m *UntaggedSign1Message
+
+	_, err := m.MarshalCBOR()
+	if err.Error() != "cbor: MarshalCBOR on nil Sign1Message pointer" {
+		t.Errorf("UntaggedSign1Message.MarshalCBOR unexpected err: %v", err)
+	}
+
+	err = m.UnmarshalCBOR([]byte{})
+	if err.Error() != "cbor: UnmarshalCBOR on nil UntaggedSign1Message pointer" {
+		t.Errorf("UntaggedSign1Message.UnmarshalCBOR unexpected err: %v", err)
+	}
+
+	err = m.Sign(nil, []byte{}, nil)
+	if err.Error() != "signing nil Sign1Message" {
+		t.Errorf("UntaggedSign1Message.Sign unexpected err: %v", err)
+	}
+
+	err = m.Verify([]byte{}, nil)
+	if err.Error() != "verifying nil Sign1Message" {
+		t.Errorf("UntaggedSign1Message.Sign unexpected err: %v", err)
+	}
+}

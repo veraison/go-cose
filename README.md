@@ -65,7 +65,7 @@ go get github.com/veraison/go-cose@main
 import "github.com/veraison/go-cose"
 ```
 
-Construct a new COSE_Sign1 message, then sign it using ECDSA w/ SHA-256 and finally marshal it. For example:
+Construct a new COSE_Sign1_Tagged message, then sign it using ECDSA w/ SHA-256 and finally marshal it. For example:
 
 ```go
 package main
@@ -102,7 +102,7 @@ func SignP256(data []byte) ([]byte, error) {
 }
 ```
 
-Verify a raw COSE_Sign1 message. For example:
+Verify a raw COSE_Sign1_Tagged message. For example:
 
 ```go
 package main
@@ -131,6 +131,11 @@ func VerifyP256(publicKey crypto.PublicKey, sig []byte) error {
 ```
 
 See [example_test.go](./example_test.go) for more examples.
+
+#### Untagged Signing and Verification
+
+Untagged COSE_Sign1 messages can be signed and verified as above, using
+`cose.UntaggedSign1Message` instead of `cose.Sign1Message`.
 
 ### About hashing
 
