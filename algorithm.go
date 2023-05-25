@@ -2,6 +2,7 @@ package cose
 
 import (
 	"crypto"
+	"fmt"
 	"strconv"
 )
 
@@ -36,10 +37,12 @@ const (
 
 	// PureEdDSA by RFC 8152.
 	AlgorithmEd25519 Algorithm = -8
+
+	// An invalid/unrecognised algorithm.
+	AlgorithmInvalid Algorithm = 0
 )
 
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
-// Algorithms with string values are not supported.
 //
 // # See Also
 //
@@ -47,6 +50,29 @@ const (
 //
 // RFC 8152 16.4: https://datatracker.ietf.org/doc/html/rfc8152#section-16.4
 type Algorithm int64
+
+// AlgorithmFromString returns the Algorithm corresponding to the specified
+// name.
+func AlgorithmFromString(v string) Algorithm {
+	switch v {
+	case "PS256":
+		return AlgorithmPS256
+	case "PS384":
+		return AlgorithmPS384
+	case "PS512":
+		return AlgorithmPS512
+	case "ES256":
+		return AlgorithmES256
+	case "ES384":
+		return AlgorithmES384
+	case "ES512":
+		return AlgorithmES512
+	case "EdDSA":
+		return AlgorithmEd25519
+	default:
+		return AlgorithmInvalid
+	}
+}
 
 // String returns the name of the algorithm
 func (a Algorithm) String() string {
@@ -70,6 +96,44 @@ func (a Algorithm) String() string {
 	default:
 		return "unknown algorithm value " + strconv.Itoa(int(a))
 	}
+}
+
+func (a Algorithm) IsSupported() bool {
+	return (a >= -39 && a <= -35) || (a >= -8 && a <= -7)
+}
+
+// MarshalCBOR marshals the Algorithm as a CBOR int.
+func (a Algorithm) MarshalCBOR() ([]byte, error) {
+	return encMode.Marshal(int64(a))
+}
+
+// UnmarshalCBOR populates the Algorithm from the provided CBOR value (must be
+// int or tstr).
+func (a *Algorithm) UnmarshalCBOR(data []byte) error {
+	var raw intOrStr
+
+	if err := raw.UnmarshalCBOR(data); err != nil {
+		return fmt.Errorf("invalid algorithm value: %w", err)
+	}
+
+	if raw.IsString() {
+		v := AlgorithmFromString(raw.String())
+		if v == AlgorithmInvalid {
+			return fmt.Errorf("unknown algorithm value %q", raw.String())
+		}
+
+		*a = v
+	} else {
+		v := raw.Int()
+		*a = Algorithm(v)
+
+		if !a.IsSupported() {
+			return fmt.Errorf("unknown algorithm value %d", v)
+		}
+
+	}
+
+	return nil
 }
 
 // hashFunc returns the hash associated with the algorithm supported by this

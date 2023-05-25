@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -204,6 +205,17 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 				},
 				HeaderLabelContentType: "text/plain",
 				"foo":                  "bar",
+			},
+		},
+		{
+			name: "valid header (string algorithm)",
+			data: []byte{
+				0x58, 0x08, // bstr
+				0xa1,                                     // map
+				0x01, 0x65, 0x45, 0x53, 0x32, 0x35, 0x36, // alg
+			},
+			want: ProtectedHeader{
+				HeaderLabelAlgorithm: AlgorithmES256,
 			},
 		},
 		{
@@ -422,13 +434,20 @@ func TestProtectedHeader_Algorithm(t *testing.T) {
 			h: ProtectedHeader{
 				HeaderLabelAlgorithm: "foo",
 			},
+			wantErr: errors.New("unknown algorithm value \"foo\""),
+		},
+		{
+			name: "invalid algorithm",
+			h: ProtectedHeader{
+				HeaderLabelAlgorithm: 2.5,
+			},
 			wantErr: ErrInvalidAlgorithm,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.Algorithm()
-			if err != tt.wantErr {
+			if tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
 				t.Errorf("ProtectedHeader.Algorithm() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

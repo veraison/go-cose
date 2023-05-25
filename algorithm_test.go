@@ -7,6 +7,10 @@ import (
 	"io"
 	"reflect"
 	"testing"
+
+	"github.com/fxamacker/cbor/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAlgorithm_String(t *testing.T) {
@@ -63,6 +67,57 @@ func TestAlgorithm_String(t *testing.T) {
 				t.Errorf("Algorithm.String() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAlgorithm_CBOR(t *testing.T) {
+	tvs := []struct {
+		Name  string
+		Value Algorithm
+	}{
+		{"PS256", AlgorithmPS256},
+		{"PS384", AlgorithmPS384},
+		{"PS512", AlgorithmPS512},
+		{"ES256", AlgorithmES256},
+		{"ES384", AlgorithmES384},
+		{"ES512", AlgorithmES512},
+		{"EdDSA", AlgorithmEd25519},
+	}
+
+	for _, tv := range tvs {
+		data, err := cbor.Marshal(tv.Name)
+		require.NoError(t, err)
+
+		var a Algorithm
+		err = cbor.Unmarshal(data, &a)
+		require.NoError(t, err)
+		assert.Equal(t, tv.Value, a)
+
+		data, err = cbor.Marshal(int(tv.Value))
+		require.NoError(t, err)
+
+		err = cbor.Unmarshal(data, &a)
+		require.NoError(t, err)
+		assert.Equal(t, tv.Value, a)
+
+	}
+
+	tvs2 := []struct {
+		Data          []byte
+		ExpectedError string
+	}{
+		{[]byte{0x38, 0x21}, "unknown algorithm value -34"},
+		{[]byte{0x28}, "unknown algorithm value -9"},
+		{[]byte{0x25}, "unknown algorithm value -6"},
+		{[]byte{0x63, 0x66, 0x6f, 0x6f}, "unknown algorithm value \"foo\""},
+		{[]byte{0x40}, "invalid algorithm value: must be int or string, found []uint8"},
+	}
+
+	for _, tv := range tvs2 {
+		var a Algorithm
+
+		err := a.UnmarshalCBOR(tv.Data)
+		assert.EqualError(t, err, tv.ExpectedError)
 	}
 }
 
