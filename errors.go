@@ -14,4 +14,5 @@ var (
 	ErrUnavailableHashFunc   = errors.New("hash function is not available")
 	ErrVerification          = errors.New("verification error")
 	ErrInvalidPubKey         = errors.New("invalid public key")
+	ErrInvalidPrivKey        = errors.New("invalid private key")
 )
