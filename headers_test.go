@@ -1,6 +1,7 @@
 package cose
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -422,13 +423,20 @@ func TestProtectedHeader_Algorithm(t *testing.T) {
 			h: ProtectedHeader{
 				HeaderLabelAlgorithm: "foo",
 			},
+			wantErr: errors.New("unknown algorithm value \"foo\""),
+		},
+		{
+			name: "invalid algorithm",
+			h: ProtectedHeader{
+				HeaderLabelAlgorithm: 2.5,
+			},
 			wantErr: ErrInvalidAlgorithm,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.Algorithm()
-			if err != tt.wantErr {
+			if tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
 				t.Errorf("ProtectedHeader.Algorithm() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
