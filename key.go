@@ -13,6 +13,13 @@ import (
 	cbor "github.com/fxamacker/cbor/v2"
 )
 
+type KeyT uint
+
+const (
+	KeyTypePrivate KeyT = 1
+	KeyTypePublic  KeyT = 2
+)
+
 const (
 	// An inviald key_op value
 	KeyOpInvalid KeyOp = -1
@@ -422,100 +429,84 @@ func NewSymmetricKey(k []byte) (*Key, error) {
 	return key, key.Validate()
 }
 
-// NewKeyFromPublic returns a Key created using the provided crypto.PublicKey
-// and Algorithm.
-func NewKeyFromPublic(alg Algorithm, pub crypto.PublicKey) (*Key, error) {
+func algToEcCurve(alg Algorithm) Curve {
+	var curve Curve
+
 	switch alg {
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		vk, ok := pub.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
-		}
-
-		var curve Curve
-
-		switch alg {
-		case AlgorithmES256:
-			curve = CurveP256
-		case AlgorithmES384:
-			curve = CurveP384
-		case AlgorithmES512:
-			curve = CurveP521
-		}
-
-		return &Key{
-			Curve: curve,
-			keyStruct: keyStruct{
-				KeyType:   KeyTypeEc2,
-				Algorithm: alg,
-				X:         vk.X.Bytes(),
-				Y:         vk.Y.Bytes(),
-			},
-		}, nil
-	case AlgorithmEd25519:
-		vk, ok := pub.(ed25519.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
-		}
-
-		return &Key{
-			Curve: CurveEd25519,
-			keyStruct: keyStruct{
-				KeyType:   KeyTypeOkp,
-				Algorithm: alg,
-				X:         []byte(vk),
-			},
-		}, nil
-	default:
-		return nil, ErrAlgorithmNotSupported
+	case AlgorithmES256:
+		curve = CurveP256
+	case AlgorithmES384:
+		curve = CurveP384
+	case AlgorithmES512:
+		curve = CurveP521
 	}
+	return curve
 }
 
-// NewKeyFromPrivate returns a Key created using provided crypto.PrivateKey
-// and Algorithm.
-func NewKeyFromPrivate(alg Algorithm, pub crypto.PrivateKey) (*Key, error) {
+func NewKeyFromCryptoKey(alg Algorithm, typ KeyT, key any) (*Key, error) {
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		sk, ok := pub.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
+		curve := algToEcCurve(alg)
+		if curve == CurveInvalid {
+			return nil, fmt.Errorf("unable to get curve for alg %d", alg)
 		}
+		if typ == KeyTypePrivate {
+			sk, ok := key.(*ecdsa.PrivateKey)
+			if !ok {
+				return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
+			}
 
-		var curve Curve
+			return NewEc2Key(curve, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
+		} else if typ == KeyTypePublic {
+			vk, ok := key.(*ecdsa.PublicKey)
+			if !ok {
+				return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
+			}
 
-		switch alg {
-		case AlgorithmES256:
-			curve = CurveP256
-		case AlgorithmES384:
-			curve = CurveP384
-		case AlgorithmES512:
-			curve = CurveP521
+			return &Key{
+				Curve: curve,
+				keyStruct: keyStruct{
+					KeyType:   KeyTypeEc2,
+					Algorithm: alg,
+					X:         vk.X.Bytes(),
+					Y:         vk.Y.Bytes(),
+				},
+			}, nil
+		} else {
+			return nil, fmt.Errorf("unsupported key Type %d", typ)
 		}
-
-		return &Key{
-			Curve: curve,
-			keyStruct: keyStruct{
-				KeyType:   KeyTypeEc2,
-				Algorithm: alg,
-				X:         sk.X.Bytes(),
-				Y:         sk.Y.Bytes(),
-				D:         sk.D.Bytes(),
-			},
-		}, nil
 	case AlgorithmEd25519:
-		sk, ok := pub.(ed25519.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
+		if typ == KeyTypePrivate {
+			sk, ok := key.(ed25519.PrivateKey)
+			if !ok {
+				return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
+			}
+			return &Key{
+				Curve: CurveEd25519,
+				keyStruct: keyStruct{
+					KeyType:   KeyTypeOkp,
+					Algorithm: alg,
+					X:         []byte(sk[32:]),
+					D:         []byte(sk[:32]),
+				},
+			}, nil
+		} else if typ == KeyTypePublic {
+			vk, ok := key.(ed25519.PublicKey)
+			if !ok {
+				return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
+			}
+
+			return &Key{
+				Curve: CurveEd25519,
+				keyStruct: keyStruct{
+					KeyType:   KeyTypeOkp,
+					Algorithm: alg,
+					X:         []byte(vk),
+				},
+			}, nil
+		} else {
+			return nil, fmt.Errorf("unsupported key Type %d", typ)
 		}
-		return &Key{
-			Curve: CurveEd25519,
-			keyStruct: keyStruct{
-				KeyType:   KeyTypeOkp,
-				Algorithm: alg,
-				X:         []byte(sk[32:]),
-				D:         []byte(sk[:32]),
-			},
-		}, nil
 	default:
 		return nil, ErrAlgorithmNotSupported
 	}
