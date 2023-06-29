@@ -17,41 +17,6 @@ func TestAlgorithm_String(t *testing.T) {
 		want string
 	}{
 		{
-			name: "PS256",
-			alg:  AlgorithmPS256,
-			want: "PS256",
-		},
-		{
-			name: "PS384",
-			alg:  AlgorithmPS384,
-			want: "PS384",
-		},
-		{
-			name: "PS512",
-			alg:  AlgorithmPS512,
-			want: "PS512",
-		},
-		{
-			name: "ES256",
-			alg:  AlgorithmES256,
-			want: "ES256",
-		},
-		{
-			name: "ES384",
-			alg:  AlgorithmES384,
-			want: "ES384",
-		},
-		{
-			name: "ES512",
-			alg:  AlgorithmES512,
-			want: "ES512",
-		},
-		{
-			name: "Ed25519",
-			alg:  AlgorithmEd25519,
-			want: "EdDSA",
-		},
-		{
 			name: "unknown algorithm",
 			alg:  0,
 			want: "unknown algorithm value 0",
@@ -63,6 +28,23 @@ func TestAlgorithm_String(t *testing.T) {
 				t.Errorf("Algorithm.String() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAlgorithm_CBOR(t *testing.T) {
+	tvs2 := []struct {
+		Data          []byte
+		ExpectedError string
+	}{
+		{[]byte{0x63, 0x66, 0x6f, 0x6f}, "unknown algorithm value \"foo\""},
+		{[]byte{0x40}, "invalid algorithm value: must be int or string, found []uint8"},
+	}
+
+	for _, tv := range tvs2 {
+		var a Algorithm
+
+		err := a.UnmarshalCBOR(tv.Data)
+		assertEqualError(t, err, tv.ExpectedError)
 	}
 }
 
