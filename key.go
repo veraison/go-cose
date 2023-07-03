@@ -412,48 +412,41 @@ func NewSymmetricKey(k []byte) (*Key, error) {
 	return key, key.Validate()
 }
 
-// NewKeyFromPublic returns a Key created using the provided crypto.PublicKey
-// and Algorithm.
-func NewKeyFromPublic(alg Algorithm, pub crypto.PublicKey) (*Key, error) {
-	switch alg {
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		vk, ok := pub.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
+// NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.
+// Supported key formats are: *ecdsa.PublicKey and ed25519.PublicKey
+func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
+	switch vk := pub.(type) {
+	case *ecdsa.PublicKey:
+		alg := algorithmFromEllipticCurve(vk.Curve)
+
+		if alg == AlgorithmInvalid {
+			return nil, fmt.Errorf("unsupported curve: %v", vk.Curve)
 		}
 
 		return NewEC2Key(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
-	case AlgorithmEd25519:
-		vk, ok := pub.(ed25519.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
-		}
-
-		return NewOKPKey(alg, []byte(vk), nil)
+	case ed25519.PublicKey:
+		return NewOKPKey(AlgorithmEd25519, []byte(vk), nil)
 	default:
-		return nil, ErrAlgorithmNotSupported
+		return nil, ErrInvalidPubKey
 	}
 }
 
-// NewKeyFromPrivate returns a Key created using provided crypto.PrivateKey
-// and Algorithm.
-func NewKeyFromPrivate(alg Algorithm, priv crypto.PrivateKey) (*Key, error) {
-	switch alg {
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		sk, ok := priv.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
+// NewKeyFromPrivate returns a Key created using provided crypto.PrivateKey.
+// Supported key formats are: *ecdsa.PrivateKey and ed25519.PrivateKey
+func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
+	switch sk := priv.(type) {
+	case *ecdsa.PrivateKey:
+		alg := algorithmFromEllipticCurve(sk.Curve)
+
+		if alg == AlgorithmInvalid {
+			return nil, fmt.Errorf("unsupported curve: %v", sk.Curve)
 		}
 
 		return NewEC2Key(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
-	case AlgorithmEd25519:
-		sk, ok := priv.(ed25519.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
-		}
-		return NewOKPKey(alg, []byte(sk[32:]), []byte(sk[:32]))
+	case ed25519.PrivateKey:
+		return NewOKPKey(AlgorithmEd25519, []byte(sk[32:]), []byte(sk[:32]))
 	default:
-		return nil, ErrAlgorithmNotSupported
+		return nil, ErrInvalidPrivKey
 	}
 }
 
@@ -798,5 +791,18 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
 		return AlgorithmInvalid, fmt.Errorf("unexpected key type %q", k.KeyType.String())
+	}
+}
+
+func algorithmFromEllipticCurve(c elliptic.Curve) Algorithm {
+	switch c {
+	case elliptic.P256():
+		return AlgorithmES256
+	case elliptic.P384():
+		return AlgorithmES384
+	case elliptic.P521():
+		return AlgorithmES512
+	default:
+		return AlgorithmInvalid
 	}
 }

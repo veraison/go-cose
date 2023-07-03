@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
+	"math/big"
 	"testing"
 
 	"github.com/fxamacker/cbor/v2"
@@ -430,36 +431,18 @@ func Test_Key_Create_and_Validate(t *testing.T) {
 	err = key.Validate()
 	assertEqualError(t, err, "unknown key type value 7")
 
-	_, err = NewKeyFromPublic(AlgorithmES256,
-		crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
-	assertEqualError(t, err, "ES256: invalid public key")
+	_, err = NewKeyFromPublic(crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
+	assertEqualError(t, err, "invalid public key")
 
-	_, err = NewKeyFromPublic(AlgorithmEd25519,
-		crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
-	assertEqualError(t, err, "EdDSA: invalid public key")
-
-	_, err = NewKeyFromPublic(AlgorithmInvalid,
-		crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
-	assertEqualError(t, err, "algorithm not supported")
-
-	_, err = NewKeyFromPrivate(AlgorithmES256,
-		crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
-	assertEqualError(t, err, "ES256: invalid private key")
-
-	_, err = NewKeyFromPrivate(AlgorithmEd25519,
-		crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
-	assertEqualError(t, err, "EdDSA: invalid private key")
-
-	_, err = NewKeyFromPrivate(AlgorithmInvalid,
-		crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
-	assertEqualError(t, err, "algorithm not supported")
+	_, err = NewKeyFromPrivate(crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
+	assertEqualError(t, err, "invalid private key")
 }
 
 func Test_Key_ed25519_signature_round_trip(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	requireNoError(t, err)
 
-	key, err := NewKeyFromPrivate(AlgorithmEd25519, priv)
+	key, err := NewKeyFromPrivate(priv)
 	requireNoError(t, err)
 	assertEqual(t, AlgorithmEd25519, key.Algorithm)
 	assertEqual(t, CurveEd25519, key.Curve)
@@ -473,7 +456,7 @@ func Test_Key_ed25519_signature_round_trip(t *testing.T) {
 	sig, err := signer.Sign(rand.Reader, message)
 	requireNoError(t, err)
 
-	key, err = NewKeyFromPublic(AlgorithmEd25519, pub)
+	key, err = NewKeyFromPublic(pub)
 	requireNoError(t, err)
 
 	assertEqual(t, AlgorithmEd25519, key.Algorithm)
@@ -501,9 +484,8 @@ func Test_Key_ecdsa_signature_round_trip(t *testing.T) {
 			priv, err := ecdsa.GenerateKey(tv.EC, rand.Reader)
 			requireNoError(t, err)
 
-			key, err := NewKeyFromPrivate(tv.Algorithm, priv)
+			key, err := NewKeyFromPrivate(priv)
 			requireNoError(t, err)
-			assertEqual(t, tv.Algorithm, key.Algorithm)
 			assertEqual(t, tv.Curve, key.Curve)
 			assertEqual(t, priv.X.Bytes(), key.X)
 			assertEqual(t, priv.Y.Bytes(), key.Y)
@@ -518,10 +500,9 @@ func Test_Key_ecdsa_signature_round_trip(t *testing.T) {
 
 			pub := priv.Public()
 
-			key, err = NewKeyFromPublic(tv.Algorithm, pub)
+			key, err = NewKeyFromPublic(pub)
 			requireNoError(t, err)
 
-			assertEqual(t, tv.Algorithm, key.Algorithm)
 			assertEqual(t, tv.Curve, key.Curve)
 			assertEqual(t, priv.X.Bytes(), key.X)
 			assertEqual(t, priv.Y.Bytes(), key.Y)
@@ -554,17 +535,32 @@ func Test_Key_derive_algorithm(t *testing.T) {
 	assertEqual(t, AlgorithmEd25519, alg)
 }
 
+func Test_NewKeyFrom(t *testing.T) {
+	pub := ecdsa.PublicKey{Curve: *new(elliptic.Curve), X: new(big.Int), Y: new(big.Int)}
+	_, err := NewKeyFromPublic(&pub)
+	assertEqualError(t, err, "unsupported curve: <nil>")
+
+	priv := ecdsa.PrivateKey{PublicKey: pub, D: new(big.Int)}
+	_, err = NewKeyFromPrivate(&priv)
+	assertEqualError(t, err, "unsupported curve: <nil>")
+}
+
+func Test_algorithmFromEllipticCurve(t *testing.T) {
+	alg := algorithmFromEllipticCurve(*new(elliptic.Curve))
+	assertEqual(t, alg, AlgorithmInvalid)
+}
+
 func Test_Key_signer_validation(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	requireNoError(t, err)
 
-	key, err := NewKeyFromPublic(AlgorithmEd25519, pub)
+	key, err := NewKeyFromPublic(pub)
 	requireNoError(t, err)
 
 	_, err = key.Signer()
 	assertEqualError(t, err, ErrNotPrivKey.Error())
 
-	key, err = NewKeyFromPrivate(AlgorithmEd25519, priv)
+	key, err = NewKeyFromPrivate(priv)
 	requireNoError(t, err)
 
 	key.KeyType = KeyTypeEC2
@@ -599,7 +595,7 @@ func Test_Key_verifier_validation(t *testing.T) {
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	requireNoError(t, err)
 
-	key, err := NewKeyFromPublic(AlgorithmEd25519, pub)
+	key, err := NewKeyFromPublic(pub)
 	requireNoError(t, err)
 
 	_, err = key.Verifier()
