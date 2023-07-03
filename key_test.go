@@ -90,7 +90,7 @@ func Test_KeyOp(t *testing.T) {
 
 	data = []byte{0x63, 0x66, 0x6f, 0x6f}
 	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown key_ops value \"foo\"")
+	assertEqualError(t, err, `unknown key_ops value "foo"`)
 
 	data = []byte{0x40}
 	err = ko.UnmarshalCBOR(data)
@@ -126,7 +126,7 @@ func Test_KeyType(t *testing.T) {
 
 	data = []byte{0x63, 0x66, 0x6f, 0x6f}
 	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown key type value \"foo\"")
+	assertEqualError(t, err, `unknown key type value "foo"`)
 
 	data = []byte{0x40}
 	err = ko.UnmarshalCBOR(data)
@@ -146,7 +146,7 @@ func Test_Curve(t *testing.T) {
 
 	data = []byte{0x63, 0x66, 0x6f, 0x6f}
 	err = c.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown curve value \"foo\"")
+	assertEqualError(t, err, `unknown curve value "foo"`)
 
 	data = []byte{0x40}
 	err = c.UnmarshalCBOR(data)
@@ -231,7 +231,7 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x01, // kty: OKP
 				0x20, 0x01, // curve: CurveP256
 			},
-			WantErr:  "Key type mismatch for curve \"P-256\" (must be EC2, found OKP)",
+			WantErr:  `Key type mismatch for curve "P-256" (must be EC2, found OKP)`,
 			Validate: nil,
 		},
 		{
@@ -241,7 +241,7 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x02, // kty: EC2
 				0x20, 0x06, // curve: CurveEd25519
 			},
-			WantErr:  "Key type mismatch for curve \"Ed25519\" (must be OKP, found EC2)",
+			WantErr:  `Key type mismatch for curve "Ed25519" (must be OKP, found EC2)`,
 			Validate: nil,
 		},
 		{
@@ -297,7 +297,7 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 				0x49, 0xe3, 0x88, 0x07, 0xa5, 0xc2, 0x6e, 0xf9,
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
-			WantErr:  "found algorithm \"ES256\" (expected \"EdDSA\")",
+			WantErr:  `found algorithm "ES256" (expected "EdDSA")`,
 			Validate: nil,
 		},
 	}
@@ -385,7 +385,7 @@ func Test_Key_MarshalCBOR(t *testing.T) {
 
 	k.KeyType = KeyType(42)
 	_, err = k.MarshalCBOR()
-	wantErr := "invalid key type: \"unknown key type value 42\""
+	wantErr := `invalid key type: "unknown key type value 42"`
 	if err == nil || err.Error() != wantErr {
 		t.Errorf("Unexpected error: want %q, got %q", wantErr, err)
 	}
@@ -412,10 +412,10 @@ func Test_Key_Create_and_Validate(t *testing.T) {
 	assertEqual(t, x, key.X)
 
 	_, err = NewOKPKey(AlgorithmES256, x, nil)
-	assertEqualError(t, err, "unsupported algorithm \"ES256\"")
+	assertEqualError(t, err, `unsupported algorithm "ES256"`)
 
 	_, err = NewEC2Key(AlgorithmEd25519, x, y, nil)
-	assertEqualError(t, err, "unsupported algorithm \"EdDSA\"")
+	assertEqualError(t, err, `unsupported algorithm "EdDSA"`)
 
 	key, err = NewEC2Key(AlgorithmES256, x, y, nil)
 	requireNoError(t, err)
@@ -523,7 +523,7 @@ func Test_Key_derive_algorithm(t *testing.T) {
 	}
 
 	_, err := k.AlgorithmOrDefault()
-	assertEqualError(t, err, "unsupported curve \"Ed25519\" for key type EC2")
+	assertEqualError(t, err, `unsupported curve "Ed25519" for key type EC2`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
@@ -531,7 +531,7 @@ func Test_Key_derive_algorithm(t *testing.T) {
 	}
 
 	_, err = k.AlgorithmOrDefault()
-	assertEqualError(t, err, "unsupported curve \"P-256\" for key type OKP")
+	assertEqualError(t, err, `unsupported curve "P-256" for key type OKP`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
@@ -539,7 +539,7 @@ func Test_Key_derive_algorithm(t *testing.T) {
 	}
 
 	_, err = k.AlgorithmOrDefault()
-	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
+	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
@@ -581,11 +581,11 @@ func Test_Key_signer_validation(t *testing.T) {
 
 	key.KeyType = KeyTypeEC2
 	_, err = key.Signer()
-	assertEqualError(t, err, "Key type mismatch for curve \"Ed25519\" (must be OKP, found EC2)")
+	assertEqualError(t, err, `Key type mismatch for curve "Ed25519" (must be OKP, found EC2)`)
 
 	key.Curve = CurveP256
 	_, err = key.Signer()
-	assertEqualError(t, err, "found algorithm \"EdDSA\" (expected \"ES256\")")
+	assertEqualError(t, err, `found algorithm "EdDSA" (expected "ES256")`)
 
 	key.KeyType = KeyTypeOKP
 	key.Algorithm = AlgorithmEd25519
@@ -600,11 +600,11 @@ func Test_Key_signer_validation(t *testing.T) {
 
 	key.Algorithm = AlgorithmES256
 	_, err = key.Signer()
-	assertEqualError(t, err, "found algorithm \"ES256\" (expected \"EdDSA\")")
+	assertEqualError(t, err, `found algorithm "ES256" (expected "EdDSA")`)
 
 	key.Curve = CurveX448
 	_, err = key.Signer()
-	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
+	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 }
 
 func Test_Key_verifier_validation(t *testing.T) {
@@ -619,7 +619,7 @@ func Test_Key_verifier_validation(t *testing.T) {
 
 	key.KeyType = KeyTypeEC2
 	_, err = key.Verifier()
-	assertEqualError(t, err, "Key type mismatch for curve \"Ed25519\" (must be OKP, found EC2)")
+	assertEqualError(t, err, `Key type mismatch for curve "Ed25519" (must be OKP, found EC2)`)
 
 	key.KeyType = KeyTypeOKP
 	key.KeyOps = []KeyOp{}
@@ -637,9 +637,9 @@ func Test_Key_crypto_keys(t *testing.T) {
 	}
 
 	_, err := k.PublicKey()
-	assertEqualError(t, err, "unexpected key type \"unknown key type value 7\"")
+	assertEqualError(t, err, `unexpected key type "unknown key type value 7"`)
 	_, err = k.PrivateKey()
-	assertEqualError(t, err, "unexpected key type \"unknown key type value 7\"")
+	assertEqualError(t, err, `unexpected key type "unknown key type value 7"`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
@@ -647,9 +647,9 @@ func Test_Key_crypto_keys(t *testing.T) {
 	}
 
 	_, err = k.PublicKey()
-	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
+	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 	_, err = k.PrivateKey()
-	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
+	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
