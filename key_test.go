@@ -650,4 +650,19 @@ func Test_Key_crypto_keys(t *testing.T) {
 	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
 	_, err = k.PrivateKey()
 	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
+
+	k = Key{
+		KeyType: KeyTypeOKP,
+		Curve:   CurveEd25519,
+		D:       []byte{0xde, 0xad, 0xbe, 0xef},
+	}
+
+	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrOKPNoPub.Error())
+
+	k.KeyType = KeyTypeEC2
+	k.Curve = CurveP256
+
+	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrEC2NoPub.Error())
 }

@@ -641,6 +641,13 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
+		// RFC8152 allows omitting X and Y from private keys;
+		// crypto.PrivateKey assumes they are available.
+		// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
+		if len(k.X) == 0 || len(k.Y) == 0 {
+			return nil, ErrEC2NoPub
+		}
+
 		var curve elliptic.Curve
 
 		switch alg {
@@ -662,6 +669,13 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 		return priv, nil
 	case AlgorithmEd25519:
+		// RFC8152 allows omitting X from private keys;
+		// crypto.PrivateKey assumes it is available.
+		// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
+		if len(k.X) == 0 {
+			return nil, ErrOKPNoPub
+		}
+
 		buf := make([]byte, ed25519.PrivateKeySize)
 
 		copy(buf, k.D)
