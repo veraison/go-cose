@@ -518,12 +518,28 @@ func Test_Key_ecdsa_signature_round_trip(t *testing.T) {
 
 func Test_Key_derive_algorithm(t *testing.T) {
 	k := Key{
+		KeyType: KeyTypeEC2,
+		Curve:   CurveEd25519,
+	}
+
+	_, err := k.AlgorithmOrDefault()
+	assertEqualError(t, err, "unsupported curve \"Ed25519\" for key type EC2")
+
+	k = Key{
+		KeyType: KeyTypeOKP,
+		Curve:   CurveP256,
+	}
+
+	_, err = k.AlgorithmOrDefault()
+	assertEqualError(t, err, "unsupported curve \"P-256\" for key type OKP")
+
+	k = Key{
 		KeyType: KeyTypeOKP,
 		Curve:   CurveX448,
 	}
 
-	_, err := k.AlgorithmOrDefault()
-	assertEqualError(t, err, "unsupported curve \"X448\"")
+	_, err = k.AlgorithmOrDefault()
+	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
 
 	k = Key{
 		KeyType: KeyTypeOKP,
@@ -588,7 +604,7 @@ func Test_Key_signer_validation(t *testing.T) {
 
 	key.Curve = CurveX448
 	_, err = key.Signer()
-	assertEqualError(t, err, "unsupported curve \"X448\"")
+	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
 }
 
 func Test_Key_verifier_validation(t *testing.T) {
@@ -631,7 +647,7 @@ func Test_Key_crypto_keys(t *testing.T) {
 	}
 
 	_, err = k.PublicKey()
-	assertEqualError(t, err, "unsupported curve \"X448\"")
+	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
 	_, err = k.PrivateKey()
-	assertEqualError(t, err, "unsupported curve \"X448\"")
+	assertEqualError(t, err, "unsupported curve \"X448\" for key type OKP")
 }

@@ -777,7 +777,7 @@ func (k *Key) Verifier() (Verifier, error) {
 // must be explicitly set,so that this derivation is not used.
 func (k *Key) deriveAlgorithm() (Algorithm, error) {
 	switch k.KeyType {
-	case KeyTypeEC2, KeyTypeOKP:
+	case KeyTypeEC2:
 		switch k.Curve {
 		case CurveP256:
 			return AlgorithmES256, nil
@@ -785,10 +785,17 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 			return AlgorithmES384, nil
 		case CurveP521:
 			return AlgorithmES512, nil
+		default:
+			return AlgorithmInvalid, fmt.Errorf(
+				"unsupported curve %q for key type EC2", k.Curve.String())
+		}
+	case KeyTypeOKP:
+		switch k.Curve {
 		case CurveEd25519:
 			return AlgorithmEd25519, nil
 		default:
-			return AlgorithmInvalid, fmt.Errorf("unsupported curve %q", k.Curve.String())
+			return AlgorithmInvalid, fmt.Errorf(
+				"unsupported curve %q for key type OKP", k.Curve.String())
 		}
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
