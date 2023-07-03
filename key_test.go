@@ -666,3 +666,11 @@ func Test_Key_crypto_keys(t *testing.T) {
 	_, err = k.PrivateKey()
 	assertEqualError(t, err, ErrEC2NoPub.Error())
 }
+
+func Test_String(t *testing.T) {
+	// test string conversions not exercised by other test cases
+	assertEqual(t, "OKP", KeyTypeOKP.String())
+	assertEqual(t, "EC2", KeyTypeEC2.String())
+	assertEqual(t, "X25519", CurveX25519.String())
+	assertEqual(t, "Ed448", CurveEd448.String())
+}
