@@ -456,23 +456,25 @@ func (k Key) Validate() error {
 	switch k.KeyType {
 	case KeyTypeEC2:
 		switch k.Curve {
-		case CurveP256, CurveP384, CurveP521:
-			// ok
-		default:
+		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
 			return fmt.Errorf(
-				"EC2 curve must be P-256, P-384, or P-521; found %q",
+				"Key type mismatch for curve %q (must be OKP, found EC2)",
 				k.Curve.String(),
 			)
+		default:
+			// ok -- a key may contain a currently unsupported curve
+			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
 		}
 	case KeyTypeOKP:
 		switch k.Curve {
-		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
-			// ok
-		default:
+		case CurveP256, CurveP384, CurveP521:
 			return fmt.Errorf(
-				"OKP curve must be X25519, X448, Ed25519, or Ed448; found %q",
+				"Key type mismatch for curve %q (must be EC2, found OKP)",
 				k.Curve.String(),
 			)
+		default:
+			// ok -- a key may contain a currently unsupported curve
+			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
 		}
 	case KeyTypeSymmetric:
 	default:

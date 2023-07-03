@@ -231,7 +231,7 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x01, // kty: OKP
 				0x20, 0x01, // curve: CurveP256
 			},
-			WantErr:  "OKP curve must be X25519, X448, Ed25519, or Ed448; found \"P-256\"",
+			WantErr:  "Key type mismatch for curve \"P-256\" (must be EC2, found OKP)",
 			Validate: nil,
 		},
 		{
@@ -241,7 +241,7 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x02, // kty: EC2
 				0x20, 0x06, // curve: CurveEd25519
 			},
-			WantErr:  "EC2 curve must be P-256, P-384, or P-521; found \"Ed25519\"",
+			WantErr:  "Key type mismatch for curve \"Ed25519\" (must be OKP, found EC2)",
 			Validate: nil,
 		},
 		{
@@ -565,7 +565,7 @@ func Test_Key_signer_validation(t *testing.T) {
 
 	key.KeyType = KeyTypeEC2
 	_, err = key.Signer()
-	assertEqualError(t, err, "EC2 curve must be P-256, P-384, or P-521; found \"Ed25519\"")
+	assertEqualError(t, err, "Key type mismatch for curve \"Ed25519\" (must be OKP, found EC2)")
 
 	key.Curve = CurveP256
 	_, err = key.Signer()
@@ -603,7 +603,7 @@ func Test_Key_verifier_validation(t *testing.T) {
 
 	key.KeyType = KeyTypeEC2
 	_, err = key.Verifier()
-	assertEqualError(t, err, "EC2 curve must be P-256, P-384, or P-521; found \"Ed25519\"")
+	assertEqualError(t, err, "Key type mismatch for curve \"Ed25519\" (must be OKP, found EC2)")
 
 	key.KeyType = KeyTypeOKP
 	key.KeyOps = []KeyOp{}
