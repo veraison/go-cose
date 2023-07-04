@@ -105,8 +105,3 @@ func computeHash(h crypto.Hash, data []byte) ([]byte, error) {
 	}
 	return hh.Sum(nil), nil
 }
-
-// NOTE: there are currently no registered string values for an algorithm.
-func algorithmFromString(v string) Algorithm {
-	return AlgorithmInvalid
-}
