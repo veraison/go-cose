@@ -81,6 +81,7 @@ func Test_intOrStr_CBOR(t *testing.T) {
 }
 
 func requireNoError(t *testing.T, err error) {
+	t.Helper()
 	if err != nil {
 		t.Errorf("Unexpected error: %q", err)
 		t.Fail()
@@ -88,12 +89,14 @@ func requireNoError(t *testing.T, err error) {
 }
 
 func assertEqualError(t *testing.T, err error, expected string) {
+	t.Helper()
 	if err == nil || err.Error() != expected {
 		t.Errorf("Unexpected error: want %q, got %q", expected, err)
 	}
 }
 
 func assertEqual(t *testing.T, expected, actual interface{}) {
+	t.Helper()
 	if !objectsAreEqualValues(expected, actual) {
 		t.Errorf("Unexpected value: want %v, got %v", expected, actual)
 	}

@@ -80,16 +80,8 @@ func Test_KeyOp(t *testing.T) {
 
 	var ko KeyOp
 
-	data := []byte{0x20}
+	data := []byte{0x63, 0x66, 0x6f, 0x6f}
 	err := ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown key_ops value -1")
-
-	data = []byte{0x18, 0xff}
-	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown key_ops value 255")
-
-	data = []byte{0x63, 0x66, 0x6f, 0x6f}
-	err = ko.UnmarshalCBOR(data)
 	assertEqualError(t, err, `unknown key_ops value "foo"`)
 
 	data = []byte{0x40}

@@ -110,13 +110,6 @@ func (ko KeyOp) String() string {
 	}
 }
 
-// IsSupported returnns true if the specified value is represents one of the
-// key_ops defined in
-// https://www.rfc-editor.org/rfc/rfc9052.html#name-cose-key-common-parameters
-func (ko KeyOp) IsSupported() bool {
-	return ko >= 1 && ko <= 10
-}
-
 // MarshalCBOR marshals the KeyOp as a CBOR int.
 func (ko KeyOp) MarshalCBOR() ([]byte, error) {
 	return encMode.Marshal(int64(ko))
@@ -141,10 +134,6 @@ func (ko *KeyOp) UnmarshalCBOR(data []byte) error {
 	} else {
 		v := raw.Int()
 		*ko = KeyOp(v)
-
-		if !ko.IsSupported() {
-			return fmt.Errorf("unknown key_ops value %d", v)
-		}
 	}
 
 	return nil
