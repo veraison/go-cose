@@ -182,51 +182,6 @@ func (kt KeyType) String() string {
 	}
 }
 
-// MarshalCBOR marshals the KeyType as a CBOR int.
-func (kt KeyType) MarshalCBOR() ([]byte, error) {
-	return encMode.Marshal(int(kt))
-}
-
-// UnmarshalCBOR populates the KeyType from the provided CBOR value (must be
-// int or tstr).
-func (kt *KeyType) UnmarshalCBOR(data []byte) error {
-	var raw intOrStr
-
-	if err := raw.UnmarshalCBOR(data); err != nil {
-		return fmt.Errorf("invalid key type value: %w", err)
-	}
-
-	if raw.IsString() {
-		v, err := keyTypeFromString(raw.String())
-
-		if err != nil {
-			return err
-		}
-
-		*kt = v
-	} else {
-		v := raw.Int()
-
-		if v == 0 {
-			// 0  is reserved, and so can never be valid
-			return fmt.Errorf("invalid key type value 0")
-		}
-
-		if v > 4 || v < 0 || v == 3 {
-			return fmt.Errorf("unknown key type value %d", v)
-		}
-
-		*kt = KeyType(v)
-	}
-
-	return nil
-}
-
-// NOTE: there are currently no registered string key type values.
-func keyTypeFromString(v string) (KeyType, error) {
-	return KeyTypeInvalid, fmt.Errorf("unknown key type value %q", v)
-}
-
 const (
 
 	// Invalid/unrecognised curve
@@ -282,46 +237,6 @@ func (c Curve) String() string {
 	}
 }
 
-// MarshalCBOR marshals the KeyType as a CBOR int.
-func (c Curve) MarshalCBOR() ([]byte, error) {
-	return encMode.Marshal(int(c))
-}
-
-// UnmarshalCBOR populates the KeyType from the provided CBOR value (must be
-// int or tstr).
-func (c *Curve) UnmarshalCBOR(data []byte) error {
-	var raw intOrStr
-
-	if err := raw.UnmarshalCBOR(data); err != nil {
-		return fmt.Errorf("invalid curve value: %w", err)
-	}
-
-	if raw.IsString() {
-		v, err := curveFromString(raw.String())
-
-		if err != nil {
-			return err
-		}
-
-		*c = v
-	} else {
-		v := raw.Int()
-
-		if v < 1 || v > 7 {
-			return fmt.Errorf("unknown curve value %d", v)
-		}
-
-		*c = Curve(v)
-	}
-
-	return nil
-}
-
-// NOTE: there are currently no registered string values for curves.
-func curveFromString(v string) (Curve, error) {
-	return CurveInvalid, fmt.Errorf("unknown curve value %q", v)
-}
-
 // Key represents a COSE_Key structure, as defined by RFC8152.
 // Note: currently, this does NOT support RFC8230 (RSA algorithms).
 type Key struct {
@@ -333,15 +248,15 @@ type Key struct {
 	KeyType KeyType `cbor:"1,keyasint"`
 	// KeyID is the identification value matched to the kid in the message.
 	KeyID []byte `cbor:"2,keyasint,omitempty"`
+	// Algorithm is used to restrict the algorithm that is used with the
+	// key. If it is set, the application MUST verify that it matches the
+	// algorithm for which the Key is being used.
+	Algorithm Algorithm `cbor:"3,keyasint,omitempty"`
 	// KeyOps can be set to restrict the set of operations that the Key is used for.
 	KeyOps []KeyOp `cbor:"4,keyasint,omitempty"`
 	// BaseIV is the Base IV to be xor-ed with Partial IVs.
 	BaseIV []byte `cbor:"5,keyasint,omitempty"`
 
-	// Algorithm is used to restrict the algorithm that is used with the
-	// key. If it is set, the application MUST verify that it matches the
-	// algorithm for which the Key is being used.
-	Algorithm Algorithm `cbor:"-"`
 	// Curve is EC identifier -- taken form "COSE Elliptic Curves" IANA registry.
 	// Populated from keyStruct.RawKeyParam when key type is EC2 or OKP.
 	Curve Curve `cbor:"-"`
@@ -505,11 +420,6 @@ type keyalias Key
 type marshaledKey struct {
 	keyalias
 
-	// RawAlgorithm contains the raw Algorithm value, this is necessary
-	// because cbor library ignores omitempty on types that implement the
-	// cbor.Marshaler interface.
-	RawAlgorithm cbor.RawMessage `cbor:"3,keyasint,omitempty"`
-
 	// RawKeyParam contains the raw CBOR encoded data for the label -1.
 	// Depending on the KeyType this is used to populate either Curve or K
 	// below.
@@ -535,13 +445,6 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("invalid key type: %q", k.KeyType.String())
 	}
-
-	if k.Algorithm != AlgorithmInvalid {
-		if tmp.RawAlgorithm, err = encMode.Marshal(k.Algorithm); err != nil {
-			return nil, err
-		}
-	}
-
 	return encMode.Marshal(tmp)
 }
 
@@ -552,13 +455,11 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 	if err := decMode.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
-	*k = Key(tmp.keyalias)
-
-	if tmp.RawAlgorithm != nil {
-		if err := decMode.Unmarshal(tmp.RawAlgorithm, &k.Algorithm); err != nil {
-			return err
-		}
+	if tmp.KeyType == KeyTypeInvalid {
+		return errors.New("invalid key type value 0")
 	}
+
+	*k = Key(tmp.keyalias)
 
 	switch k.KeyType {
 	case KeyTypeEC2:

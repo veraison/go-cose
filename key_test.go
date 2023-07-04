@@ -109,54 +109,6 @@ func Test_KeyOp(t *testing.T) {
 	}
 }
 
-func Test_KeyType(t *testing.T) {
-	var ko KeyType
-
-	data := []byte{0x20}
-	err := ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown key type value -1")
-
-	data = []byte{0x00}
-	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "invalid key type value 0")
-
-	data = []byte{0x03}
-	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown key type value 3")
-
-	data = []byte{0x63, 0x66, 0x6f, 0x6f}
-	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, `unknown key type value "foo"`)
-
-	data = []byte{0x40}
-	err = ko.UnmarshalCBOR(data)
-	assertEqualError(t, err, "invalid key type value: must be int or string, found []uint8")
-}
-
-func Test_Curve(t *testing.T) {
-	var c Curve
-
-	data := []byte{0x20}
-	err := c.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown curve value -1")
-
-	data = []byte{0x00}
-	err = c.UnmarshalCBOR(data)
-	assertEqualError(t, err, "unknown curve value 0")
-
-	data = []byte{0x63, 0x66, 0x6f, 0x6f}
-	err = c.UnmarshalCBOR(data)
-	assertEqualError(t, err, `unknown curve value "foo"`)
-
-	data = []byte{0x40}
-	err = c.UnmarshalCBOR(data)
-	assertEqualError(t, err, "invalid curve value: must be int or string, found []uint8")
-
-	if "unknown curve value 42" != Curve(42).String() {
-		t.Errorf("Unexpected string value %q", Curve(42).String())
-	}
-}
-
 func Test_Key_UnmarshalCBOR(t *testing.T) {
 	tvs := []struct {
 		Name     string

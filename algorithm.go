@@ -2,7 +2,6 @@ package cose
 
 import (
 	"crypto"
-	"fmt"
 	"strconv"
 )
 
@@ -73,35 +72,6 @@ func (a Algorithm) String() string {
 	default:
 		return "unknown algorithm value " + strconv.Itoa(int(a))
 	}
-}
-
-// MarshalCBOR marshals the Algorithm as a CBOR int.
-func (a Algorithm) MarshalCBOR() ([]byte, error) {
-	return encMode.Marshal(int64(a))
-}
-
-// UnmarshalCBOR populates the Algorithm from the provided CBOR value (must be
-// int or tstr).
-func (a *Algorithm) UnmarshalCBOR(data []byte) error {
-	var raw intOrStr
-
-	if err := raw.UnmarshalCBOR(data); err != nil {
-		return fmt.Errorf("invalid algorithm value: %w", err)
-	}
-
-	if raw.IsString() {
-		v := algorithmFromString(raw.String())
-		if v == AlgorithmInvalid {
-			return fmt.Errorf("unknown algorithm value %q", raw.String())
-		}
-
-		*a = v
-	} else {
-		v := raw.Int()
-		*a = Algorithm(v)
-	}
-
-	return nil
 }
 
 // hashFunc returns the hash associated with the algorithm supported by this
