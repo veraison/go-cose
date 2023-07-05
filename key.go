@@ -276,7 +276,7 @@ func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
 		X:         x,
 		D:         d,
 	}
-	return key, key.Validate()
+	return key, key.validate(KeyOpInvalid)
 }
 
 // NewEC2Key returns a Key created using the provided elliptic curve key
@@ -303,17 +303,17 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 		Y:         y,
 		D:         d,
 	}
-	return key, key.Validate()
+	return key, key.validate(KeyOpInvalid)
 }
 
 // NewSymmetricKey returns a Key created using the provided Symmetric key
 // bytes.
-func NewSymmetricKey(k []byte) (*Key, error) {
+func NewSymmetricKey(k []byte) *Key {
 	key := &Key{
 		KeyType: KeyTypeSymmetric,
 		K:       k,
 	}
-	return key, key.Validate()
+	return key
 }
 
 // NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.
@@ -355,10 +355,24 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 }
 
 // Validate ensures that the parameters set inside the Key are internally
-// consistent (e.g., that the key type is appropriate to the curve.)
-func (k Key) Validate() error {
+// consistent (e.g., that the key type is appropriate to the curve).
+// It also checks that the key is valid for the requested operation.
+func (k Key) validate(op KeyOp) error {
 	switch k.KeyType {
 	case KeyTypeEC2:
+		switch op {
+		case KeyOpVerify:
+			if len(k.X) == 0 || len(k.Y) == 0 {
+				return ErrEC2NoPub
+			}
+		case KeyOpSign:
+			if len(k.D) == 0 {
+				return ErrNotPrivKey
+			}
+		}
+		if k.Curve == CurveInvalid || (len(k.X) == 0 && len(k.Y) == 0 && len(k.D) == 0) {
+			return ErrInvalidKey
+		}
 		switch k.Curve {
 		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
 			return fmt.Errorf(
@@ -370,6 +384,19 @@ func (k Key) Validate() error {
 			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
 		}
 	case KeyTypeOKP:
+		switch op {
+		case KeyOpVerify:
+			if len(k.X) == 0 {
+				return ErrOKPNoPub
+			}
+		case KeyOpSign:
+			if len(k.D) == 0 {
+				return ErrNotPrivKey
+			}
+		}
+		if k.Curve == CurveInvalid || (len(k.X) == 0 && len(k.D) == 0) {
+			return ErrInvalidKey
+		}
 		switch k.Curve {
 		case CurveP256, CurveP384, CurveP521:
 			return fmt.Errorf(
@@ -381,8 +408,22 @@ func (k Key) Validate() error {
 			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
 		}
 	case KeyTypeSymmetric:
+		// Nothing to validate
 	default:
-		return errors.New(k.KeyType.String())
+		// Unknown key type, we can't validate custom parameters.
+	}
+
+	if op != KeyOpInvalid && k.KeyOps != nil {
+		found := false
+		for _, kop := range k.KeyOps {
+			if kop == op {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return ErrOpNotSupported
+		}
 	}
 
 	// If Algorithm is set, it must match the specified key parameters.
@@ -483,11 +524,14 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 		return fmt.Errorf("unexpected key type %q", k.KeyType.String())
 	}
 
-	return k.Validate()
+	return k.validate(KeyOpInvalid)
 }
 
 // PublicKey returns a crypto.PublicKey generated using Key's parameters.
 func (k *Key) PublicKey() (crypto.PublicKey, error) {
+	if err := k.validate(KeyOpVerify); err != nil {
+		return nil, err
+	}
 	alg, err := k.deriveAlgorithm()
 	if err != nil {
 		return nil, err
@@ -520,6 +564,9 @@ func (k *Key) PublicKey() (crypto.PublicKey, error) {
 
 // PrivateKey returns a crypto.PrivateKey generated using Key's parameters.
 func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
+	if err := k.validate(KeyOpSign); err != nil {
+		return nil, err
+	}
 	alg, err := k.deriveAlgorithm()
 	if err != nil {
 		return nil, err
@@ -591,25 +638,6 @@ func (k *Key) AlgorithmOrDefault() (Algorithm, error) {
 
 // Signer returns a Signer created using Key.
 func (k *Key) Signer() (Signer, error) {
-	if err := k.Validate(); err != nil {
-		return nil, err
-	}
-
-	if k.KeyOps != nil {
-		signFound := false
-
-		for _, kop := range k.KeyOps {
-			if kop == KeyOpSign {
-				signFound = true
-				break
-			}
-		}
-
-		if !signFound {
-			return nil, ErrSignOpNotSupported
-		}
-	}
-
 	priv, err := k.PrivateKey()
 	if err != nil {
 		return nil, err
@@ -620,22 +648,9 @@ func (k *Key) Signer() (Signer, error) {
 		return nil, err
 	}
 
-	var signer crypto.Signer
-	var ok bool
-
-	switch alg {
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		signer, ok = priv.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, ErrInvalidPrivKey
-		}
-	case AlgorithmEd25519:
-		signer, ok = priv.(ed25519.PrivateKey)
-		if !ok {
-			return nil, ErrInvalidPrivKey
-		}
-	default:
-		return nil, ErrAlgorithmNotSupported
+	signer, ok := priv.(crypto.Signer)
+	if !ok {
+		return nil, ErrInvalidPrivKey
 	}
 
 	return NewSigner(alg, signer)
@@ -643,25 +658,6 @@ func (k *Key) Signer() (Signer, error) {
 
 // Verifier returns a Verifier created using Key.
 func (k *Key) Verifier() (Verifier, error) {
-	if err := k.Validate(); err != nil {
-		return nil, err
-	}
-
-	if k.KeyOps != nil {
-		verifyFound := false
-
-		for _, kop := range k.KeyOps {
-			if kop == KeyOpVerify {
-				verifyFound = true
-				break
-			}
-		}
-
-		if !verifyFound {
-			return nil, ErrVerifyOpNotSupported
-		}
-	}
-
 	pub, err := k.PublicKey()
 	if err != nil {
 		return nil, err

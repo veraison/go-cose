@@ -171,9 +171,14 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 		{
 			Name: "invalid curve OKP",
 			Value: []byte{
-				0xa2,       // map (2)
+				0xa3,       // map (3)
 				0x01, 0x01, // kty: OKP
 				0x20, 0x01, // curve: CurveP256
+				0x21, 0x58, 0x20, //  x-coordinate: bytes(32)
+				0x15, 0x52, 0x2e, 0xf1, 0x57, 0x29, 0xcc, 0xf3, // 32-byte value
+				0x95, 0x09, 0xea, 0x5c, 0x15, 0xa2, 0x6b, 0xe9,
+				0x49, 0xe3, 0x88, 0x07, 0xa5, 0xc2, 0x6e, 0xf9,
+				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			WantErr:  `Key type mismatch for curve "P-256" (must be EC2, found OKP)`,
 			Validate: nil,
@@ -181,9 +186,19 @@ func Test_Key_UnmarshalCBOR(t *testing.T) {
 		{
 			Name: "invalid curve EC2",
 			Value: []byte{
-				0xa2,       // map (2)
+				0xa4,       // map (4)
 				0x01, 0x02, // kty: EC2
 				0x20, 0x06, // curve: CurveEd25519
+				0x21, 0x58, 0x20, //  x-coordinate: bytes(32)
+				0x15, 0x52, 0x2e, 0xf1, 0x57, 0x29, 0xcc, 0xf3, // 32-byte value
+				0x95, 0x09, 0xea, 0x5c, 0x15, 0xa2, 0x6b, 0xe9,
+				0x49, 0xe3, 0x88, 0x07, 0xa5, 0xc2, 0x6e, 0xf9,
+				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
+				0x22, 0x58, 0x20, //  y-coordinate: bytes(32)
+				0x15, 0x52, 0x2e, 0xf1, 0x57, 0x29, 0xcc, 0xf3, // 32-byte value
+				0x95, 0x09, 0xea, 0x5c, 0x15, 0xa2, 0x6b, 0xe9,
+				0x49, 0xe3, 0x88, 0x07, 0xa5, 0xc2, 0x6e, 0xf9,
+				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			WantErr:  `Key type mismatch for curve "Ed25519" (must be OKP, found EC2)`,
 			Validate: nil,
@@ -367,13 +382,8 @@ func Test_Key_Create_and_Validate(t *testing.T) {
 	assertEqual(t, x, key.X)
 	assertEqual(t, y, key.Y)
 
-	key, err = NewSymmetricKey(x)
-	requireNoError(t, err)
+	key = NewSymmetricKey(x)
 	assertEqual(t, x, key.K)
-
-	key.KeyType = KeyType(7)
-	err = key.Validate()
-	assertEqualError(t, err, "unknown key type value 7")
 
 	_, err = NewKeyFromPublic(crypto.PublicKey([]byte{0xde, 0xad, 0xbe, 0xef}))
 	assertEqualError(t, err, "invalid public key")
@@ -536,7 +546,7 @@ func Test_Key_signer_validation(t *testing.T) {
 	key.Curve = CurveEd25519
 	key.KeyOps = []KeyOp{}
 	_, err = key.Signer()
-	assertEqualError(t, err, ErrSignOpNotSupported.Error())
+	assertEqualError(t, err, ErrOpNotSupported.Error())
 
 	key.KeyOps = []KeyOp{KeyOpSign}
 	_, err = key.Signer()
@@ -551,7 +561,7 @@ func Test_Key_signer_validation(t *testing.T) {
 	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 }
 
-func Test_Key_verifier_validation(t *testing.T) {
+func TestKey_Verifier(t *testing.T) {
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
 	requireNoError(t, err)
 
@@ -563,42 +573,49 @@ func Test_Key_verifier_validation(t *testing.T) {
 
 	key.KeyType = KeyTypeEC2
 	_, err = key.Verifier()
-	assertEqualError(t, err, `Key type mismatch for curve "Ed25519" (must be OKP, found EC2)`)
+	assertEqualError(t, err, ErrEC2NoPub.Error())
 
 	key.KeyType = KeyTypeOKP
 	key.KeyOps = []KeyOp{}
 	_, err = key.Verifier()
-	assertEqualError(t, err, ErrVerifyOpNotSupported.Error())
+	assertEqualError(t, err, ErrOpNotSupported.Error())
 
 	key.KeyOps = []KeyOp{KeyOpVerify}
 	_, err = key.Verifier()
 	requireNoError(t, err)
 }
 
-func Test_Key_crypto_keys(t *testing.T) {
+func TestKey_PrivateKey(t *testing.T) {
 	k := Key{
 		KeyType: KeyType(7),
 	}
 
-	_, err := k.PublicKey()
-	assertEqualError(t, err, `unexpected key type "unknown key type value 7"`)
-	_, err = k.PrivateKey()
+	_, err := k.PrivateKey()
 	assertEqualError(t, err, `unexpected key type "unknown key type value 7"`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
 		Curve:   CurveX448,
+		X:       make([]byte, 1),
+		D:       make([]byte, 1),
 	}
 
-	_, err = k.PublicKey()
-	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 	_, err = k.PrivateKey()
 	assertEqualError(t, err, `unsupported curve "X448" for key type OKP`)
 
 	k = Key{
 		KeyType: KeyTypeOKP,
 		Curve:   CurveEd25519,
-		D:       []byte{0xde, 0xad, 0xbe, 0xef},
+		X:       make([]byte, 1),
+	}
+
+	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrNotPrivKey.Error())
+
+	k = Key{
+		KeyType: KeyTypeOKP,
+		Curve:   CurveEd25519,
+		D:       make([]byte, 1),
 	}
 
 	_, err = k.PrivateKey()
@@ -608,6 +625,30 @@ func Test_Key_crypto_keys(t *testing.T) {
 	k.Curve = CurveP256
 
 	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrEC2NoPub.Error())
+}
+
+func TestKey_PublicKey(t *testing.T) {
+	k := Key{
+		KeyType: KeyType(7),
+	}
+
+	_, err := k.PublicKey()
+	assertEqualError(t, err, `unexpected key type "unknown key type value 7"`)
+
+	k = Key{
+		KeyType: KeyTypeOKP,
+		Curve:   CurveEd25519,
+		D:       []byte{0xde, 0xad, 0xbe, 0xef},
+	}
+
+	_, err = k.PublicKey()
+	assertEqualError(t, err, ErrOKPNoPub.Error())
+
+	k.KeyType = KeyTypeEC2
+	k.Curve = CurveP256
+
+	_, err = k.PublicKey()
 	assertEqualError(t, err, ErrEC2NoPub.Error())
 }
 
