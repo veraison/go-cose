@@ -413,19 +413,6 @@ func (k Key) validate(op KeyOp) error {
 		// Unknown key type, we can't validate custom parameters.
 	}
 
-	if op != KeyOpInvalid && k.KeyOps != nil {
-		found := false
-		for _, kop := range k.KeyOps {
-			if kop == op {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return ErrOpNotSupported
-		}
-	}
-
 	// If Algorithm is set, it must match the specified key parameters.
 	if k.Algorithm != AlgorithmInvalid {
 		expectedAlg, err := k.deriveAlgorithm()
@@ -443,6 +430,18 @@ func (k Key) validate(op KeyOp) error {
 	}
 
 	return nil
+}
+
+func (k Key) canOp(op KeyOp) bool {
+	if k.KeyOps == nil {
+		return true
+	}
+	for _, kop := range k.KeyOps {
+		if kop == op {
+			return true
+		}
+	}
+	return false
 }
 
 type keyalias Key
@@ -634,6 +633,9 @@ func (k *Key) AlgorithmOrDefault() (Algorithm, error) {
 
 // Signer returns a Signer created using Key.
 func (k *Key) Signer() (Signer, error) {
+	if !k.canOp(KeyOpSign) {
+		return nil, ErrOpNotSupported
+	}
 	priv, err := k.PrivateKey()
 	if err != nil {
 		return nil, err
@@ -654,6 +656,9 @@ func (k *Key) Signer() (Signer, error) {
 
 // Verifier returns a Verifier created using Key.
 func (k *Key) Verifier() (Verifier, error) {
+	if !k.canOp(KeyOpVerify) {
+		return nil, ErrOpNotSupported
+	}
 	pub, err := k.PublicKey()
 	if err != nil {
 		return nil, err
