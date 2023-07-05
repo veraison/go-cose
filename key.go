@@ -412,48 +412,41 @@ func NewSymmetricKey(k []byte) (*Key, error) {
 	return key, key.Validate()
 }
 
-// NewKeyFromPublic returns a Key created using the provided crypto.PublicKey
-// and Algorithm.
-func NewKeyFromPublic(alg Algorithm, pub crypto.PublicKey) (*Key, error) {
-	switch alg {
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		vk, ok := pub.(*ecdsa.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
+// NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.
+// Supported key formats are: *ecdsa.PublicKey and ed25519.PublicKey
+func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
+	switch vk := pub.(type) {
+	case *ecdsa.PublicKey:
+		alg := algorithmFromEllipticCurve(vk.Curve)
+
+		if alg == AlgorithmInvalid {
+			return nil, fmt.Errorf("unsupported curve: %v", vk.Curve)
 		}
 
 		return NewEC2Key(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
-	case AlgorithmEd25519:
-		vk, ok := pub.(ed25519.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
-		}
-
-		return NewOKPKey(alg, []byte(vk), nil)
+	case ed25519.PublicKey:
+		return NewOKPKey(AlgorithmEd25519, []byte(vk), nil)
 	default:
-		return nil, ErrAlgorithmNotSupported
+		return nil, ErrInvalidPubKey
 	}
 }
 
-// NewKeyFromPrivate returns a Key created using provided crypto.PrivateKey
-// and Algorithm.
-func NewKeyFromPrivate(alg Algorithm, priv crypto.PrivateKey) (*Key, error) {
-	switch alg {
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		sk, ok := priv.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
+// NewKeyFromPrivate returns a Key created using provided crypto.PrivateKey.
+// Supported key formats are: *ecdsa.PrivateKey and ed25519.PrivateKey
+func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
+	switch sk := priv.(type) {
+	case *ecdsa.PrivateKey:
+		alg := algorithmFromEllipticCurve(sk.Curve)
+
+		if alg == AlgorithmInvalid {
+			return nil, fmt.Errorf("unsupported curve: %v", sk.Curve)
 		}
 
 		return NewEC2Key(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
-	case AlgorithmEd25519:
-		sk, ok := priv.(ed25519.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPrivKey)
-		}
-		return NewOKPKey(alg, []byte(sk[32:]), []byte(sk[:32]))
+	case ed25519.PrivateKey:
+		return NewOKPKey(AlgorithmEd25519, []byte(sk[32:]), []byte(sk[:32]))
 	default:
-		return nil, ErrAlgorithmNotSupported
+		return nil, ErrInvalidPrivKey
 	}
 }
 
@@ -463,23 +456,25 @@ func (k Key) Validate() error {
 	switch k.KeyType {
 	case KeyTypeEC2:
 		switch k.Curve {
-		case CurveP256, CurveP384, CurveP521:
-			// ok
-		default:
+		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
 			return fmt.Errorf(
-				"EC2 curve must be P-256, P-384, or P-521; found %q",
+				"Key type mismatch for curve %q (must be OKP, found EC2)",
 				k.Curve.String(),
 			)
+		default:
+			// ok -- a key may contain a currently unsupported curve
+			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
 		}
 	case KeyTypeOKP:
 		switch k.Curve {
-		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
-			// ok
-		default:
+		case CurveP256, CurveP384, CurveP521:
 			return fmt.Errorf(
-				"OKP curve must be X25519, X448, Ed25519, or Ed448; found %q",
+				"Key type mismatch for curve %q (must be EC2, found OKP)",
 				k.Curve.String(),
 			)
+		default:
+			// ok -- a key may contain a currently unsupported curve
+			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
 		}
 	case KeyTypeSymmetric:
 	default:
@@ -646,6 +641,13 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
+		// RFC8152 allows omitting X and Y from private keys;
+		// crypto.PrivateKey assumes they are available.
+		// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
+		if len(k.X) == 0 || len(k.Y) == 0 {
+			return nil, ErrEC2NoPub
+		}
+
 		var curve elliptic.Curve
 
 		switch alg {
@@ -667,6 +669,13 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 		return priv, nil
 	case AlgorithmEd25519:
+		// RFC8152 allows omitting X from private keys;
+		// crypto.PrivateKey assumes it is available.
+		// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
+		if len(k.X) == 0 {
+			return nil, ErrOKPNoPub
+		}
+
 		buf := make([]byte, ed25519.PrivateKeySize)
 
 		copy(buf, k.D)
@@ -782,7 +791,7 @@ func (k *Key) Verifier() (Verifier, error) {
 // must be explicitly set,so that this derivation is not used.
 func (k *Key) deriveAlgorithm() (Algorithm, error) {
 	switch k.KeyType {
-	case KeyTypeEC2, KeyTypeOKP:
+	case KeyTypeEC2:
 		switch k.Curve {
 		case CurveP256:
 			return AlgorithmES256, nil
@@ -790,13 +799,33 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 			return AlgorithmES384, nil
 		case CurveP521:
 			return AlgorithmES512, nil
+		default:
+			return AlgorithmInvalid, fmt.Errorf(
+				"unsupported curve %q for key type EC2", k.Curve.String())
+		}
+	case KeyTypeOKP:
+		switch k.Curve {
 		case CurveEd25519:
 			return AlgorithmEd25519, nil
 		default:
-			return AlgorithmInvalid, fmt.Errorf("unsupported curve %q", k.Curve.String())
+			return AlgorithmInvalid, fmt.Errorf(
+				"unsupported curve %q for key type OKP", k.Curve.String())
 		}
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
 		return AlgorithmInvalid, fmt.Errorf("unexpected key type %q", k.KeyType.String())
+	}
+}
+
+func algorithmFromEllipticCurve(c elliptic.Curve) Algorithm {
+	switch c {
+	case elliptic.P256():
+		return AlgorithmES256
+	case elliptic.P384():
+		return AlgorithmES384
+	case elliptic.P521():
+		return AlgorithmES512
+	default:
+		return AlgorithmInvalid
 	}
 }

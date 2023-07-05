@@ -18,4 +18,6 @@ var (
 	ErrNotPrivKey            = errors.New("not a private key")
 	ErrSignOpNotSupported    = errors.New("sign key_op not supported by key")
 	ErrVerifyOpNotSupported  = errors.New("verify key_op not supported by key")
+	ErrEC2NoPub              = errors.New("cannot create PrivateKey from EC2 key: missing X or Y")
+	ErrOKPNoPub              = errors.New("cannot create PrivateKey from OKP key: missing X")
 )
