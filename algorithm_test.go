@@ -31,23 +31,6 @@ func TestAlgorithm_String(t *testing.T) {
 	}
 }
 
-func TestAlgorithm_CBOR(t *testing.T) {
-	tvs2 := []struct {
-		Data          []byte
-		ExpectedError string
-	}{
-		{[]byte{0x63, 0x66, 0x6f, 0x6f}, "unknown algorithm value \"foo\""},
-		{[]byte{0x40}, "invalid algorithm value: must be int or string, found []uint8"},
-	}
-
-	for _, tv := range tvs2 {
-		var a Algorithm
-
-		err := a.UnmarshalCBOR(tv.Data)
-		assertEqualError(t, err, tv.ExpectedError)
-	}
-}
-
 func TestAlgorithm_computeHash(t *testing.T) {
 	// run tests
 	data := []byte("hello world")
