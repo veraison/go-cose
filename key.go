@@ -572,10 +572,6 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 		return nil, err
 	}
 
-	if len(k.D) == 0 {
-		return nil, ErrNotPrivKey
-	}
-
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
 		// RFC8152 allows omitting X and Y from private keys;

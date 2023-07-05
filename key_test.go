@@ -612,6 +612,12 @@ func TestKey_PrivateKey(t *testing.T) {
 	_, err = k.PrivateKey()
 	assertEqualError(t, err, ErrNotPrivKey.Error())
 
+	k.KeyType = KeyTypeEC2
+	k.Curve = CurveP256
+
+	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrNotPrivKey.Error())
+
 	k = Key{
 		KeyType: KeyTypeOKP,
 		Curve:   CurveEd25519,
@@ -621,11 +627,19 @@ func TestKey_PrivateKey(t *testing.T) {
 	_, err = k.PrivateKey()
 	assertEqualError(t, err, ErrOKPNoPub.Error())
 
+	k.Curve = CurveInvalid
+	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrInvalidKey.Error())
+
 	k.KeyType = KeyTypeEC2
 	k.Curve = CurveP256
 
 	_, err = k.PrivateKey()
 	assertEqualError(t, err, ErrEC2NoPub.Error())
+
+	k.Curve = CurveInvalid
+	_, err = k.PrivateKey()
+	assertEqualError(t, err, ErrInvalidKey.Error())
 }
 
 func TestKey_PublicKey(t *testing.T) {
