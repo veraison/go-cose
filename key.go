@@ -276,7 +276,10 @@ func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
 		X:         x,
 		D:         d,
 	}
-	return key, key.validate(KeyOpInvalid)
+	if err := key.validate(KeyOpInvalid); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // NewEC2Key returns a Key created using the provided elliptic curve key
@@ -303,17 +306,19 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 		Y:         y,
 		D:         d,
 	}
-	return key, key.validate(KeyOpInvalid)
+	if err := key.validate(KeyOpInvalid); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // NewSymmetricKey returns a Key created using the provided Symmetric key
 // bytes.
 func NewSymmetricKey(k []byte) *Key {
-	key := &Key{
+	return &Key{
 		KeyType: KeyTypeSymmetric,
 		K:       k,
 	}
-	return key
 }
 
 // NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.
