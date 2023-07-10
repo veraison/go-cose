@@ -137,6 +137,16 @@ See [example_test.go](./example_test.go) for more examples.
 Untagged COSE_Sign1 messages can be signed and verified as above, using
 `cose.UntaggedSign1Message` instead of `cose.Sign1Message`.
 
+#### Signing and Verification of digested payloads
+
+When `cose.NewSigner` is used with PS{256,384,512} or ES{256,384,512}, the returned signer
+can be casted to the `cose.DigestSigner` interface, whose `SignDigest` method signs an
+already digested message.
+
+When `cose.NewVerifier` is used with PS{256,384,512} or ES{256,384,512}, the returned verifier
+can be casted to the `cose.DigestVerifier` interface, whose `VerifyDigest` method verifies an
+already digested message.
+
 ### About hashing
 
 `go-cose` does not import any hash package by its own to avoid linking unnecessary algorithms to the final binary.
