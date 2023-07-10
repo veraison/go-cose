@@ -514,7 +514,7 @@ func TestKey_SignRoundtrip(t *testing.T) {
 				return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 			},
 		}, {
-			"ED25519", func() (crypto.PrivateKey, error) {
+			"Ed25519", func() (crypto.PrivateKey, error) {
 				_, priv, err := ed25519.GenerateKey(rand.Reader)
 				return priv, err
 			},
