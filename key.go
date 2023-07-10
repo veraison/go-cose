@@ -315,11 +315,10 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 // NewSymmetricKey returns a Key created using the provided Symmetric key
 // bytes.
 func NewSymmetricKey(k []byte) *Key {
-	key := &Key{
+	return &Key{
 		KeyType: KeyTypeSymmetric,
 		K:       k,
 	}
-	return key
 }
 
 // NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.

@@ -473,6 +473,29 @@ func TestNewEC2Key(t *testing.T) {
 	}
 }
 
+func TestNewSymmetricKey(t *testing.T) {
+	type args struct {
+		k []byte
+	}
+	tests := []struct {
+		name string
+		args args
+		want *Key
+	}{
+		{"valid", args{[]byte{1, 2, 3}}, &Key{
+			KeyType: KeyTypeSymmetric,
+			K:       []byte{1, 2, 3},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewSymmetricKey(tt.args.k); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewSymmetricKey() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestKey_SignRoundtrip(t *testing.T) {
 	tests := []struct {
 		name   string
