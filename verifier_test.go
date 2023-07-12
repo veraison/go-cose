@@ -73,7 +73,7 @@ func TestNewVerifier(t *testing.T) {
 		},
 		{
 			name: "ed25519 verifier",
-			alg:  AlgorithmEd25519,
+			alg:  AlgorithmEdDSA,
 			key:  ed25519Key,
 			want: &ed25519Verifier{
 				key: ed25519Key,
@@ -81,7 +81,7 @@ func TestNewVerifier(t *testing.T) {
 		},
 		{
 			name:    "ed25519 invalid public key",
-			alg:     AlgorithmEd25519,
+			alg:     AlgorithmEdDSA,
 			key:     rsaKey,
 			wantErr: "EdDSA: invalid public key",
 		},

@@ -17,7 +17,7 @@ func generateTestEd25519Key(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey
 
 func Test_ed25519Signer(t *testing.T) {
 	// generate key
-	alg := AlgorithmEd25519
+	alg := AlgorithmEdDSA
 	_, key := generateTestEd25519Key(t)
 
 	// set up signer
@@ -51,7 +51,7 @@ func Test_ed25519Signer(t *testing.T) {
 
 func Test_ed25519Verifier_Verify_Success(t *testing.T) {
 	// generate key
-	alg := AlgorithmEd25519
+	alg := AlgorithmEdDSA
 	_, key := generateTestEd25519Key(t)
 
 	// generate a valid signature
@@ -77,7 +77,7 @@ func Test_ed25519Verifier_Verify_Success(t *testing.T) {
 
 func Test_ed25519Verifier_Verify_KeyMismatch(t *testing.T) {
 	// generate key
-	alg := AlgorithmEd25519
+	alg := AlgorithmEdDSA
 	_, key := generateTestEd25519Key(t)
 
 	// generate a valid signature
@@ -97,7 +97,7 @@ func Test_ed25519Verifier_Verify_KeyMismatch(t *testing.T) {
 
 func Test_ed25519Verifier_Verify_InvalidSignature(t *testing.T) {
 	// generate key
-	alg := AlgorithmEd25519
+	alg := AlgorithmEdDSA
 	vk, sk := generateTestEd25519Key(t)
 
 	// generate a valid signature with a tampered one

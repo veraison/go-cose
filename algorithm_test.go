@@ -96,7 +96,7 @@ func TestAlgorithm_computeHash(t *testing.T) {
 		},
 		{
 			name:    "Ed25519",
-			alg:     AlgorithmEd25519,
+			alg:     AlgorithmEdDSA,
 			wantErr: ErrUnavailableHashFunc,
 		},
 		{

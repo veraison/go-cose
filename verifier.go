@@ -53,7 +53,7 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 			alg: alg,
 			key: vk,
 		}, nil
-	case AlgorithmEd25519:
+	case AlgorithmEdDSA:
 		vk, ok := key.(ed25519.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)

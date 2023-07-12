@@ -240,7 +240,7 @@ type Key struct {
 
 // NewOKPKey returns a Key created using the provided Octet Key Pair data.
 func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
-	if alg != AlgorithmEd25519 {
+	if alg != AlgorithmEdDSA {
 		return nil, fmt.Errorf("unsupported algorithm %q", alg)
 	}
 
@@ -389,7 +389,7 @@ func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
 
 		return NewEC2Key(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
 	case ed25519.PublicKey:
-		return NewOKPKey(AlgorithmEd25519, []byte(vk), nil)
+		return NewOKPKey(AlgorithmEdDSA, []byte(vk), nil)
 	default:
 		return nil, ErrInvalidPubKey
 	}
@@ -408,7 +408,7 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 
 		return NewEC2Key(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
 	case ed25519.PrivateKey:
-		return NewOKPKey(AlgorithmEd25519, []byte(sk[32:]), []byte(sk[:32]))
+		return NewOKPKey(AlgorithmEdDSA, []byte(sk[32:]), []byte(sk[:32]))
 	default:
 		return nil, ErrInvalidPrivKey
 	}
@@ -679,7 +679,7 @@ func (k *Key) PublicKey() (crypto.PublicKey, error) {
 		pub.Y.SetBytes(y)
 
 		return pub, nil
-	case AlgorithmEd25519:
+	case AlgorithmEdDSA:
 		_, x, _ := k.OKP()
 		return ed25519.PublicKey(x), nil
 	default:
@@ -724,7 +724,7 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 			PublicKey: ecdsa.PublicKey{Curve: curve, X: bx, Y: by},
 			D:         bd,
 		}, nil
-	case AlgorithmEd25519:
+	case AlgorithmEdDSA:
 		_, x, d := k.OKP()
 		if len(x) == 0 {
 			return ed25519.NewKeyFromSeed(d), nil
@@ -817,7 +817,7 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 		crv, _, _ := k.OKP()
 		switch crv {
 		case CurveEd25519:
-			return AlgorithmEd25519, nil
+			return AlgorithmEdDSA, nil
 		default:
 			return AlgorithmInvalid, fmt.Errorf(
 				"unsupported curve %q for key type OKP", crv.String())
