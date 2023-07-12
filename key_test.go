@@ -9,8 +9,193 @@ import (
 	"encoding/hex"
 	"math/big"
 	"reflect"
+	"strconv"
 	"testing"
 )
+
+func TestKey_ParamBytes(t *testing.T) {
+	key := &Key{
+		Params: map[interface{}]interface{}{
+			int64(-1): []byte{1},
+			2:         []byte{2},
+			uint16(3): []byte{3},
+			"foo":     ed25519.PublicKey([]byte{4}),
+			5:         5,
+		},
+	}
+	tests := []struct {
+		label interface{}
+		want  []byte
+		want1 bool
+	}{
+		{int64(-1), []byte{1}, true},
+		{2, []byte{2}, true},
+		{uint16(3), []byte{3}, true},
+		{3, nil, false},
+		{5, nil, false},
+		{"foo", []byte{4}, true},
+		{"bar", nil, false},
+	}
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got, got1 := key.ParamBytes(tt.label)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Key.ParamBytes() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("Key.ParamBytes() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestKey_ParamInt(t *testing.T) {
+	type i16 int16
+	type u16 uint16
+	key := &Key{
+		Params: map[interface{}]interface{}{
+			int64(-1): 1,
+			2:         int8(2),
+			uint16(3): i16(3),
+			uint16(6): u16(3),
+			"foo":     -4,
+			5:         []byte{5},
+		},
+	}
+	tests := []struct {
+		label interface{}
+		want  int64
+		want1 bool
+	}{
+		{int64(-1), 1, true},
+		{2, 2, true},
+		{uint16(3), 3, true},
+		{3, 0, false},
+		{5, 0, false},
+		{uint16(6), 0, false},
+		{"foo", -4, true},
+		{"bar", 0, false},
+	}
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got, got1 := key.ParamInt(tt.label)
+			if got != tt.want {
+				t.Errorf("Key.ParamInt() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("Key.ParamInt() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestKey_ParamUint(t *testing.T) {
+	type i16 int16
+	type u16 uint16
+	key := &Key{
+		Params: map[interface{}]interface{}{
+			int64(-1): 1,
+			2:         int8(2),
+			uint16(3): i16(3),
+			4:         i16(-3),
+			uint16(6): u16(3),
+			"foo":     -4,
+			5:         []byte{5},
+		},
+	}
+	tests := []struct {
+		label interface{}
+		want  uint64
+		want1 bool
+	}{
+		{int64(-1), 1, true},
+		{2, 2, true},
+		{uint16(3), 3, true},
+		{uint16(6), 3, true},
+		{4, 0, false},
+		{3, 0, false},
+		{5, 0, false},
+		{"foo", 0, false},
+		{"bar", 0, false},
+	}
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got, got1 := key.ParamUint(tt.label)
+			if got != tt.want {
+				t.Errorf("Key.ParamUint() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("Key.ParamUint() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestKey_ParamString(t *testing.T) {
+	type str string
+	key := &Key{
+		Params: map[interface{}]interface{}{
+			1:   "foo",
+			"2": str("bar"),
+			3:   []byte("baz"),
+			4:   5,
+		},
+	}
+	tests := []struct {
+		label interface{}
+		want  string
+		want1 bool
+	}{
+		{1, "foo", true},
+		{"2", "bar", true},
+		{3, "", false},
+		{4, "", false},
+	}
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got, got1 := key.ParamString(tt.label)
+			if got != tt.want {
+				t.Errorf("Key.ParamString() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("Key.ParamString() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestKey_ParamBool(t *testing.T) {
+	type boo bool
+	key := &Key{
+		Params: map[interface{}]interface{}{
+			1:   true,
+			"2": boo(false),
+			3:   []byte("baz"),
+			4:   5,
+		},
+	}
+	tests := []struct {
+		label interface{}
+		want  bool
+		want1 bool
+	}{
+		{1, true, true},
+		{"2", false, true},
+		{3, false, false},
+		{4, false, false},
+	}
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			got, got1 := key.ParamBool(tt.label)
+			if got != tt.want {
+				t.Errorf("Key.ParamBool() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("Key.ParamBool() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
 
 func TestKeyOp_String(t *testing.T) {
 	tests := []struct {
@@ -1474,6 +1659,12 @@ func TestKey_PublicKey(t *testing.T) {
 			},
 			nil,
 			`unexpected key type "unknown key type value 7"`,
+		}, {
+			"invalid key type", &Key{
+				KeyType: KeyTypeInvalid,
+			},
+			nil,
+			`invalid kty value 0`,
 		}, {
 			"OKP missing X", &Key{
 				KeyType: KeyTypeOKP,
