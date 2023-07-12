@@ -758,6 +758,34 @@ func TestKey_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: "",
 		}, {
+			name: "EC2 with short x and y",
+			key: &Key{
+				KeyType:   KeyTypeEC2,
+				Algorithm: AlgorithmES256,
+				Params: map[interface{}]interface{}{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     []byte{0x01},
+					KeyLabelEC2Y:     []byte{0x02, 0x03},
+				},
+			},
+			want: []byte{
+				0xa5,       // map (4)
+				0x01, 0x02, // kty: EC2
+				0x03, 0x26, // alg: ES256
+				0x20, 0x01, // curve: P256
+				0x21, 0x58, 0x20, //  x-coordinate: bytes(32)
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 32-byte value
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+				0x22, 0x58, 0x20, //  y-coordinate: bytes(32)
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 32-byte value
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03,
+			},
+			wantErr: "",
+		}, {
 			name: "Symmetric",
 			key: &Key{
 				KeyType: KeyTypeSymmetric,
@@ -805,18 +833,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 }
 
 func TestNewOKPKey(t *testing.T) {
-	x := []byte{
-		0x30, 0xa0, 0x42, 0x4c, 0xd2, 0x1c, 0x29, 0x44,
-		0x83, 0x8a, 0x2d, 0x75, 0xc9, 0x2b, 0x37, 0xe7,
-		0x6e, 0xa2, 0x0d, 0x9f, 0x00, 0x89, 0x3a, 0x3b,
-		0x4e, 0xee, 0x8a, 0x3c, 0x0a, 0xaf, 0xec, 0x3e,
-	}
-	d := []byte{
-		0xe0, 0x4b, 0x65, 0xe9, 0x24, 0x56, 0xd9, 0x88,
-		0x8b, 0x52, 0xb3, 0x79, 0xbd, 0xfb, 0xd5, 0x1e,
-		0xe8, 0x69, 0xef, 0x1f, 0x0f, 0xc6, 0x5b, 0x66,
-		0x59, 0x69, 0x5b, 0x6c, 0xce, 0x08, 0x17, 0x23,
-	}
+	x, d := newEd25519(t)
 	type args struct {
 		alg Algorithm
 		x   []byte
@@ -865,9 +882,9 @@ func TestNewOKPKey(t *testing.T) {
 }
 
 func TestNewEC2Key(t *testing.T) {
-	x := []byte{1, 2, 3}
-	y := []byte{4, 5, 6}
-	d := []byte{7, 8, 9}
+	ec256x, ec256y, ec256d := newEC2(t, elliptic.P256())
+	ec384x, ec384y, ec384d := newEC2(t, elliptic.P384())
+	ec521x, ec521y, ec521d := newEC2(t, elliptic.P521())
 	type args struct {
 		alg Algorithm
 		x   []byte
@@ -881,46 +898,46 @@ func TestNewEC2Key(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "valid ES256", args: args{AlgorithmES256, x, y, d},
+			name: "valid ES256", args: args{AlgorithmES256, ec256x, ec256y, ec256d},
 			want: &Key{
 				KeyType:   KeyTypeEC2,
 				Algorithm: AlgorithmES256,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+					KeyLabelEC2D:     ec256d,
 				},
 			},
 			wantErr: "",
 		}, {
-			name: "valid ES384", args: args{AlgorithmES384, x, y, d},
+			name: "valid ES384", args: args{AlgorithmES384, ec384x, ec384y, ec384d},
 			want: &Key{
 				KeyType:   KeyTypeEC2,
 				Algorithm: AlgorithmES384,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec384x,
+					KeyLabelEC2Y:     ec384y,
+					KeyLabelEC2D:     ec384d,
 				},
 			},
 			wantErr: "",
 		}, {
-			name: "valid ES521", args: args{AlgorithmES512, x, y, d},
+			name: "valid ES521", args: args{AlgorithmES512, ec521x, ec521y, ec521d},
 			want: &Key{
 				KeyType:   KeyTypeEC2,
 				Algorithm: AlgorithmES512,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec521x,
+					KeyLabelEC2Y:     ec521y,
+					KeyLabelEC2D:     ec521d,
 				},
 			},
 			wantErr: "",
 		}, {
-			name: "invalid alg", args: args{Algorithm(-100), x, y, d},
+			name: "invalid alg", args: args{Algorithm(-100), ec256x, ec256y, ec256d},
 			want:    nil,
 			wantErr: `unsupported algorithm "unknown algorithm value -100"`,
 		}, {
@@ -1118,6 +1135,8 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 }
 
 func TestNewKeyFromPrivate(t *testing.T) {
+	x, y, d := newEC2(t, elliptic.P256())
+	okpx, okpd := newEd25519(t)
 	tests := []struct {
 		name    string
 		k       crypto.PrivateKey
@@ -1126,16 +1145,16 @@ func TestNewKeyFromPrivate(t *testing.T) {
 	}{
 		{
 			"ecdsa", &ecdsa.PrivateKey{
-				PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: big.NewInt(1), Y: big.NewInt(2)},
-				D:         big.NewInt(3),
+				PublicKey: ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(x), Y: new(big.Int).SetBytes(y)},
+				D:         new(big.Int).SetBytes(d),
 			}, &Key{
 				Algorithm: AlgorithmES256,
 				KeyType:   KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     big.NewInt(1).Bytes(),
-					KeyLabelEC2Y:     big.NewInt(2).Bytes(),
-					KeyLabelEC2D:     big.NewInt(3).Bytes(),
+					KeyLabelEC2X:     x,
+					KeyLabelEC2Y:     y,
+					KeyLabelEC2D:     d,
 				},
 			},
 			"",
@@ -1149,16 +1168,13 @@ func TestNewKeyFromPrivate(t *testing.T) {
 			"unsupported curve: <nil>",
 		},
 		{
-			"ed25519", ed25519.PrivateKey{
-				1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				4, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			},
+			"ed25519", ed25519.PrivateKey(append(okpd, okpx...)),
 			&Key{
 				Algorithm: AlgorithmEd25519, KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPX:     []byte{4, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-					KeyLabelOKPD:     []byte{1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					KeyLabelOKPX:     okpx,
+					KeyLabelOKPD:     okpd,
 				}},
 			"",
 		},
@@ -1183,6 +1199,8 @@ func TestNewKeyFromPrivate(t *testing.T) {
 }
 
 func TestNewKeyFromPublic(t *testing.T) {
+	ecx, ecy, _ := newEC2(t, elliptic.P256())
+	okpx, _ := newEd25519(t)
 	tests := []struct {
 		name    string
 		k       crypto.PublicKey
@@ -1190,14 +1208,14 @@ func TestNewKeyFromPublic(t *testing.T) {
 		wantErr string
 	}{
 		{
-			"ecdsa", &ecdsa.PublicKey{Curve: elliptic.P256(), X: big.NewInt(1), Y: big.NewInt(2)},
+			"ecdsa", &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(ecx), Y: new(big.Int).SetBytes(ecy)},
 			&Key{
 				Algorithm: AlgorithmES256,
 				KeyType:   KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     big.NewInt(1).Bytes(),
-					KeyLabelEC2Y:     big.NewInt(2).Bytes(),
+					KeyLabelEC2X:     ecx,
+					KeyLabelEC2Y:     ecy,
 				},
 			},
 			"",
@@ -1208,13 +1226,13 @@ func TestNewKeyFromPublic(t *testing.T) {
 			"unsupported curve: <nil>",
 		},
 		{
-			"ed25519", ed25519.PublicKey{1, 2, 3},
+			"ed25519", ed25519.PublicKey(okpx),
 			&Key{
 				Algorithm: AlgorithmEd25519,
 				KeyType:   KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPX:     []byte{1, 2, 3},
+					KeyLabelOKPX:     okpx,
 				},
 			},
 			"",
@@ -1240,8 +1258,7 @@ func TestNewKeyFromPublic(t *testing.T) {
 }
 
 func TestKey_Signer(t *testing.T) {
-	x := []byte{0xde, 0xad, 0xbe, 0xef}
-	d := []byte{0xde, 0xad, 0xbe, 0xef}
+	x, d := newEd25519(t)
 	tests := []struct {
 		name    string
 		k       *Key
@@ -1328,7 +1345,7 @@ func TestKey_Signer(t *testing.T) {
 }
 
 func TestKey_Verifier(t *testing.T) {
-	x := []byte{0xde, 0xad, 0xbe, 0xef}
+	x, _ := newEd25519(t)
 	tests := []struct {
 		name    string
 		k       *Key
@@ -1411,9 +1428,10 @@ func TestKey_Verifier(t *testing.T) {
 }
 
 func TestKey_PrivateKey(t *testing.T) {
-	x := []byte{0xde, 0xad, 0xbe, 0xef}
-	y := []byte{0xef, 0xbe, 0xad, 0xde}
-	d := []byte{0xad, 0xde, 0xef, 0xbe}
+	ec256x, ec256y, ec256d := newEC2(t, elliptic.P256())
+	ec384x, ec384y, ec384d := newEC2(t, elliptic.P384())
+	ec521x, ec521y, ec521d := newEC2(t, elliptic.P521())
+	okpx, okpd := newEd25519(t)
 	tests := []struct {
 		name    string
 		k       *Key
@@ -1425,32 +1443,56 @@ func TestKey_PrivateKey(t *testing.T) {
 				KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPX:     x,
-					KeyLabelOKPD:     d,
+					KeyLabelOKPX:     okpx,
+					KeyLabelOKPD:     okpd,
 				},
 			},
-			ed25519.PrivateKey{
-				d[0], d[1], d[2], d[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				x[0], x[1], x[2], x[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			ed25519.PrivateKey(append(okpd, okpx...)),
+			"",
+		}, {
+			"CurveEd25519 missing x", &Key{
+				KeyType: KeyTypeOKP,
+				Params: map[interface{}]interface{}{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPD:     okpd,
+				},
 			},
+			ed25519.PrivateKey(append(okpd, okpx...)),
 			"",
 		}, {
 			"CurveP256", &Key{
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+					KeyLabelEC2D:     ec256d,
 				},
 			},
 			&ecdsa.PrivateKey{
 				PublicKey: ecdsa.PublicKey{
 					Curve: elliptic.P256(),
-					X:     new(big.Int).SetBytes(x),
-					Y:     new(big.Int).SetBytes(y),
+					X:     new(big.Int).SetBytes(ec256x),
+					Y:     new(big.Int).SetBytes(ec256y),
 				},
-				D: new(big.Int).SetBytes(d),
+				D: new(big.Int).SetBytes(ec256d),
+			},
+			"",
+		}, {
+			"CurveP256 missing x and y", &Key{
+				KeyType: KeyTypeEC2,
+				Params: map[interface{}]interface{}{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2D:     ec256d,
+				},
+			},
+			&ecdsa.PrivateKey{
+				PublicKey: ecdsa.PublicKey{
+					Curve: elliptic.P256(),
+					X:     new(big.Int).SetBytes(ec256x),
+					Y:     new(big.Int).SetBytes(ec256y),
+				},
+				D: new(big.Int).SetBytes(ec256d),
 			},
 			"",
 		}, {
@@ -1458,18 +1500,18 @@ func TestKey_PrivateKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec384x,
+					KeyLabelEC2Y:     ec384y,
+					KeyLabelEC2D:     ec384d,
 				},
 			},
 			&ecdsa.PrivateKey{
 				PublicKey: ecdsa.PublicKey{
 					Curve: elliptic.P384(),
-					X:     new(big.Int).SetBytes(x),
-					Y:     new(big.Int).SetBytes(y),
+					X:     new(big.Int).SetBytes(ec384x),
+					Y:     new(big.Int).SetBytes(ec384y),
 				},
-				D: new(big.Int).SetBytes(d),
+				D: new(big.Int).SetBytes(ec384d),
 			},
 			"",
 		}, {
@@ -1477,18 +1519,18 @@ func TestKey_PrivateKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec521x,
+					KeyLabelEC2Y:     ec521y,
+					KeyLabelEC2D:     ec521d,
 				},
 			},
 			&ecdsa.PrivateKey{
 				PublicKey: ecdsa.PublicKey{
 					Curve: elliptic.P521(),
-					X:     new(big.Int).SetBytes(x),
-					Y:     new(big.Int).SetBytes(y),
+					X:     new(big.Int).SetBytes(ec521x),
+					Y:     new(big.Int).SetBytes(ec521y),
 				},
-				D: new(big.Int).SetBytes(d),
+				D: new(big.Int).SetBytes(ec521d),
 			},
 			"",
 		}, {
@@ -1498,65 +1540,55 @@ func TestKey_PrivateKey(t *testing.T) {
 			nil,
 			`unexpected key type "unknown key type value 7"`,
 		}, {
-			"OKP missing X", &Key{
-				KeyType: KeyTypeOKP,
-				Params: map[interface{}]interface{}{
-					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPD:     d,
-				},
-			},
-			nil,
-			ErrOKPNoPub.Error(),
-		}, {
-			"OKP missing D", &Key{
-				KeyType: KeyTypeOKP,
-				Params: map[interface{}]interface{}{
-					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPX:     x,
-				},
-			},
-			nil,
-			ErrNotPrivKey.Error(),
-		}, {
 			"OKP unknown curve", &Key{
 				KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: 70,
-					KeyLabelOKPX:     x,
-					KeyLabelOKPD:     d,
+					KeyLabelOKPX:     okpx,
+					KeyLabelOKPD:     okpd,
 				},
 			},
 			nil,
 			`unsupported curve "unknown curve value 70" for key type OKP`,
 		}, {
-			"EC2 missing X", &Key{
-				KeyType: KeyTypeEC2,
+			"OKP missing d", &Key{
+				KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     okpx,
 				},
 			},
 			nil,
-			ErrEC2NoPub.Error(),
+			ErrNotPrivKey.Error(),
 		}, {
-			"EC2 missing Y", &Key{
-				KeyType: KeyTypeEC2,
+			"OKP incorrect x size", &Key{
+				KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2D:     d,
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     make([]byte, 10),
+					KeyLabelOKPD:     okpd,
 				},
 			},
 			nil,
-			ErrEC2NoPub.Error(),
+			"invalid x size: expected 32, got 10",
+		}, {
+			"OKP incorrect d size", &Key{
+				KeyType: KeyTypeOKP,
+				Params: map[interface{}]interface{}{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     okpx,
+					KeyLabelOKPD:     make([]byte, 5),
+				},
+			},
+			nil,
+			"invalid d size: expected 32, got 5",
 		}, {
 			"EC2 missing D", &Key{
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
 				},
 			},
 			nil,
@@ -1566,13 +1598,49 @@ func TestKey_PrivateKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: 70,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
-					KeyLabelEC2D:     d,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+					KeyLabelEC2D:     ec256d,
 				},
 			},
 			nil,
 			`unsupported curve "unknown curve value 70" for key type EC2`,
+		}, {
+			"EC2 incorrect x size", &Key{
+				KeyType: KeyTypeEC2,
+				Params: map[interface{}]interface{}{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec384x,
+					KeyLabelEC2Y:     ec256y,
+					KeyLabelEC2D:     ec256d,
+				},
+			},
+			nil,
+			"invalid x size: expected lower or equal to 32, got 48",
+		}, {
+			"EC2 incorrect y size", &Key{
+				KeyType: KeyTypeEC2,
+				Params: map[interface{}]interface{}{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec384y,
+					KeyLabelEC2D:     ec256d,
+				},
+			},
+			nil,
+			"invalid y size: expected lower or equal to 32, got 48",
+		}, {
+			"EC2 incorrect d size", &Key{
+				KeyType: KeyTypeEC2,
+				Params: map[interface{}]interface{}{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+					KeyLabelEC2D:     ec384d,
+				},
+			},
+			nil,
+			"invalid d size: expected lower or equal to 32, got 48",
 		},
 	}
 	for _, tt := range tests {
@@ -1590,8 +1658,10 @@ func TestKey_PrivateKey(t *testing.T) {
 }
 
 func TestKey_PublicKey(t *testing.T) {
-	x := []byte{0xde, 0xad, 0xbe, 0xef}
-	y := []byte{0xef, 0xbe, 0xad, 0xde}
+	ec256x, ec256y, _ := newEC2(t, elliptic.P256())
+	ec384x, ec384y, _ := newEC2(t, elliptic.P384())
+	ec521x, ec521y, _ := newEC2(t, elliptic.P521())
+	okpx, _ := newEd25519(t)
 	tests := []struct {
 		name    string
 		k       *Key
@@ -1603,24 +1673,24 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPX:     x,
+					KeyLabelOKPX:     okpx,
 				},
 			},
-			ed25519.PublicKey(x),
+			ed25519.PublicKey(okpx),
 			"",
 		}, {
 			"CurveP256", &Key{
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
 				},
 			},
 			&ecdsa.PublicKey{
 				Curve: elliptic.P256(),
-				X:     new(big.Int).SetBytes(x),
-				Y:     new(big.Int).SetBytes(y),
+				X:     new(big.Int).SetBytes(ec256x),
+				Y:     new(big.Int).SetBytes(ec256y),
 			},
 			"",
 		}, {
@@ -1628,14 +1698,14 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
+					KeyLabelEC2X:     ec384x,
+					KeyLabelEC2Y:     ec384y,
 				},
 			},
 			&ecdsa.PublicKey{
 				Curve: elliptic.P384(),
-				X:     new(big.Int).SetBytes(x),
-				Y:     new(big.Int).SetBytes(y),
+				X:     new(big.Int).SetBytes(ec384x),
+				Y:     new(big.Int).SetBytes(ec384y),
 			},
 			"",
 		}, {
@@ -1643,14 +1713,14 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
+					KeyLabelEC2X:     ec521x,
+					KeyLabelEC2Y:     ec521y,
 				},
 			},
 			&ecdsa.PublicKey{
 				Curve: elliptic.P521(),
-				X:     new(big.Int).SetBytes(x),
-				Y:     new(big.Int).SetBytes(y),
+				X:     new(big.Int).SetBytes(ec521x),
+				Y:     new(big.Int).SetBytes(ec521y),
 			},
 			"",
 		}, {
@@ -1679,7 +1749,7 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: 70,
-					KeyLabelOKPX:     x,
+					KeyLabelOKPX:     okpx,
 				},
 			},
 			nil,
@@ -1689,7 +1759,7 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2Y:     y,
+					KeyLabelEC2Y:     ec256y,
 				},
 			},
 			nil,
@@ -1699,7 +1769,7 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     x,
+					KeyLabelEC2X:     ec256x,
 				},
 			},
 			nil,
@@ -1709,8 +1779,8 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: 70,
-					KeyLabelEC2X:     x,
-					KeyLabelEC2Y:     y,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
 				},
 			},
 			nil,
@@ -1807,4 +1877,22 @@ func mustHexToBytes(s string) []byte {
 		panic(err)
 	}
 	return b
+}
+
+func newEd25519(t *testing.T) (x, d []byte) {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pub, priv[:32]
+}
+
+func newEC2(t *testing.T, crv elliptic.Curve) (x, y, d []byte) {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(crv, rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return priv.X.Bytes(), priv.Y.Bytes(), priv.D.Bytes()
 }
