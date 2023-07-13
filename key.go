@@ -8,9 +8,29 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"strconv"
+)
 
-	cbor "github.com/fxamacker/cbor/v2"
+const (
+	KeyLabelOKPCurve int64 = -1
+	KeyLabelOKPX     int64 = -2
+	KeyLabelOKPD     int64 = -4
+
+	KeyLabelEC2Curve int64 = -1
+	KeyLabelEC2X     int64 = -2
+	KeyLabelEC2Y     int64 = -3
+	KeyLabelEC2D     int64 = -4
+
+	KeyLabelSymmetricK int64 = -1
+)
+
+const (
+	keyLabelKeyType   int64 = 1
+	keyLabelKeyID     int64 = 2
+	keyLabelAlgorithm int64 = 3
+	keyLabelKeyOps    int64 = 4
+	keyLabelBaseIV    int64 = 5
 )
 
 const (
@@ -55,26 +75,26 @@ type KeyOp int64
 
 // KeyOpFromString returns the KeyOp corresponding to the specified name.
 // The values are taken from https://www.rfc-editor.org/rfc/rfc7517#section-4.3
-func KeyOpFromString(val string) (KeyOp, error) {
+func KeyOpFromString(val string) (KeyOp, bool) {
 	switch val {
 	case "sign":
-		return KeyOpSign, nil
+		return KeyOpSign, true
 	case "verify":
-		return KeyOpVerify, nil
+		return KeyOpVerify, true
 	case "encrypt":
-		return KeyOpEncrypt, nil
+		return KeyOpEncrypt, true
 	case "decrypt":
-		return KeyOpDecrypt, nil
+		return KeyOpDecrypt, true
 	case "wrapKey":
-		return KeyOpWrapKey, nil
+		return KeyOpWrapKey, true
 	case "unwrapKey":
-		return KeyOpUnwrapKey, nil
+		return KeyOpUnwrapKey, true
 	case "deriveKey":
-		return KeyOpDeriveKey, nil
+		return KeyOpDeriveKey, true
 	case "deriveBits":
-		return KeyOpDeriveBits, nil
+		return KeyOpDeriveBits, true
 	default:
-		return KeyOpInvalid, fmt.Errorf("unknown key_ops value %q", val)
+		return KeyOpInvalid, false
 	}
 }
 
@@ -108,35 +128,6 @@ func (ko KeyOp) String() string {
 	default:
 		return "unknown key_op value " + strconv.Itoa(int(ko))
 	}
-}
-
-// MarshalCBOR marshals the KeyOp as a CBOR int.
-func (ko KeyOp) MarshalCBOR() ([]byte, error) {
-	return encMode.Marshal(int64(ko))
-}
-
-// UnmarshalCBOR populates the KeyOp from the provided CBOR value (must be int
-// or tstr).
-func (ko *KeyOp) UnmarshalCBOR(data []byte) error {
-	var raw intOrStr
-
-	if err := raw.UnmarshalCBOR(data); err != nil {
-		return fmt.Errorf("invalid key_ops value %w", err)
-	}
-
-	if raw.IsString() {
-		v, err := KeyOpFromString(raw.String())
-		if err != nil {
-			return err
-		}
-
-		*ko = v
-	} else {
-		v := raw.Int()
-		*ko = KeyOp(v)
-	}
-
-	return nil
 }
 
 // KeyType identifies the family of keys represented by the associated Key.
@@ -229,38 +220,22 @@ func (c Curve) String() string {
 // Key represents a COSE_Key structure, as defined by RFC8152.
 // Note: currently, this does NOT support RFC8230 (RSA algorithms).
 type Key struct {
-	// Common parameters. These are independent of the key type. Only
-	// KeyType common parameter MUST be set.
-
 	// KeyType identifies the family of keys for this structure, and thus,
 	// which of the key-type-specific parameters need to be set.
-	KeyType KeyType `cbor:"1,keyasint"`
+	KeyType KeyType
 	// KeyID is the identification value matched to the kid in the message.
-	KeyID []byte `cbor:"2,keyasint,omitempty"`
+	KeyID []byte
 	// Algorithm is used to restrict the algorithm that is used with the
 	// key. If it is set, the application MUST verify that it matches the
 	// algorithm for which the Key is being used.
-	Algorithm Algorithm `cbor:"3,keyasint,omitempty"`
+	Algorithm Algorithm
 	// KeyOps can be set to restrict the set of operations that the Key is used for.
-	KeyOps []KeyOp `cbor:"4,keyasint,omitempty"`
+	KeyOps []KeyOp
 	// BaseIV is the Base IV to be xor-ed with Partial IVs.
-	BaseIV []byte `cbor:"5,keyasint,omitempty"`
+	BaseIV []byte
 
-	// Curve is EC identifier -- taken form "COSE Elliptic Curves" IANA registry.
-	// Populated from keyStruct.RawKeyParam when key type is EC2 or OKP.
-	Curve Curve `cbor:"-"`
-	// K is the key value. Populated from keyStruct.RawKeyParam when key
-	// type is Symmetric.
-	K []byte `cbor:"-"`
-
-	// EC2/OKP params
-
-	// X is the x-coordinate
-	X []byte `cbor:"-2,keyasint,omitempty"`
-	// Y is the y-coordinate (sign bits are not supported)
-	Y []byte `cbor:"-3,keyasint,omitempty"`
-	// D is the private key
-	D []byte `cbor:"-4,keyasint,omitempty"`
+	// Any additional parameter (label,value) pairs.
+	Params map[interface{}]interface{}
 }
 
 // NewOKPKey returns a Key created using the provided Octet Key Pair data.
@@ -272,14 +247,66 @@ func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
 	key := &Key{
 		KeyType:   KeyTypeOKP,
 		Algorithm: alg,
-		Curve:     CurveEd25519,
-		X:         x,
-		D:         d,
+		Params: map[interface{}]interface{}{
+			KeyLabelOKPCurve: CurveEd25519,
+		},
+	}
+	if x != nil {
+		key.Params[KeyLabelOKPX] = x
+	}
+	if d != nil {
+		key.Params[KeyLabelOKPD] = d
 	}
 	if err := key.validate(KeyOpInvalid); err != nil {
 		return nil, err
 	}
 	return key, nil
+}
+
+// ParamBytes returns the value of the parameter with the given label, if it
+// exists and is of type []byte or can be converted to []byte.
+func (k *Key) ParamBytes(label interface{}) ([]byte, bool) {
+	v, ok, err := decodeBytes(k.Params, label)
+	return v, ok && err == nil
+}
+
+// ParamInt returns the value of the parameter with the given label, if it
+// exists and is of type int64 or can be converted to int64.
+func (k *Key) ParamInt(label interface{}) (int64, bool) {
+	v, ok, err := decodeInt(k.Params, label)
+	return v, ok && err == nil
+}
+
+// ParamUint returns the value of the parameter with the given label, if it
+// exists and is of type uint64 or can be converted to uint64.
+func (k *Key) ParamUint(label interface{}) (uint64, bool) {
+	v, ok, err := decodeUint(k.Params, label)
+	return v, ok && err == nil
+}
+
+// ParamString returns the value of the parameter with the given label, if it
+// exists and is of type string or can be converted to string.
+func (k *Key) ParamString(label interface{}) (string, bool) {
+	v, ok, err := decodeString(k.Params, label)
+	return v, ok && err == nil
+}
+
+// ParamBool returns the value of the parameter with the given label, if it
+// exists and is of type bool or can be converted to bool.
+func (k *Key) ParamBool(label interface{}) (bool, bool) {
+	v, ok, err := decodeBool(k.Params, label)
+	return v, ok && err == nil
+}
+
+// OKP returns the Octet Key Pair parameters for the key.
+func (k *Key) OKP() (crv Curve, x []byte, d []byte) {
+	v, ok := k.ParamInt(KeyLabelOKPCurve)
+	if ok {
+		crv = Curve(v)
+	}
+	x, _ = k.ParamBytes(KeyLabelOKPX)
+	d, _ = k.ParamBytes(KeyLabelOKPD)
+	return
 }
 
 // NewEC2Key returns a Key created using the provided elliptic curve key
@@ -301,10 +328,18 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 	key := &Key{
 		KeyType:   KeyTypeEC2,
 		Algorithm: alg,
-		Curve:     curve,
-		X:         x,
-		Y:         y,
-		D:         d,
+		Params: map[interface{}]interface{}{
+			KeyLabelEC2Curve: curve,
+		},
+	}
+	if x != nil {
+		key.Params[KeyLabelEC2X] = x
+	}
+	if y != nil {
+		key.Params[KeyLabelEC2Y] = y
+	}
+	if d != nil {
+		key.Params[KeyLabelEC2D] = d
 	}
 	if err := key.validate(KeyOpInvalid); err != nil {
 		return nil, err
@@ -312,13 +347,33 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 	return key, nil
 }
 
+// EC2 returns the Elliptic Curve parameters for the key.
+func (k *Key) EC2() (crv Curve, x []byte, y, d []byte) {
+	v, ok := k.ParamInt(KeyLabelEC2Curve)
+	if ok {
+		crv = Curve(v)
+	}
+	x, _ = k.ParamBytes(KeyLabelEC2X)
+	y, _ = k.ParamBytes(KeyLabelEC2Y)
+	d, _ = k.ParamBytes(KeyLabelEC2D)
+	return
+}
+
 // NewSymmetricKey returns a Key created using the provided Symmetric key
 // bytes.
 func NewSymmetricKey(k []byte) *Key {
 	return &Key{
 		KeyType: KeyTypeSymmetric,
-		K:       k,
+		Params: map[interface{}]interface{}{
+			KeyLabelSymmetricK: k,
+		},
 	}
+}
+
+// Symmetric returns the Symmetric parameters for the key.
+func (key *Key) Symmetric() (k []byte) {
+	k, _ = key.ParamBytes(KeyLabelSymmetricK)
+	return
 }
 
 // NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.
@@ -365,55 +420,62 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 func (k Key) validate(op KeyOp) error {
 	switch k.KeyType {
 	case KeyTypeEC2:
+		crv, x, y, d := k.EC2()
 		switch op {
 		case KeyOpVerify:
-			if len(k.X) == 0 || len(k.Y) == 0 {
+			if len(x) == 0 || len(y) == 0 {
 				return ErrEC2NoPub
 			}
 		case KeyOpSign:
-			if len(k.D) == 0 {
+			if len(d) == 0 {
 				return ErrNotPrivKey
 			}
 		}
-		if k.Curve == CurveInvalid || (len(k.X) == 0 && len(k.Y) == 0 && len(k.D) == 0) {
+		if crv == CurveInvalid || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
 			return ErrInvalidKey
 		}
-		switch k.Curve {
+		switch crv {
 		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
 			return fmt.Errorf(
 				"Key type mismatch for curve %q (must be OKP, found EC2)",
-				k.Curve.String(),
+				crv.String(),
 			)
 		default:
 			// ok -- a key may contain a currently unsupported curve
 			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
 		}
 	case KeyTypeOKP:
+		crv, x, d := k.OKP()
 		switch op {
 		case KeyOpVerify:
-			if len(k.X) == 0 {
+			if len(x) == 0 {
 				return ErrOKPNoPub
 			}
 		case KeyOpSign:
-			if len(k.D) == 0 {
+			if len(d) == 0 {
 				return ErrNotPrivKey
 			}
 		}
-		if k.Curve == CurveInvalid || (len(k.X) == 0 && len(k.D) == 0) {
+		if crv == CurveInvalid || (len(x) == 0 && len(d) == 0) {
 			return ErrInvalidKey
 		}
-		switch k.Curve {
+		switch crv {
 		case CurveP256, CurveP384, CurveP521:
 			return fmt.Errorf(
 				"Key type mismatch for curve %q (must be EC2, found OKP)",
-				k.Curve.String(),
+				crv.String(),
 			)
 		default:
 			// ok -- a key may contain a currently unsupported curve
 			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
 		}
 	case KeyTypeSymmetric:
-		// Nothing to validate
+		k := k.Symmetric()
+		if len(k) == 0 {
+			return ErrInvalidKey
+		}
+	case KeyTypeInvalid:
+		return errors.New("invalid kty value 0")
 	default:
 		// Unknown key type, we can't validate custom parameters.
 	}
@@ -449,85 +511,114 @@ func (k Key) canOp(op KeyOp) bool {
 	return false
 }
 
-type keyalias Key
-
-type marshaledKey struct {
-	keyalias
-
-	// RawKeyParam contains the raw CBOR encoded data for the label -1.
-	// Depending on the KeyType this is used to populate either Curve or K
-	// below.
-	RawKeyParam cbor.RawMessage `cbor:"-1,keyasint,omitempty"`
-}
-
 // MarshalCBOR encodes Key into a COSE_Key object.
 func (k *Key) MarshalCBOR() ([]byte, error) {
-	tmp := marshaledKey{
-		keyalias: keyalias(*k),
+	tmp := map[interface{}]interface{}{
+		keyLabelKeyType: k.KeyType,
 	}
-	var err error
-
-	switch k.KeyType {
-	case KeyTypeSymmetric:
-		if tmp.RawKeyParam, err = encMode.Marshal(k.K); err != nil {
-			return nil, err
+	if k.KeyID != nil {
+		tmp[keyLabelKeyID] = k.KeyID
+	}
+	if k.Algorithm != AlgorithmInvalid {
+		tmp[keyLabelAlgorithm] = k.Algorithm
+	}
+	if k.KeyOps != nil {
+		tmp[keyLabelKeyOps] = k.KeyOps
+	}
+	if k.BaseIV != nil {
+		tmp[keyLabelBaseIV] = k.BaseIV
+	}
+	existing := make(map[interface{}]struct{}, len(k.Params))
+	for label, v := range k.Params {
+		lbl, ok := normalizeLabel(label)
+		if !ok {
+			return nil, fmt.Errorf("invalid label type %T", label)
 		}
-	case KeyTypeEC2, KeyTypeOKP:
-		if tmp.RawKeyParam, err = encMode.Marshal(k.Curve); err != nil {
-			return nil, err
+		if _, ok := existing[lbl]; ok {
+			return nil, fmt.Errorf("duplicate label %v", lbl)
 		}
-	default:
-		return nil, fmt.Errorf("invalid key type: %q", k.KeyType.String())
+		existing[lbl] = struct{}{}
+		tmp[lbl] = v
 	}
 	return encMode.Marshal(tmp)
 }
 
 // UnmarshalCBOR decodes a COSE_Key object into Key.
 func (k *Key) UnmarshalCBOR(data []byte) error {
-	var tmp marshaledKey
-
+	var tmp map[interface{}]interface{}
 	if err := decMode.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
-	if tmp.KeyType == KeyTypeInvalid {
-		return errors.New("invalid key type value 0")
+
+	*k = Key{}
+	kty, exist, err := decodeInt(tmp, keyLabelKeyType)
+	if !exist {
+		return errors.New("kty: missing")
+	}
+	if err != nil {
+		return fmt.Errorf("kty: %w", err)
+	}
+	k.KeyType = KeyType(kty)
+	if k.KeyType == KeyTypeInvalid {
+		return errors.New("kty: invalid value 0")
+	}
+	k.KeyID, _, err = decodeBytes(tmp, keyLabelKeyID)
+	if err != nil {
+		return fmt.Errorf("kid: %w", err)
+	}
+	alg, _, err := decodeInt(tmp, keyLabelAlgorithm)
+	if err != nil {
+		return fmt.Errorf("alg: %w", err)
+	}
+	k.Algorithm = Algorithm(alg)
+	key_ops, err := decodeSlice(tmp, keyLabelKeyOps)
+	if err != nil {
+		return fmt.Errorf("key_ops: %w", err)
+	}
+	if len(key_ops) > 0 {
+		k.KeyOps = make([]KeyOp, len(key_ops))
+		for i, op := range key_ops {
+			switch op := op.(type) {
+			case int64:
+				k.KeyOps[i] = KeyOp(op)
+			case string:
+				var ok bool
+				if k.KeyOps[i], ok = KeyOpFromString(op); !ok {
+					return fmt.Errorf("key_ops: unknown entry value %q", op)
+				}
+			default:
+				return fmt.Errorf("key_ops: invalid entry type %T", op)
+			}
+		}
+	}
+	k.BaseIV, _, err = decodeBytes(tmp, keyLabelBaseIV)
+	if err != nil {
+		return fmt.Errorf("base_iv: %w", err)
 	}
 
-	*k = Key(tmp.keyalias)
+	delete(tmp, keyLabelKeyType)
+	delete(tmp, keyLabelKeyID)
+	delete(tmp, keyLabelAlgorithm)
+	delete(tmp, keyLabelKeyOps)
+	delete(tmp, keyLabelBaseIV)
 
-	switch k.KeyType {
-	case KeyTypeEC2:
-		if tmp.RawKeyParam == nil {
-			return errors.New("missing Curve parameter (required for EC2 key type)")
+	if len(tmp) > 0 {
+		k.Params = make(map[interface{}]interface{}, len(tmp))
+		for lbl, v := range tmp {
+			switch lbl := lbl.(type) {
+			case int64:
+				if (k.KeyType == KeyTypeEC2 || k.KeyType == KeyTypeOKP) &&
+					(lbl == KeyLabelEC2Curve || lbl == KeyLabelOKPCurve) {
+					v = Curve(v.(int64))
+				}
+				k.Params[lbl] = v
+			case string:
+				k.Params[lbl] = v
+			default:
+				return fmt.Errorf("invalid label type %T", lbl)
+			}
 		}
-
-		if err := decMode.Unmarshal(tmp.RawKeyParam, &k.Curve); err != nil {
-			return err
-		}
-	case KeyTypeOKP:
-		if tmp.RawKeyParam == nil {
-			return errors.New("missing Curve parameter (required for OKP key type)")
-		}
-
-		if err := decMode.Unmarshal(tmp.RawKeyParam, &k.Curve); err != nil {
-			return err
-		}
-	case KeyTypeSymmetric:
-		if tmp.RawKeyParam == nil {
-			return errors.New("missing K parameter (required for Symmetric key type)")
-		}
-
-		if err := decMode.Unmarshal(tmp.RawKeyParam, &k.K); err != nil {
-			return err
-		}
-	default:
-		// this should not be reachable as KeyType.UnmarshalCBOR would
-		// result in an error during decMode.Unmarshal() above, if the
-		// value in the data doesn't correspond to one of the above
-		// types.
-		return fmt.Errorf("unexpected key type %q", k.KeyType.String())
 	}
-
 	return k.validate(KeyOpInvalid)
 }
 
@@ -554,13 +645,16 @@ func (k *Key) PublicKey() (crypto.PublicKey, error) {
 			curve = elliptic.P521()
 		}
 
+		_, x, y, _ := k.EC2()
+
 		pub := &ecdsa.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)}
-		pub.X.SetBytes(k.X)
-		pub.Y.SetBytes(k.Y)
+		pub.X.SetBytes(x)
+		pub.Y.SetBytes(y)
 
 		return pub, nil
 	case AlgorithmEd25519:
-		return ed25519.PublicKey(k.X), nil
+		_, x, _ := k.OKP()
+		return ed25519.PublicKey(x), nil
 	default:
 		return nil, ErrAlgorithmNotSupported
 	}
@@ -578,10 +672,11 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
+		_, x, y, d := k.EC2()
 		// RFC8152 allows omitting X and Y from private keys;
 		// crypto.PrivateKey assumes they are available.
 		// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
-		if len(k.X) == 0 || len(k.Y) == 0 {
+		if len(x) == 0 || len(y) == 0 {
 			return nil, ErrEC2NoPub
 		}
 
@@ -600,23 +695,24 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 			PublicKey: ecdsa.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)},
 			D:         new(big.Int),
 		}
-		priv.X.SetBytes(k.X)
-		priv.Y.SetBytes(k.Y)
-		priv.D.SetBytes(k.D)
+		priv.X.SetBytes(x)
+		priv.Y.SetBytes(y)
+		priv.D.SetBytes(d)
 
 		return priv, nil
 	case AlgorithmEd25519:
+		_, x, d := k.OKP()
 		// RFC8152 allows omitting X from private keys;
 		// crypto.PrivateKey assumes it is available.
 		// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
-		if len(k.X) == 0 {
+		if len(x) == 0 {
 			return nil, ErrOKPNoPub
 		}
 
 		buf := make([]byte, ed25519.PrivateKeySize)
 
-		copy(buf, k.D)
-		copy(buf[32:], k.X)
+		copy(buf, d)
+		copy(buf[32:], x)
 
 		return ed25519.PrivateKey(buf), nil
 	default:
@@ -684,7 +780,8 @@ func (k *Key) Verifier() (Verifier, error) {
 func (k *Key) deriveAlgorithm() (Algorithm, error) {
 	switch k.KeyType {
 	case KeyTypeEC2:
-		switch k.Curve {
+		crv, _, _, _ := k.EC2()
+		switch crv {
 		case CurveP256:
 			return AlgorithmES256, nil
 		case CurveP384:
@@ -693,15 +790,16 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 			return AlgorithmES512, nil
 		default:
 			return AlgorithmInvalid, fmt.Errorf(
-				"unsupported curve %q for key type EC2", k.Curve.String())
+				"unsupported curve %q for key type EC2", crv.String())
 		}
 	case KeyTypeOKP:
-		switch k.Curve {
+		crv, _, _ := k.OKP()
+		switch crv {
 		case CurveEd25519:
 			return AlgorithmEd25519, nil
 		default:
 			return AlgorithmInvalid, fmt.Errorf(
-				"unsupported curve %q for key type OKP", k.Curve.String())
+				"unsupported curve %q for key type OKP", crv.String())
 		}
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
@@ -720,4 +818,94 @@ func algorithmFromEllipticCurve(c elliptic.Curve) Algorithm {
 	default:
 		return AlgorithmInvalid
 	}
+}
+
+func decodeBytes(dic map[interface{}]interface{}, lbl interface{}) (b []byte, ok bool, err error) {
+	val, ok := dic[lbl]
+	if !ok {
+		return nil, false, nil
+	}
+	if b, ok = val.([]byte); ok {
+		return b, true, nil
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("invalid type: expected []uint8, got %T", val)
+		}
+	}()
+	return reflect.ValueOf(val).Bytes(), true, nil
+}
+
+func decodeInt(dic map[interface{}]interface{}, lbl interface{}) (int64, bool, error) {
+	val, ok := dic[lbl]
+	if !ok {
+		return 0, false, nil
+	}
+	if b, ok := val.(int64); ok {
+		return b, true, nil
+	}
+	if v := reflect.ValueOf(val); v.CanInt() {
+		return v.Int(), true, nil
+	}
+	return 0, true, fmt.Errorf("invalid type: expected int64, got %T", val)
+}
+
+func decodeUint(dic map[interface{}]interface{}, lbl interface{}) (uint64, bool, error) {
+	val, ok := dic[lbl]
+	if !ok {
+		return 0, false, nil
+	}
+	if b, ok := val.(uint64); ok {
+		return b, true, nil
+	}
+	v := reflect.ValueOf(val)
+	if v.CanUint() {
+		return v.Uint(), true, nil
+	}
+	if v.CanInt() {
+		if b := v.Int(); b >= 0 {
+			return uint64(b), true, nil
+		}
+	}
+	return 0, true, fmt.Errorf("invalid type: expected uint64, got %T", val)
+}
+
+func decodeString(dic map[interface{}]interface{}, lbl interface{}) (string, bool, error) {
+	val, ok := dic[lbl]
+	if !ok {
+		return "", false, nil
+	}
+	if b, ok := val.(string); ok {
+		return b, true, nil
+	}
+	if v := reflect.ValueOf(val); v.Kind() == reflect.String {
+		return v.String(), true, nil
+	}
+	return "", true, fmt.Errorf("invalid type: expected uint64, got %T", val)
+}
+
+func decodeBool(dic map[interface{}]interface{}, lbl interface{}) (bool, bool, error) {
+	val, ok := dic[lbl]
+	if !ok {
+		return false, false, nil
+	}
+	if b, ok := val.(bool); ok {
+		return b, true, nil
+	}
+	if v := reflect.ValueOf(val); v.Kind() == reflect.Bool {
+		return v.Bool(), true, nil
+	}
+	return false, true, fmt.Errorf("invalid type: expected uint64, got %T", val)
+}
+
+func decodeSlice(dic map[interface{}]interface{}, lbl interface{}) ([]interface{}, error) {
+	v, ok := dic[lbl]
+	if !ok {
+		return nil, nil
+	}
+	arr, ok := v.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid type: expected []interface{}, got %T", v)
+	}
+	return arr, nil
 }
