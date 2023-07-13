@@ -414,6 +414,15 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 	}
 }
 
+var (
+	// The following errors are used multiple times
+	// in Key.validate. We declare them here to avoid
+	// duplication. They are not considered public errors.
+	errCoordOverflow    = fmt.Errorf("%w: overflowing coordinate", ErrInvalidKey)
+	errReqParamsMissing = fmt.Errorf("%w: required parameters missing", ErrInvalidKey)
+	errInvalidCurve     = fmt.Errorf("%w: curve not supported for the given key type", ErrInvalidKey)
+)
+
 // Validate ensures that the parameters set inside the Key are internally
 // consistent (e.g., that the key type is appropriate to the curve).
 // It also checks that the key is valid for the requested operation.
@@ -432,29 +441,20 @@ func (k Key) validate(op KeyOp) error {
 			}
 		}
 		if crv == CurveInvalid || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
-			return ErrInvalidKey
+			return errReqParamsMissing
 		}
 		if size := curveSize(crv); size > 0 {
 			// RFC 8152 Section 13.1.1 says that x and y leading zero octets MUST be preserved,
 			// but the Go crypto/elliptic package trims them. So we relax the check
 			// here to allow for omitted leading zero octets, we will add them back
 			// when marshaling.
-			if len(x) > size {
-				return fmt.Errorf("invalid x size: expected lower or equal to %d, got %d", size, len(x))
-			}
-			if len(y) > size {
-				return fmt.Errorf("invalid y size: expected lower or equal to %d, got %d", size, len(y))
-			}
-			if len(d) > size {
-				return fmt.Errorf("invalid d size: expected lower or equal to %d, got %d", size, len(d))
+			if len(x) > size || len(y) > size || len(d) > size {
+				return errCoordOverflow
 			}
 		}
 		switch crv {
 		case CurveX25519, CurveX448, CurveEd25519, CurveEd448:
-			return fmt.Errorf(
-				"Key type mismatch for curve %q (must be OKP, found EC2)",
-				crv.String(),
-			)
+			return errInvalidCurve
 		default:
 			// ok -- a key may contain a currently unsupported curve
 			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.1.1
@@ -472,20 +472,14 @@ func (k Key) validate(op KeyOp) error {
 			}
 		}
 		if crv == CurveInvalid || (len(x) == 0 && len(d) == 0) {
-			return ErrInvalidKey
+			return errReqParamsMissing
 		}
-		if len(x) > 0 && len(x) != ed25519.PublicKeySize {
-			return fmt.Errorf("invalid x size: expected %d, got %d", ed25519.PublicKeySize, len(x))
-		}
-		if len(d) > 0 && len(d) != ed25519.SeedSize {
-			return fmt.Errorf("invalid d size: expected %d, got %d", ed25519.SeedSize, len(d))
+		if (len(x) > 0 && len(x) != ed25519.PublicKeySize) || (len(d) > 0 && len(d) != ed25519.SeedSize) {
+			return errCoordOverflow
 		}
 		switch crv {
 		case CurveP256, CurveP384, CurveP521:
-			return fmt.Errorf(
-				"Key type mismatch for curve %q (must be EC2, found OKP)",
-				crv.String(),
-			)
+			return errInvalidCurve
 		default:
 			// ok -- a key may contain a currently unsupported curve
 			// see https://www.rfc-editor.org/rfc/rfc8152#section-13.2
@@ -493,10 +487,10 @@ func (k Key) validate(op KeyOp) error {
 	case KeyTypeSymmetric:
 		k := k.Symmetric()
 		if len(k) == 0 {
-			return ErrInvalidKey
+			return errReqParamsMissing
 		}
 	case KeyTypeInvalid:
-		return errors.New("invalid kty value 0")
+		return fmt.Errorf("%w: kty value 0", ErrInvalidKey)
 	default:
 		// Unknown key type, we can't validate custom parameters.
 	}

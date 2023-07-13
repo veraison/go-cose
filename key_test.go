@@ -357,7 +357,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x01, // kty: OKP
 			},
 			want:    nil,
-			wantErr: ErrInvalidKey.Error(),
+			wantErr: "invalid key: required parameters missing",
 		}, {
 			name: "EC2 missing curve",
 			data: []byte{
@@ -365,7 +365,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x02, // kty: EC2
 			},
 			want:    nil,
-			wantErr: ErrInvalidKey.Error(),
+			wantErr: "invalid key: required parameters missing",
 		}, {
 			name: "OKP invalid curve",
 			data: []byte{
@@ -379,7 +379,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want:    nil,
-			wantErr: `Key type mismatch for curve "P-256" (must be EC2, found OKP)`,
+			wantErr: "invalid key: curve not supported for the given key type",
 		}, {
 			name: "EC2 invalid curve",
 			data: []byte{
@@ -398,7 +398,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want:    nil,
-			wantErr: `Key type mismatch for curve "Ed25519" (must be OKP, found EC2)`,
+			wantErr: "invalid key: curve not supported for the given key type",
 		}, {
 			name: "Symmetric missing K",
 			data: []byte{
@@ -406,7 +406,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x04, // kty: Symmetric
 			},
 			want:    nil,
-			wantErr: ErrInvalidKey.Error(),
+			wantErr: "invalid key: required parameters missing",
 		}, {
 			name: "EC2 invalid algorithm",
 			data: []byte{
@@ -864,7 +864,7 @@ func TestNewOKPKey(t *testing.T) {
 		}, {
 			name: "x and d missing", args: args{AlgorithmEd25519, nil, nil},
 			want:    nil,
-			wantErr: ErrInvalidKey.Error(),
+			wantErr: "invalid key: required parameters missing",
 		},
 	}
 	for _, tt := range tests {
@@ -943,7 +943,7 @@ func TestNewEC2Key(t *testing.T) {
 		}, {
 			name: "x, y and d missing", args: args{AlgorithmES512, nil, nil, nil},
 			want:    nil,
-			wantErr: ErrInvalidKey.Error(),
+			wantErr: "invalid key: required parameters missing",
 		},
 	}
 	for _, tt := range tests {
@@ -1301,7 +1301,7 @@ func TestKey_Signer(t *testing.T) {
 				},
 			},
 			AlgorithmInvalid,
-			`Key type mismatch for curve "P-256" (must be EC2, found OKP)`,
+			"invalid key: curve not supported for the given key type",
 		},
 		{
 			"can't sign", &Key{
@@ -1385,7 +1385,7 @@ func TestKey_Verifier(t *testing.T) {
 				},
 			},
 			AlgorithmInvalid,
-			`Key type mismatch for curve "P-256" (must be EC2, found OKP)`,
+			"invalid key: curve not supported for the given key type",
 		},
 		{
 			"can't verify", &Key{
@@ -1570,7 +1570,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid x size: expected 32, got 10",
+			"invalid key: overflowing coordinate",
 		}, {
 			"OKP incorrect d size", &Key{
 				KeyType: KeyTypeOKP,
@@ -1581,7 +1581,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid d size: expected 32, got 5",
+			"invalid key: overflowing coordinate",
 		}, {
 			"EC2 missing D", &Key{
 				KeyType: KeyTypeEC2,
@@ -1616,7 +1616,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid x size: expected lower or equal to 32, got 48",
+			"invalid key: overflowing coordinate",
 		}, {
 			"EC2 incorrect y size", &Key{
 				KeyType: KeyTypeEC2,
@@ -1628,7 +1628,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid y size: expected lower or equal to 32, got 48",
+			"invalid key: overflowing coordinate",
 		}, {
 			"EC2 incorrect d size", &Key{
 				KeyType: KeyTypeEC2,
@@ -1640,7 +1640,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid d size: expected lower or equal to 32, got 48",
+			"invalid key: overflowing coordinate",
 		},
 	}
 	for _, tt := range tests {
@@ -1734,7 +1734,7 @@ func TestKey_PublicKey(t *testing.T) {
 				KeyType: KeyTypeInvalid,
 			},
 			nil,
-			`invalid kty value 0`,
+			`invalid key: kty value 0`,
 		}, {
 			"OKP missing X", &Key{
 				KeyType: KeyTypeOKP,
