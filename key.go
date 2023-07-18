@@ -560,10 +560,10 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 		crv, x, y, _ := k.EC2()
 		if size := curveSize(crv); size > 0 {
 			if 0 < len(x) && len(x) < size {
-				tmp[KeyLabelEC2X] = append(make([]byte, size-len(x)), x...)
+				tmp[KeyLabelEC2X] = append(make([]byte, size-len(x), size), x...)
 			}
 			if 0 < len(y) && len(y) < size {
-				tmp[KeyLabelEC2Y] = append(make([]byte, size-len(y)), y...)
+				tmp[KeyLabelEC2Y] = append(make([]byte, size-len(y), size), y...)
 			}
 		}
 	}
