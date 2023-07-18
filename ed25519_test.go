@@ -47,6 +47,15 @@ func Test_ed25519Signer(t *testing.T) {
 	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("Verifier.Verify() error = %v", err)
 	}
+
+	_, ok := signer.(DigestSigner)
+	if ok {
+		t.Fatalf("signer shouldn't be a DigestSigner")
+	}
+	_, ok = verifier.(DigestVerifier)
+	if ok {
+		t.Fatalf("verifier shouldn't be a DigestVerifier")
+	}
 }
 
 func Test_ed25519Verifier_Verify_Success(t *testing.T) {

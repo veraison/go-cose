@@ -219,7 +219,7 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 
 	// sign / verify round trip
 	// see also conformance_test.go for strict tests.
-	content := []byte("hello world")
+	content := []byte("hello world, مرحبا بالعالم")
 	sig, err := signer.Sign(rand.Reader, content)
 	if err != nil {
 		t.Fatalf("Sign() error = %v", err)
@@ -231,6 +231,24 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 	}
 	if err := verifier.Verify(content, sig); err != nil {
 		t.Fatalf("Verifier.Verify() error = %v", err)
+	}
+
+	// digested sign/verify round trip
+	dsigner, ok := signer.(DigestSigner)
+	if !ok {
+		t.Fatalf("signer is not a DigestSigner")
+	}
+	digest := sha256.Sum256(content)
+	dsig, err := dsigner.SignDigest(rand.Reader, digest[:])
+	if err != nil {
+		t.Fatalf("SignDigest() error = %v", err)
+	}
+	dverifier, ok := verifier.(DigestVerifier)
+	if !ok {
+		t.Fatalf("verifier is not a DigestVerifier")
+	}
+	if err := dverifier.VerifyDigest(digest[:], dsig); err != nil {
+		t.Fatalf("VerifyDigest() error = %v", err)
 	}
 }
 
