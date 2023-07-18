@@ -24,7 +24,8 @@ type Verifier interface {
 
 // DigestVerifier is an interface for public keys to verify digested COSE signatures.
 type DigestVerifier interface {
-	Verifier
+	// Algorithm returns the signing algorithm associated with the public key.
+	Algorithm() Algorithm
 
 	// VerifyDigest verifies message digest with the public key, returning nil
 	// for success.

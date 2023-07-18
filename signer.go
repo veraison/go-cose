@@ -25,7 +25,8 @@ type Signer interface {
 
 // DigestSigner is an interface for private keys to sign digested COSE signatures.
 type DigestSigner interface {
-	Signer
+	// Algorithm returns the signing algorithm associated with the private key.
+	Algorithm() Algorithm
 
 	// SignDigest signs message digest with the private key, possibly using
 	// entropy from rand.
