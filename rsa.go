@@ -72,7 +72,7 @@ func (rv *rsaVerifier) Verify(content []byte, signature []byte) error {
 // Otherwise, it returns ErrVerification.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
-func (rv *rsaVerifier) VerifyDigest(digest, signature []byte) error {
+func (rv *rsaVerifier) VerifyDigest(digest []byte, signature []byte) error {
 	if err := rsa.VerifyPSS(rv.key, rv.alg.hashFunc(), digest, signature, &rsa.PSSOptions{
 		SaltLength: rsa.PSSSaltLengthEqualsHash, // defined in RFC 8230 sec 2
 	}); err != nil {

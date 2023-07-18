@@ -175,7 +175,7 @@ func (ev *ecdsaVerifier) Verify(content []byte, signature []byte) error {
 // Otherwise, it returns ErrVerification.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
-func (ev *ecdsaVerifier) VerifyDigest(digest, signature []byte) error {
+func (ev *ecdsaVerifier) VerifyDigest(digest []byte, signature []byte) error {
 	// verify signature
 	r, s, err := decodeECDSASignature(ev.key.Curve, signature)
 	if err != nil {
