@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha512"
 	_ "crypto/sha512"
 	"fmt"
 
@@ -201,4 +202,30 @@ func ExampleSign1Untagged() {
 	_ = sig // further process on sig
 	// Output:
 	// message signed
+}
+
+func ExampleDigestSigner() {
+	// create a signer
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES256, privateKey)
+	if err != nil {
+		panic(err)
+	}
+	digestSigner, ok := signer.(cose.DigestSigner)
+	if !ok {
+		panic("signer does not support digest signing")
+	}
+
+	// hash payload outside go-cose.
+	payload := []byte("hello world")
+	digested := sha512.Sum512(payload)
+	sig, err := digestSigner.SignDigest(rand.Reader, digested[:])
+
+	fmt.Println("digest signed")
+	_ = sig // further process on sig
+	// Output:
+	// digest signed
 }
