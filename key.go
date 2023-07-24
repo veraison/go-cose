@@ -220,17 +220,17 @@ func (c Curve) String() string {
 // Key represents a COSE_Key structure, as defined by RFC8152.
 // Note: currently, this does NOT support RFC8230 (RSA algorithms).
 type Key struct {
-	// KeyType identifies the family of keys for this structure, and thus,
+	// Type identifies the family of keys for this structure, and thus,
 	// which of the key-type-specific parameters need to be set.
-	KeyType KeyType
-	// KeyID is the identification value matched to the kid in the message.
-	KeyID []byte
+	Type KeyType
+	// ID is the identification value matched to the kid in the message.
+	ID []byte
 	// Algorithm is used to restrict the algorithm that is used with the
 	// key. If it is set, the application MUST verify that it matches the
 	// algorithm for which the Key is being used.
 	Algorithm Algorithm
-	// KeyOps can be set to restrict the set of operations that the Key is used for.
-	KeyOps []KeyOp
+	// Ops can be set to restrict the set of operations that the Key is used for.
+	Ops []KeyOp
 	// BaseIV is the Base IV to be xor-ed with Partial IVs.
 	BaseIV []byte
 
@@ -245,7 +245,7 @@ func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 	}
 
 	key := &Key{
-		KeyType:   KeyTypeOKP,
+		Type:      KeyTypeOKP,
 		Algorithm: alg,
 		Params: map[interface{}]interface{}{
 			KeyLabelOKPCurve: CurveEd25519,
@@ -326,7 +326,7 @@ func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 	}
 
 	key := &Key{
-		KeyType:   KeyTypeEC2,
+		Type:      KeyTypeEC2,
 		Algorithm: alg,
 		Params: map[interface{}]interface{}{
 			KeyLabelEC2Curve: curve,
@@ -363,7 +363,7 @@ func (k *Key) EC2() (crv Curve, x []byte, y, d []byte) {
 // bytes.
 func NewKeySymmetric(k []byte) *Key {
 	return &Key{
-		KeyType: KeyTypeSymmetric,
+		Type: KeyTypeSymmetric,
 		Params: map[interface{}]interface{}{
 			KeyLabelSymmetricK: k,
 		},
@@ -427,7 +427,7 @@ var (
 // consistent (e.g., that the key type is appropriate to the curve).
 // It also checks that the key is valid for the requested operation.
 func (k Key) validate(op KeyOp) error {
-	switch k.KeyType {
+	switch k.Type {
 	case KeyTypeEC2:
 		crv, x, y, d := k.EC2()
 		switch op {
@@ -515,10 +515,10 @@ func (k Key) validate(op KeyOp) error {
 }
 
 func (k Key) canOp(op KeyOp) bool {
-	if k.KeyOps == nil {
+	if k.Ops == nil {
 		return true
 	}
-	for _, kop := range k.KeyOps {
+	for _, kop := range k.Ops {
 		if kop == op {
 			return true
 		}
@@ -529,16 +529,16 @@ func (k Key) canOp(op KeyOp) bool {
 // MarshalCBOR encodes Key into a COSE_Key object.
 func (k *Key) MarshalCBOR() ([]byte, error) {
 	tmp := map[interface{}]interface{}{
-		keyLabelKeyType: k.KeyType,
+		keyLabelKeyType: k.Type,
 	}
-	if k.KeyID != nil {
-		tmp[keyLabelKeyID] = k.KeyID
+	if k.ID != nil {
+		tmp[keyLabelKeyID] = k.ID
 	}
 	if k.Algorithm != AlgorithmInvalid {
 		tmp[keyLabelAlgorithm] = k.Algorithm
 	}
-	if k.KeyOps != nil {
-		tmp[keyLabelKeyOps] = k.KeyOps
+	if k.Ops != nil {
+		tmp[keyLabelKeyOps] = k.Ops
 	}
 	if k.BaseIV != nil {
 		tmp[keyLabelBaseIV] = k.BaseIV
@@ -555,7 +555,7 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 		existing[lbl] = struct{}{}
 		tmp[lbl] = v
 	}
-	if k.KeyType == KeyTypeEC2 {
+	if k.Type == KeyTypeEC2 {
 		// If EC2 key, ensure that x and y are padded to the correct size.
 		crv, x, y, _ := k.EC2()
 		if size := curveSize(crv); size > 0 {
@@ -585,11 +585,11 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("kty: %w", err)
 	}
-	k.KeyType = KeyType(kty)
-	if k.KeyType == KeyTypeInvalid {
+	k.Type = KeyType(kty)
+	if k.Type == KeyTypeInvalid {
 		return errors.New("kty: invalid value 0")
 	}
-	k.KeyID, _, err = decodeBytes(tmp, keyLabelKeyID)
+	k.ID, _, err = decodeBytes(tmp, keyLabelKeyID)
 	if err != nil {
 		return fmt.Errorf("kid: %w", err)
 	}
@@ -603,14 +603,14 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 		return fmt.Errorf("key_ops: %w", err)
 	}
 	if len(key_ops) > 0 {
-		k.KeyOps = make([]KeyOp, len(key_ops))
+		k.Ops = make([]KeyOp, len(key_ops))
 		for i, op := range key_ops {
 			switch op := op.(type) {
 			case int64:
-				k.KeyOps[i] = KeyOp(op)
+				k.Ops[i] = KeyOp(op)
 			case string:
 				var ok bool
-				if k.KeyOps[i], ok = KeyOpFromString(op); !ok {
+				if k.Ops[i], ok = KeyOpFromString(op); !ok {
 					return fmt.Errorf("key_ops: unknown entry value %q", op)
 				}
 			default:
@@ -634,7 +634,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 		for lbl, v := range tmp {
 			switch lbl := lbl.(type) {
 			case int64:
-				if (k.KeyType == KeyTypeEC2 || k.KeyType == KeyTypeOKP) &&
+				if (k.Type == KeyTypeEC2 || k.Type == KeyTypeOKP) &&
 					(lbl == KeyLabelEC2Curve || lbl == KeyLabelOKPCurve) {
 					v = Curve(v.(int64))
 				}
@@ -799,7 +799,7 @@ func (k *Key) Verifier() (Verifier, error) {
 // only used with P-256, etc. For other combinations, the Algorithm in the Key
 // must be explicitly set,so that this derivation is not used.
 func (k *Key) deriveAlgorithm() (Algorithm, error) {
-	switch k.KeyType {
+	switch k.Type {
 	case KeyTypeEC2:
 		crv, _, _, _ := k.EC2()
 		switch crv {
@@ -824,7 +824,7 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 		}
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
-		return AlgorithmInvalid, fmt.Errorf("unexpected key type %q", k.KeyType.String())
+		return AlgorithmInvalid, fmt.Errorf("unexpected key type %q", k.Type.String())
 	}
 }
 
