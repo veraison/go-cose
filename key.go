@@ -33,9 +33,15 @@ const (
 	keyLabelBaseIV    int64 = 5
 )
 
+// KeyOp represents a key_ops value used to restrict purposes for which a Key
+// may be used.
+//
+// https://datatracker.ietf.org/doc/html/rfc8152#section-7.1
+type KeyOp int64
+
 const (
-	// An invalid key_op value
-	KeyOpInvalid KeyOp = 0
+	// Reserved value.
+	KeyOpReserved KeyOp = 0
 
 	// The key is used to create signatures. Requires private key fields.
 	KeyOpSign KeyOp = 1
@@ -69,10 +75,6 @@ const (
 	KeyOpMACVerify KeyOp = 10
 )
 
-// KeyOp represents a key_ops value used to restrict purposes for which a Key
-// may be used.
-type KeyOp int64
-
 // KeyOpFromString returns the KeyOp corresponding to the specified name.
 // The values are taken from https://www.rfc-editor.org/rfc/rfc7517#section-4.3
 func KeyOpFromString(val string) (KeyOp, bool) {
@@ -94,7 +96,7 @@ func KeyOpFromString(val string) (KeyOp, bool) {
 	case "deriveBits":
 		return KeyOpDeriveBits, true
 	default:
-		return KeyOpInvalid, false
+		return KeyOpReserved, false
 	}
 }
 
@@ -125,6 +127,8 @@ func (ko KeyOp) String() string {
 		return "MAC create"
 	case KeyOpMACVerify:
 		return "MAC verify"
+	case KeyOpReserved:
+		return "Reserved"
 	default:
 		return "unknown key_op value " + strconv.Itoa(int(ko))
 	}
@@ -257,7 +261,7 @@ func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 	if d != nil {
 		key.Params[KeyLabelOKPD] = d
 	}
-	if err := key.validate(KeyOpInvalid); err != nil {
+	if err := key.validate(KeyOpReserved); err != nil {
 		return nil, err
 	}
 	return key, nil
@@ -341,7 +345,7 @@ func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 	if d != nil {
 		key.Params[KeyLabelEC2D] = d
 	}
-	if err := key.validate(KeyOpInvalid); err != nil {
+	if err := key.validate(KeyOpReserved); err != nil {
 		return nil, err
 	}
 	return key, nil
@@ -646,7 +650,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 			}
 		}
 	}
-	return k.validate(KeyOpInvalid)
+	return k.validate(KeyOpReserved)
 }
 
 // PublicKey returns a crypto.PublicKey generated using Key's parameters.

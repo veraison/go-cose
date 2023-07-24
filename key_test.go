@@ -202,6 +202,7 @@ func TestKeyOp_String(t *testing.T) {
 		op   KeyOp
 		want string
 	}{
+		{KeyOpReserved, "Reserved"},
 		{KeyOpSign, "sign"},
 		{KeyOpVerify, "verify"},
 		{KeyOpEncrypt, "encrypt"},
