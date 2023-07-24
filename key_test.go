@@ -1073,7 +1073,7 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 					KeyLabelOKPCurve: CurveP256,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unsupported curve "P-256" for key type OKP`,
 		},
 		{
@@ -1117,7 +1117,7 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 					KeyLabelEC2Curve: CurveEd25519,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unsupported curve "Ed25519" for key type EC2`,
 		},
 	}
@@ -1301,7 +1301,7 @@ func TestKey_Signer(t *testing.T) {
 					KeyLabelOKPD:     d,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			"invalid key: curve not supported for the given key type",
 		},
 		{
@@ -1314,7 +1314,7 @@ func TestKey_Signer(t *testing.T) {
 					KeyLabelOKPD:     d,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			ErrOpNotSupported.Error(),
 		},
 		{
@@ -1325,7 +1325,7 @@ func TestKey_Signer(t *testing.T) {
 					KeyLabelSymmetricK: d,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unexpected key type "Symmetric"`,
 		},
 	}
@@ -1385,7 +1385,7 @@ func TestKey_Verifier(t *testing.T) {
 					KeyLabelOKPX:     x,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			"invalid key: curve not supported for the given key type",
 		},
 		{
@@ -1397,7 +1397,7 @@ func TestKey_Verifier(t *testing.T) {
 					KeyLabelOKPX:     x,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			ErrOpNotSupported.Error(),
 		},
 		{
@@ -1408,7 +1408,7 @@ func TestKey_Verifier(t *testing.T) {
 					KeyLabelSymmetricK: x,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unexpected key type "Symmetric"`,
 		},
 	}

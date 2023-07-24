@@ -43,8 +43,8 @@ const (
 	// PureEdDSA by RFC 8152.
 	AlgorithmEdDSA Algorithm = -8
 
-	// An invalid/unrecognised algorithm.
-	AlgorithmInvalid Algorithm = 0
+	// Reserved value.
+	AlgorithmReserved Algorithm = 0
 )
 
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
@@ -75,6 +75,8 @@ func (a Algorithm) String() string {
 		// As stated in RFC 8152 8.2, only the pure EdDSA version is used for
 		// COSE.
 		return "EdDSA"
+	case AlgorithmReserved:
+		return "Reserved"
 	default:
 		return "unknown algorithm value " + strconv.Itoa(int(a))
 	}

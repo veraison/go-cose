@@ -387,7 +387,7 @@ func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
 	case *ecdsa.PublicKey:
 		alg := algorithmFromEllipticCurve(vk.Curve)
 
-		if alg == AlgorithmInvalid {
+		if alg == AlgorithmReserved {
 			return nil, fmt.Errorf("unsupported curve: %v", vk.Curve)
 		}
 
@@ -406,7 +406,7 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 	case *ecdsa.PrivateKey:
 		alg := algorithmFromEllipticCurve(sk.Curve)
 
-		if alg == AlgorithmInvalid {
+		if alg == AlgorithmReserved {
 			return nil, fmt.Errorf("unsupported curve: %v", sk.Curve)
 		}
 
@@ -500,7 +500,7 @@ func (k Key) validate(op KeyOp) error {
 	}
 
 	// If Algorithm is set, it must match the specified key parameters.
-	if k.Algorithm != AlgorithmInvalid {
+	if k.Algorithm != AlgorithmReserved {
 		expectedAlg, err := k.deriveAlgorithm()
 		if err != nil {
 			return err
@@ -538,7 +538,7 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 	if k.ID != nil {
 		tmp[keyLabelKeyID] = k.ID
 	}
-	if k.Algorithm != AlgorithmInvalid {
+	if k.Algorithm != AlgorithmReserved {
 		tmp[keyLabelAlgorithm] = k.Algorithm
 	}
 	if k.Ops != nil {
@@ -750,7 +750,7 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 // Key.Curve. This method does NOT validate that Key.Algorithm, if set, aligns
 // with Key.Curve.
 func (k *Key) AlgorithmOrDefault() (Algorithm, error) {
-	if k.Algorithm != AlgorithmInvalid {
+	if k.Algorithm != AlgorithmReserved {
 		return k.Algorithm, nil
 	}
 
@@ -814,7 +814,7 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 		case CurveP521:
 			return AlgorithmES512, nil
 		default:
-			return AlgorithmInvalid, fmt.Errorf(
+			return AlgorithmReserved, fmt.Errorf(
 				"unsupported curve %q for key type EC2", crv.String())
 		}
 	case KeyTypeOKP:
@@ -823,12 +823,12 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 		case CurveEd25519:
 			return AlgorithmEdDSA, nil
 		default:
-			return AlgorithmInvalid, fmt.Errorf(
+			return AlgorithmReserved, fmt.Errorf(
 				"unsupported curve %q for key type OKP", crv.String())
 		}
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
-		return AlgorithmInvalid, fmt.Errorf("unexpected key type %q", k.Type.String())
+		return AlgorithmReserved, fmt.Errorf("unexpected key type %q", k.Type.String())
 	}
 }
 
@@ -841,7 +841,7 @@ func algorithmFromEllipticCurve(c elliptic.Curve) Algorithm {
 	case elliptic.P521():
 		return AlgorithmES512
 	default:
-		return AlgorithmInvalid
+		return AlgorithmReserved
 	}
 }
 

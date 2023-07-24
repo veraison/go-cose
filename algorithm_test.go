@@ -12,18 +12,21 @@ import (
 func TestAlgorithm_String(t *testing.T) {
 	// run tests
 	tests := []struct {
-		name string
 		alg  Algorithm
 		want string
 	}{
-		{
-			name: "unknown algorithm",
-			alg:  0,
-			want: "unknown algorithm value 0",
-		},
+		{AlgorithmPS256, "PS256"},
+		{AlgorithmPS384, "PS384"},
+		{AlgorithmPS512, "PS512"},
+		{AlgorithmES256, "ES256"},
+		{AlgorithmES384, "ES384"},
+		{AlgorithmES512, "ES512"},
+		{AlgorithmEdDSA, "EdDSA"},
+		{AlgorithmReserved, "Reserved"},
+		{7, "unknown algorithm value 7"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(tt.want, func(t *testing.T) {
 			if got := tt.alg.String(); got != tt.want {
 				t.Errorf("Algorithm.String() = %v, want %v", got, tt.want)
 			}
