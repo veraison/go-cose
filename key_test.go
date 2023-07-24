@@ -1731,7 +1731,7 @@ func TestKey_PublicKey(t *testing.T) {
 			`unexpected key type "unknown key type value 7"`,
 		}, {
 			"invalid key type", &Key{
-				Type: KeyTypeInvalid,
+				Type: KeyTypeReserved,
 			},
 			nil,
 			`invalid key: kty value 0`,
@@ -1802,13 +1802,14 @@ func TestKey_PublicKey(t *testing.T) {
 }
 
 func TestKeyType_String(t *testing.T) {
-	// test string conversions not exercised by other test cases
 	tests := []struct {
 		kt   KeyType
 		want string
 	}{
+		{KeyTypeReserved, "Reserved"},
 		{KeyTypeOKP, "OKP"},
 		{KeyTypeEC2, "EC2"},
+		{KeyTypeSymmetric, "Symmetric"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

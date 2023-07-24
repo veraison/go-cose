@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	// An inviald key_op value
+	// An invalid key_op value
 	KeyOpInvalid KeyOp = 0
 
 	// The key is used to create signatures. Requires private key fields.
@@ -131,18 +131,14 @@ func (ko KeyOp) String() string {
 }
 
 // KeyType identifies the family of keys represented by the associated Key.
-// This determines which files within the Key must be set in order for it to be
-// valid.
+//
+// https://datatracker.ietf.org/doc/html/rfc8152#section-13
 type KeyType int64
 
 const (
-	// Invlaid key type
-	KeyTypeInvalid KeyType = 0
-	// Octet Key Pair
-	KeyTypeOKP KeyType = 1
-	// Elliptic Curve Keys w/ x- and y-coordinate pair
-	KeyTypeEC2 KeyType = 2
-	// Symmetric Keys
+	KeyTypeReserved  KeyType = 0
+	KeyTypeOKP       KeyType = 1
+	KeyTypeEC2       KeyType = 2
 	KeyTypeSymmetric KeyType = 4
 )
 
@@ -157,13 +153,14 @@ func (kt KeyType) String() string {
 		return "EC2"
 	case KeyTypeSymmetric:
 		return "Symmetric"
+	case KeyTypeReserved:
+		return "Reserved"
 	default:
 		return "unknown key type value " + strconv.Itoa(int(kt))
 	}
 }
 
 const (
-
 	// Invalid/unrecognised curve
 	CurveInvalid Curve = 0
 
@@ -489,7 +486,7 @@ func (k Key) validate(op KeyOp) error {
 		if len(k) == 0 {
 			return errReqParamsMissing
 		}
-	case KeyTypeInvalid:
+	case KeyTypeReserved:
 		return fmt.Errorf("%w: kty value 0", ErrInvalidKey)
 	default:
 		// Unknown key type, we can't validate custom parameters.
@@ -586,7 +583,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 		return fmt.Errorf("kty: %w", err)
 	}
 	k.Type = KeyType(kty)
-	if k.Type == KeyTypeInvalid {
+	if k.Type == KeyTypeReserved {
 		return errors.New("kty: invalid value 0")
 	}
 	k.ID, _, err = decodeBytes(tmp, keyLabelKeyID)
