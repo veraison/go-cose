@@ -1832,6 +1832,7 @@ func TestCurve_String(t *testing.T) {
 		{CurveX448, "X448"},
 		{CurveEd25519, "Ed25519"},
 		{CurveEd448, "Ed448"},
+		{CurveReserved, "Reserved"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

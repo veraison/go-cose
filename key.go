@@ -160,9 +160,14 @@ func (kt KeyType) String() string {
 	}
 }
 
+// Curve represents the EC2/OKP key's curve.
+//
+// https://datatracker.ietf.org/doc/html/rfc8152#section-13.1
+type Curve int64
+
 const (
-	// Invalid/unrecognised curve
-	CurveInvalid Curve = 0
+	// Reserved value
+	CurveReserved Curve = 0
 
 	// NIST P-256 also known as secp256r1
 	CurveP256 Curve = 1
@@ -186,10 +191,6 @@ const (
 	CurveEd448 Curve = 7
 )
 
-// Curve represents the EC2/OKP key's curve. See:
-// https://datatracker.ietf.org/doc/html/rfc8152#section-13.1
-type Curve int64
-
 // String returns a string representation of the Curve. Note does not
 // represent a valid value  of the corresponding serialized entry, and must
 // not be used as such.
@@ -209,6 +210,8 @@ func (c Curve) String() string {
 		return "Ed25519"
 	case CurveEd448:
 		return "Ed448"
+	case CurveReserved:
+		return "Reserved"
 	default:
 		return "unknown curve value " + strconv.Itoa(int(c))
 	}
@@ -437,7 +440,7 @@ func (k Key) validate(op KeyOp) error {
 				return ErrNotPrivKey
 			}
 		}
-		if crv == CurveInvalid || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
+		if crv == CurveReserved || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
 			return errReqParamsMissing
 		}
 		if size := curveSize(crv); size > 0 {
@@ -468,7 +471,7 @@ func (k Key) validate(op KeyOp) error {
 				return ErrNotPrivKey
 			}
 		}
-		if crv == CurveInvalid || (len(x) == 0 && len(d) == 0) {
+		if crv == CurveReserved || (len(x) == 0 && len(d) == 0) {
 			return errReqParamsMissing
 		}
 		if (len(x) > 0 && len(x) != ed25519.PublicKeySize) || (len(d) > 0 && len(d) != ed25519.SeedSize) {
