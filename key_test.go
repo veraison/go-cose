@@ -457,7 +457,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 			},
 			want: &Key{
 				KeyType:   KeyTypeOKP,
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 				KeyOps:    []KeyOp{KeyOpVerify, KeyOpSign},
 				BaseIV:    []byte{0x03, 0x02, 0x01},
 				Params: map[interface{}]interface{}{
@@ -644,7 +644,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 			name: "OKP with kty and alg",
 			key: &Key{
 				KeyType:   KeyTypeOKP,
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 			},
 			want: []byte{
 				0xa2,       // map (2)
@@ -730,7 +730,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 			name: "OKP",
 			key: &Key{
 				KeyType:   KeyTypeOKP,
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 				KeyOps:    []KeyOp{KeyOpVerify, KeyOpEncrypt},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
@@ -846,10 +846,10 @@ func TestNewOKPKey(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "valid", args: args{AlgorithmEd25519, x, d},
+			name: "valid", args: args{AlgorithmEdDSA, x, d},
 			want: &Key{
 				KeyType:   KeyTypeOKP,
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
@@ -862,7 +862,7 @@ func TestNewOKPKey(t *testing.T) {
 			want:    nil,
 			wantErr: `unsupported algorithm "unknown algorithm value -100"`,
 		}, {
-			name: "x and d missing", args: args{AlgorithmEd25519, nil, nil},
+			name: "x and d missing", args: args{AlgorithmEdDSA, nil, nil},
 			want:    nil,
 			wantErr: "invalid key: required parameters missing",
 		},
@@ -1061,7 +1061,7 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 					KeyLabelOKPCurve: CurveEd25519,
 				},
 			},
-			AlgorithmEd25519,
+			AlgorithmEdDSA,
 			"",
 		},
 		{
@@ -1170,7 +1170,7 @@ func TestNewKeyFromPrivate(t *testing.T) {
 		{
 			"ed25519", ed25519.PrivateKey(append(okpd, okpx...)),
 			&Key{
-				Algorithm: AlgorithmEd25519, KeyType: KeyTypeOKP,
+				Algorithm: AlgorithmEdDSA, KeyType: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1228,7 +1228,7 @@ func TestNewKeyFromPublic(t *testing.T) {
 		{
 			"ed25519", ed25519.PublicKey(okpx),
 			&Key{
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 				KeyType:   KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
@@ -1275,20 +1275,20 @@ func TestKey_Signer(t *testing.T) {
 					KeyLabelOKPD:     d,
 				},
 			},
-			AlgorithmEd25519,
+			AlgorithmEdDSA,
 			"",
 		},
 		{
 			"without key_ops", &Key{
 				KeyType:   KeyTypeOKP,
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
 					KeyLabelOKPD:     d,
 				},
 			},
-			AlgorithmEd25519,
+			AlgorithmEdDSA,
 			"",
 		},
 		{
@@ -1361,19 +1361,19 @@ func TestKey_Verifier(t *testing.T) {
 					KeyLabelOKPX:     x,
 				},
 			},
-			AlgorithmEd25519,
+			AlgorithmEdDSA,
 			"",
 		},
 		{
 			"without key_ops", &Key{
 				KeyType:   KeyTypeOKP,
-				Algorithm: AlgorithmEd25519,
+				Algorithm: AlgorithmEdDSA,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
 				},
 			},
-			AlgorithmEd25519,
+			AlgorithmEdDSA,
 			"",
 		},
 		{

@@ -154,7 +154,7 @@ These are the required packages for each built-in cose.Algorithm:
 
 - cose.AlgorithmPS256, cose.AlgorithmES256: `crypto/sha256`
 - cose.AlgorithmPS384, cose.AlgorithmPS512, cose.AlgorithmES384, cose.AlgorithmES512: `crypto/sha512`
-- cose.AlgorithmEd25519: none
+- cose.AlgorithmEdDSA: none
 
 ## Features
 

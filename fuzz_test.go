@@ -24,7 +24,7 @@ import (
 var supportedAlgorithms = [...]cose.Algorithm{
 	cose.AlgorithmPS256, cose.AlgorithmPS384, cose.AlgorithmPS512,
 	cose.AlgorithmES256, cose.AlgorithmES384, cose.AlgorithmES512,
-	cose.AlgorithmEd25519,
+	cose.AlgorithmEdDSA,
 }
 
 func FuzzSign1Message_UnmarshalCBOR(f *testing.F) {
@@ -181,7 +181,7 @@ func newSignerWithEphemeralKey(alg cose.Algorithm) (sv signVerifier, err error) 
 		key, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	case cose.AlgorithmES512:
 		key, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	case cose.AlgorithmEd25519:
+	case cose.AlgorithmEdDSA:
 		_, key, err = ed25519.GenerateKey(rand.Reader)
 	default:
 		err = cose.ErrAlgorithmNotSupported

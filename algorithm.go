@@ -35,7 +35,13 @@ const (
 	AlgorithmES512 Algorithm = -36
 
 	// PureEdDSA by RFC 8152.
+	//
+	// Deprecated: use AlgorithmEdDSA instead, which has
+	// the same value but with a more accurate name.
 	AlgorithmEd25519 Algorithm = -8
+
+	// PureEdDSA by RFC 8152.
+	AlgorithmEdDSA Algorithm = -8
 
 	// An invalid/unrecognised algorithm.
 	AlgorithmInvalid Algorithm = 0
@@ -65,7 +71,7 @@ func (a Algorithm) String() string {
 		return "ES384"
 	case AlgorithmES512:
 		return "ES512"
-	case AlgorithmEd25519:
+	case AlgorithmEdDSA:
 		// As stated in RFC 8152 8.2, only the pure EdDSA version is used for
 		// COSE.
 		return "EdDSA"

@@ -77,7 +77,7 @@ func TestNewSigner(t *testing.T) {
 		},
 		{
 			name: "ed25519 signer",
-			alg:  AlgorithmEd25519,
+			alg:  AlgorithmEdDSA,
 			key:  ed25519Key,
 			want: &ed25519Signer{
 				key: ed25519Key,
@@ -85,7 +85,7 @@ func TestNewSigner(t *testing.T) {
 		},
 		{
 			name:    "ed25519 key mismatch",
-			alg:     AlgorithmEd25519,
+			alg:     AlgorithmEdDSA,
 			key:     rsaKey,
 			wantErr: "EdDSA: invalid public key",
 		},
