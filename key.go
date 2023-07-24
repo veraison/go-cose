@@ -238,8 +238,8 @@ type Key struct {
 	Params map[interface{}]interface{}
 }
 
-// NewOKPKey returns a Key created using the provided Octet Key Pair data.
-func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
+// NewKeyOKP returns a Key created using the provided Octet Key Pair data.
+func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 	if alg != AlgorithmEdDSA {
 		return nil, fmt.Errorf("unsupported algorithm %q", alg)
 	}
@@ -309,9 +309,9 @@ func (k *Key) OKP() (crv Curve, x []byte, d []byte) {
 	return
 }
 
-// NewEC2Key returns a Key created using the provided elliptic curve key
+// NewKeyEC2 returns a Key created using the provided elliptic curve key
 // data.
-func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
+func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 	var curve Curve
 
 	switch alg {
@@ -359,9 +359,9 @@ func (k *Key) EC2() (crv Curve, x []byte, y, d []byte) {
 	return
 }
 
-// NewSymmetricKey returns a Key created using the provided Symmetric key
+// NewKeySymmetric returns a Key created using the provided Symmetric key
 // bytes.
-func NewSymmetricKey(k []byte) *Key {
+func NewKeySymmetric(k []byte) *Key {
 	return &Key{
 		KeyType: KeyTypeSymmetric,
 		Params: map[interface{}]interface{}{
@@ -387,9 +387,9 @@ func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
 			return nil, fmt.Errorf("unsupported curve: %v", vk.Curve)
 		}
 
-		return NewEC2Key(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
+		return NewKeyEC2(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
 	case ed25519.PublicKey:
-		return NewOKPKey(AlgorithmEdDSA, []byte(vk), nil)
+		return NewKeyOKP(AlgorithmEdDSA, []byte(vk), nil)
 	default:
 		return nil, ErrInvalidPubKey
 	}
@@ -406,9 +406,9 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 			return nil, fmt.Errorf("unsupported curve: %v", sk.Curve)
 		}
 
-		return NewEC2Key(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
+		return NewKeyEC2(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
 	case ed25519.PrivateKey:
-		return NewOKPKey(AlgorithmEdDSA, []byte(sk[32:]), []byte(sk[:32]))
+		return NewKeyOKP(AlgorithmEdDSA, []byte(sk[32:]), []byte(sk[:32]))
 	default:
 		return nil, ErrInvalidPrivKey
 	}

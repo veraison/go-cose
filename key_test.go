@@ -832,7 +832,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 	}
 }
 
-func TestNewOKPKey(t *testing.T) {
+func TestNewKeyOKP(t *testing.T) {
 	x, d := newEd25519(t)
 	type args struct {
 		alg Algorithm
@@ -869,19 +869,19 @@ func TestNewOKPKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewOKPKey(tt.args.alg, tt.args.x, tt.args.d)
+			got, err := NewKeyOKP(tt.args.alg, tt.args.x, tt.args.d)
 			if (err != nil && err.Error() != tt.wantErr) || (err == nil && tt.wantErr != "") {
-				t.Errorf("NewOKPKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewKeyOKP() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewOKPKey() = %v, want %v", got, tt.want)
+				t.Errorf("NewKeyOKP() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewEC2Key(t *testing.T) {
+func TestNewNewKeyEC2(t *testing.T) {
 	ec256x, ec256y, ec256d := newEC2(t, elliptic.P256())
 	ec384x, ec384y, ec384d := newEC2(t, elliptic.P384())
 	ec521x, ec521y, ec521d := newEC2(t, elliptic.P521())
@@ -948,19 +948,19 @@ func TestNewEC2Key(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewEC2Key(tt.args.alg, tt.args.x, tt.args.y, tt.args.d)
+			got, err := NewKeyEC2(tt.args.alg, tt.args.x, tt.args.y, tt.args.d)
 			if (err != nil && err.Error() != tt.wantErr) || (err == nil && tt.wantErr != "") {
-				t.Errorf("NewEC2Key() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewKeyEC2() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewEC2Key() = %v, want %v", got, tt.want)
+				t.Errorf("NewKeyEC2() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewSymmetricKey(t *testing.T) {
+func TestNewKeySymmetric(t *testing.T) {
 	type args struct {
 		k []byte
 	}
@@ -978,8 +978,8 @@ func TestNewSymmetricKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSymmetricKey(tt.args.k); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewSymmetricKey() = %v, want %v", got, tt.want)
+			if got := NewKeySymmetric(tt.args.k); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewKeySymmetric() = %v, want %v", got, tt.want)
 			}
 		})
 	}
