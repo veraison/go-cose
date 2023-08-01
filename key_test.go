@@ -202,6 +202,7 @@ func TestKeyOp_String(t *testing.T) {
 		op   KeyOp
 		want string
 	}{
+		{KeyOpReserved, "Reserved"},
 		{KeyOpSign, "sign"},
 		{KeyOpVerify, "verify"},
 		{KeyOpEncrypt, "encrypt"},
@@ -431,7 +432,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x61, 0x66, 0x63, 0x66, 0x6f, 0x6f, // 0x21: foo
 			},
 			want: &Key{
-				KeyType: -70000,
+				Type: -70000,
 				Params: map[interface{}]interface{}{
 					int64(-1): int64(6),
 					"f":       "foo",
@@ -456,9 +457,9 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want: &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
-				KeyOps:    []KeyOp{KeyOpVerify, KeyOpSign},
+				Ops:       []KeyOp{KeyOpVerify, KeyOpSign},
 				BaseIV:    []byte{0x03, 0x02, 0x01},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
@@ -483,7 +484,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want: &Key{
-				KeyType: KeyTypeSymmetric,
+				Type: KeyTypeSymmetric,
 				Params: map[interface{}]interface{}{
 					KeyLabelSymmetricK: []byte{
 						0x15, 0x52, 0x2e, 0xf1, 0x57, 0x29, 0xcc, 0xf3,
@@ -505,8 +506,8 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				"21582065eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d" +
 				"2258201e52ed75701163f7f9e40ddf9f341b3dc9ba860af7e0ca7ca7e9eecd0084d19c"),
 			want: &Key{
-				KeyType: KeyTypeEC2,
-				KeyID:   []byte("meriadoc.brandybuck@buckland.example"),
+				Type: KeyTypeEC2,
+				ID:   []byte("meriadoc.brandybuck@buckland.example"),
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     mustHexToBytes("65eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d"),
@@ -523,8 +524,8 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				"2158420072992cb3ac08ecf3e5c63dedec0d51a8c1f79ef2f82f94f3c737bf5de7986671eac625fe8257bbd0394644caaa3aaf8f27a4585fbbcad0f2457620085e5c8f42ad" +
 				"22584201dca6947bce88bc5790485ac97427342bc35f887d86d65a089377e247e60baa55e4e8501e2ada5724ac51d6909008033ebc10ac999b9d7f5cc2519f3fe1ea1d9475"),
 			want: &Key{
-				KeyType: KeyTypeEC2,
-				KeyID:   []byte("bilbo.baggins@hobbiton.example"),
+				Type: KeyTypeEC2,
+				ID:   []byte("bilbo.baggins@hobbiton.example"),
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
 					KeyLabelEC2X:     mustHexToBytes("0072992cb3ac08ecf3e5c63dedec0d51a8c1f79ef2f82f94f3c737bf5de7986671eac625fe8257bbd0394644caaa3aaf8f27a4585fbbcad0f2457620085e5c8f42ad"),
@@ -543,8 +544,8 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				"2258201e52ed75701163f7f9e40ddf9f341b3dc9ba860af7e0ca7ca7e9eecd0084d19c" +
 				"235820aff907c99f9ad3aae6c4cdf21122bce2bd68b5283e6907154ad911840fa208cf"),
 			want: &Key{
-				KeyType: KeyTypeEC2,
-				KeyID:   []byte("meriadoc.brandybuck@buckland.example"),
+				Type: KeyTypeEC2,
+				ID:   []byte("meriadoc.brandybuck@buckland.example"),
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     mustHexToBytes("65eda5a12577c2bae829437fe338701a10aaa375e1bb5b5de108de439c08551d"),
@@ -562,8 +563,8 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				"22584201dca6947bce88bc5790485ac97427342bc35f887d86d65a089377e247e60baa55e4e8501e2ada5724ac51d6909008033ebc10ac999b9d7f5cc2519f3fe1ea1d9475" +
 				"23584200085138ddabf5ca975f5860f91a08e91d6d5f9a76ad4018766a476680b55cd339e8ab6c72b5facdb2a2a50ac25bd086647dd3e2e6e99e84ca2c3609fdf177feb26d"),
 			want: &Key{
-				KeyType: KeyTypeEC2,
-				KeyID:   []byte("bilbo.baggins@hobbiton.example"),
+				Type: KeyTypeEC2,
+				ID:   []byte("bilbo.baggins@hobbiton.example"),
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
 					KeyLabelEC2X:     mustHexToBytes("0072992cb3ac08ecf3e5c63dedec0d51a8c1f79ef2f82f94f3c737bf5de7986671eac625fe8257bbd0394644caaa3aaf8f27a4585fbbcad0f2457620085e5c8f42ad"),
@@ -578,8 +579,8 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				"024a6f75722d736563726574" +
 				"205820849b57219dae48de646d07dbb533566e976686457c1491be3a76dcea6c427188"),
 			want: &Key{
-				KeyType: KeyTypeSymmetric,
-				KeyID:   []byte("our-secret"),
+				Type: KeyTypeSymmetric,
+				ID:   []byte("our-secret"),
 				Params: map[interface{}]interface{}{
 					KeyLabelSymmetricK: mustHexToBytes("849b57219dae48de646d07dbb533566e976686457c1491be3a76dcea6c427188"),
 				},
@@ -612,8 +613,8 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		{
 			name: "OKP with kty and kid",
 			key: &Key{
-				KeyType: KeyTypeOKP,
-				KeyID:   []byte{1, 2, 3},
+				Type: KeyTypeOKP,
+				ID:   []byte{1, 2, 3},
 			},
 			want: []byte{
 				0xa2,       // map (2)
@@ -623,7 +624,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with only kty",
 			key: &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 			},
 			want: []byte{
 				0xa1,       // map (1)
@@ -632,8 +633,8 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with kty and base_iv",
 			key: &Key{
-				KeyType: KeyTypeOKP,
-				BaseIV:  []byte{3, 2, 1},
+				Type:   KeyTypeOKP,
+				BaseIV: []byte{3, 2, 1},
 			},
 			want: []byte{
 				0xa2,       // map (2)
@@ -643,7 +644,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with kty and alg",
 			key: &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
 			},
 			want: []byte{
@@ -654,7 +655,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with kty and private alg",
 			key: &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: -70_000,
 			},
 			want: []byte{
@@ -665,9 +666,9 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with kty and key_ops",
 			key: &Key{
-				KeyType: KeyTypeOKP,
-				KeyID:   []byte{1, 2, 3},
-				KeyOps:  []KeyOp{KeyOpEncrypt, KeyOpDecrypt, -70_000},
+				Type: KeyTypeOKP,
+				ID:   []byte{1, 2, 3},
+				Ops:  []KeyOp{KeyOpEncrypt, KeyOpDecrypt, -70_000},
 			},
 			want: []byte{
 				0xa3,       // map (3)
@@ -679,7 +680,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with kty and private int params",
 			key: &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					0x46: 0x47,
 					0x66: 0x67,
@@ -694,7 +695,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with kty and private mixed params",
 			key: &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					0x1234: 0x47,
 					"a":    0x67,
@@ -709,7 +710,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP duplicated params",
 			key: &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					int8(10):  0,
 					int32(10): 1,
@@ -719,7 +720,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP with invalid param label",
 			key: &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					int8(10): 0,
 					-3.5:     1,
@@ -729,9 +730,9 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "OKP",
 			key: &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
-				KeyOps:    []KeyOp{KeyOpVerify, KeyOpEncrypt},
+				Ops:       []KeyOp{KeyOpVerify, KeyOpEncrypt},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX: []byte{
@@ -760,7 +761,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "EC2 with short x and y",
 			key: &Key{
-				KeyType:   KeyTypeEC2,
+				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmES256,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
@@ -788,7 +789,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 		}, {
 			name: "Symmetric",
 			key: &Key{
-				KeyType: KeyTypeSymmetric,
+				Type: KeyTypeSymmetric,
 				Params: map[interface{}]interface{}{
 					KeyLabelSymmetricK: []byte{
 						0x15, 0x52, 0x2e, 0xf1, 0x57, 0x29, 0xcc, 0xf3,
@@ -810,7 +811,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 			wantErr: "",
 		}, {
 			name: "unknown key type",
-			key:  &Key{KeyType: 42},
+			key:  &Key{Type: 42},
 			want: []byte{
 				0xa1,             // map (1)
 				0x01, 0x18, 0x2a, // kty: 42
@@ -832,7 +833,7 @@ func TestKey_MarshalCBOR(t *testing.T) {
 	}
 }
 
-func TestNewOKPKey(t *testing.T) {
+func TestNewKeyOKP(t *testing.T) {
 	x, d := newEd25519(t)
 	type args struct {
 		alg Algorithm
@@ -848,7 +849,7 @@ func TestNewOKPKey(t *testing.T) {
 		{
 			name: "valid", args: args{AlgorithmEdDSA, x, d},
 			want: &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
@@ -869,19 +870,19 @@ func TestNewOKPKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewOKPKey(tt.args.alg, tt.args.x, tt.args.d)
+			got, err := NewKeyOKP(tt.args.alg, tt.args.x, tt.args.d)
 			if (err != nil && err.Error() != tt.wantErr) || (err == nil && tt.wantErr != "") {
-				t.Errorf("NewOKPKey() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewKeyOKP() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewOKPKey() = %v, want %v", got, tt.want)
+				t.Errorf("NewKeyOKP() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewEC2Key(t *testing.T) {
+func TestNewNewKeyEC2(t *testing.T) {
 	ec256x, ec256y, ec256d := newEC2(t, elliptic.P256())
 	ec384x, ec384y, ec384d := newEC2(t, elliptic.P384())
 	ec521x, ec521y, ec521d := newEC2(t, elliptic.P521())
@@ -900,7 +901,7 @@ func TestNewEC2Key(t *testing.T) {
 		{
 			name: "valid ES256", args: args{AlgorithmES256, ec256x, ec256y, ec256d},
 			want: &Key{
-				KeyType:   KeyTypeEC2,
+				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmES256,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
@@ -913,7 +914,7 @@ func TestNewEC2Key(t *testing.T) {
 		}, {
 			name: "valid ES384", args: args{AlgorithmES384, ec384x, ec384y, ec384d},
 			want: &Key{
-				KeyType:   KeyTypeEC2,
+				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmES384,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
@@ -926,7 +927,7 @@ func TestNewEC2Key(t *testing.T) {
 		}, {
 			name: "valid ES521", args: args{AlgorithmES512, ec521x, ec521y, ec521d},
 			want: &Key{
-				KeyType:   KeyTypeEC2,
+				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmES512,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
@@ -948,19 +949,19 @@ func TestNewEC2Key(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewEC2Key(tt.args.alg, tt.args.x, tt.args.y, tt.args.d)
+			got, err := NewKeyEC2(tt.args.alg, tt.args.x, tt.args.y, tt.args.d)
 			if (err != nil && err.Error() != tt.wantErr) || (err == nil && tt.wantErr != "") {
-				t.Errorf("NewEC2Key() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewKeyEC2() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewEC2Key() = %v, want %v", got, tt.want)
+				t.Errorf("NewKeyEC2() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestNewSymmetricKey(t *testing.T) {
+func TestNewKeySymmetric(t *testing.T) {
 	type args struct {
 		k []byte
 	}
@@ -970,7 +971,7 @@ func TestNewSymmetricKey(t *testing.T) {
 		want *Key
 	}{
 		{"valid", args{[]byte{1, 2, 3}}, &Key{
-			KeyType: KeyTypeSymmetric,
+			Type: KeyTypeSymmetric,
 			Params: map[interface{}]interface{}{
 				KeyLabelSymmetricK: []byte{1, 2, 3},
 			},
@@ -978,8 +979,8 @@ func TestNewSymmetricKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSymmetricKey(tt.args.k); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewSymmetricKey() = %v, want %v", got, tt.want)
+			if got := NewKeySymmetric(tt.args.k); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewKeySymmetric() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1056,7 +1057,7 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 		{
 			"OKP-Ed25519",
 			&Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 				},
@@ -1067,18 +1068,18 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 		{
 			"OKP-P256",
 			&Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveP256,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unsupported curve "P-256" for key type OKP`,
 		},
 		{
 			"EC2-P256",
 			&Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 				},
@@ -1089,7 +1090,7 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 		{
 			"EC2-P384",
 			&Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
 				},
@@ -1100,7 +1101,7 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 		{
 			"EC2-P521",
 			&Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
 				},
@@ -1111,12 +1112,12 @@ func TestKey_AlgorithmOrDefault(t *testing.T) {
 		{
 			"EC2-Ed25519",
 			&Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveEd25519,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unsupported curve "Ed25519" for key type EC2`,
 		},
 	}
@@ -1149,7 +1150,7 @@ func TestNewKeyFromPrivate(t *testing.T) {
 				D:         new(big.Int).SetBytes(d),
 			}, &Key{
 				Algorithm: AlgorithmES256,
-				KeyType:   KeyTypeEC2,
+				Type:      KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     x,
@@ -1170,7 +1171,7 @@ func TestNewKeyFromPrivate(t *testing.T) {
 		{
 			"ed25519", ed25519.PrivateKey(append(okpd, okpx...)),
 			&Key{
-				Algorithm: AlgorithmEdDSA, KeyType: KeyTypeOKP,
+				Algorithm: AlgorithmEdDSA, Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1211,7 +1212,7 @@ func TestNewKeyFromPublic(t *testing.T) {
 			"ecdsa", &ecdsa.PublicKey{Curve: elliptic.P256(), X: new(big.Int).SetBytes(ecx), Y: new(big.Int).SetBytes(ecy)},
 			&Key{
 				Algorithm: AlgorithmES256,
-				KeyType:   KeyTypeEC2,
+				Type:      KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ecx,
@@ -1229,7 +1230,7 @@ func TestNewKeyFromPublic(t *testing.T) {
 			"ed25519", ed25519.PublicKey(okpx),
 			&Key{
 				Algorithm: AlgorithmEdDSA,
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1267,8 +1268,8 @@ func TestKey_Signer(t *testing.T) {
 	}{
 		{
 			"without algorithm", &Key{
-				KeyType: KeyTypeOKP,
-				KeyOps:  []KeyOp{KeyOpSign},
+				Type: KeyTypeOKP,
+				Ops:  []KeyOp{KeyOpSign},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
@@ -1280,7 +1281,7 @@ func TestKey_Signer(t *testing.T) {
 		},
 		{
 			"without key_ops", &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
@@ -1293,38 +1294,38 @@ func TestKey_Signer(t *testing.T) {
 		},
 		{
 			"invalid algorithm", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveP256,
 					KeyLabelOKPX:     x,
 					KeyLabelOKPD:     d,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			"invalid key: curve not supported for the given key type",
 		},
 		{
 			"can't sign", &Key{
-				KeyType: KeyTypeOKP,
-				KeyOps:  []KeyOp{KeyOpVerify},
+				Type: KeyTypeOKP,
+				Ops:  []KeyOp{KeyOpVerify},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
 					KeyLabelOKPD:     d,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			ErrOpNotSupported.Error(),
 		},
 		{
 			"unsupported key", &Key{
-				KeyType: KeyTypeSymmetric,
-				KeyOps:  []KeyOp{KeyOpSign},
+				Type: KeyTypeSymmetric,
+				Ops:  []KeyOp{KeyOpSign},
 				Params: map[interface{}]interface{}{
 					KeyLabelSymmetricK: d,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unexpected key type "Symmetric"`,
 		},
 	}
@@ -1354,8 +1355,8 @@ func TestKey_Verifier(t *testing.T) {
 	}{
 		{
 			"without algorithm", &Key{
-				KeyType: KeyTypeOKP,
-				KeyOps:  []KeyOp{KeyOpVerify},
+				Type: KeyTypeOKP,
+				Ops:  []KeyOp{KeyOpVerify},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
@@ -1366,7 +1367,7 @@ func TestKey_Verifier(t *testing.T) {
 		},
 		{
 			"without key_ops", &Key{
-				KeyType:   KeyTypeOKP,
+				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
@@ -1378,36 +1379,36 @@ func TestKey_Verifier(t *testing.T) {
 		},
 		{
 			"invalid algorithm", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveP256,
 					KeyLabelOKPX:     x,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			"invalid key: curve not supported for the given key type",
 		},
 		{
 			"can't verify", &Key{
-				KeyType: KeyTypeOKP,
-				KeyOps:  []KeyOp{KeyOpSign},
+				Type: KeyTypeOKP,
+				Ops:  []KeyOp{KeyOpSign},
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			ErrOpNotSupported.Error(),
 		},
 		{
 			"unsupported key", &Key{
-				KeyType: KeyTypeSymmetric,
-				KeyOps:  []KeyOp{KeyOpVerify},
+				Type: KeyTypeSymmetric,
+				Ops:  []KeyOp{KeyOpVerify},
 				Params: map[interface{}]interface{}{
 					KeyLabelSymmetricK: x,
 				},
 			},
-			AlgorithmInvalid,
+			AlgorithmReserved,
 			`unexpected key type "Symmetric"`,
 		},
 	}
@@ -1440,7 +1441,7 @@ func TestKey_PrivateKey(t *testing.T) {
 	}{
 		{
 			"CurveEd25519", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1451,7 +1452,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"",
 		}, {
 			"CurveEd25519 missing x", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPD:     okpd,
@@ -1461,7 +1462,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP256", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec256x,
@@ -1480,7 +1481,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP256 missing x and y", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2D:     ec256d,
@@ -1497,7 +1498,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP384", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
 					KeyLabelEC2X:     ec384x,
@@ -1516,7 +1517,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP521", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
 					KeyLabelEC2X:     ec521x,
@@ -1535,13 +1536,13 @@ func TestKey_PrivateKey(t *testing.T) {
 			"",
 		}, {
 			"unknown key type", &Key{
-				KeyType: KeyType(7),
+				Type: KeyType(7),
 			},
 			nil,
 			`unexpected key type "unknown key type value 7"`,
 		}, {
 			"OKP unknown curve", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: 70,
 					KeyLabelOKPX:     okpx,
@@ -1552,7 +1553,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			`unsupported curve "unknown curve value 70" for key type OKP`,
 		}, {
 			"OKP missing d", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1562,7 +1563,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			ErrNotPrivKey.Error(),
 		}, {
 			"OKP incorrect x size", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     make([]byte, 10),
@@ -1573,7 +1574,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"invalid key: overflowing coordinate",
 		}, {
 			"OKP incorrect d size", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1584,7 +1585,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"invalid key: overflowing coordinate",
 		}, {
 			"EC2 missing D", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec256x,
@@ -1595,7 +1596,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			ErrNotPrivKey.Error(),
 		}, {
 			"EC2 unknown curve", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: 70,
 					KeyLabelEC2X:     ec256x,
@@ -1607,7 +1608,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			`unsupported curve "unknown curve value 70" for key type EC2`,
 		}, {
 			"EC2 incorrect x size", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec384x,
@@ -1619,7 +1620,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"invalid key: overflowing coordinate",
 		}, {
 			"EC2 incorrect y size", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec256x,
@@ -1631,7 +1632,7 @@ func TestKey_PrivateKey(t *testing.T) {
 			"invalid key: overflowing coordinate",
 		}, {
 			"EC2 incorrect d size", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec256x,
@@ -1670,7 +1671,7 @@ func TestKey_PublicKey(t *testing.T) {
 	}{
 		{
 			"CurveEd25519", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     okpx,
@@ -1680,7 +1681,7 @@ func TestKey_PublicKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP256", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec256x,
@@ -1695,7 +1696,7 @@ func TestKey_PublicKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP384", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP384,
 					KeyLabelEC2X:     ec384x,
@@ -1710,7 +1711,7 @@ func TestKey_PublicKey(t *testing.T) {
 			"",
 		}, {
 			"CurveP521", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP521,
 					KeyLabelEC2X:     ec521x,
@@ -1725,19 +1726,19 @@ func TestKey_PublicKey(t *testing.T) {
 			"",
 		}, {
 			"unknown key type", &Key{
-				KeyType: KeyType(7),
+				Type: KeyType(7),
 			},
 			nil,
 			`unexpected key type "unknown key type value 7"`,
 		}, {
 			"invalid key type", &Key{
-				KeyType: KeyTypeInvalid,
+				Type: KeyTypeReserved,
 			},
 			nil,
 			`invalid key: kty value 0`,
 		}, {
 			"OKP missing X", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: CurveEd25519,
 				},
@@ -1746,7 +1747,7 @@ func TestKey_PublicKey(t *testing.T) {
 			ErrOKPNoPub.Error(),
 		}, {
 			"OKP unknown curve", &Key{
-				KeyType: KeyTypeOKP,
+				Type: KeyTypeOKP,
 				Params: map[interface{}]interface{}{
 					KeyLabelOKPCurve: 70,
 					KeyLabelOKPX:     okpx,
@@ -1756,7 +1757,7 @@ func TestKey_PublicKey(t *testing.T) {
 			`unsupported curve "unknown curve value 70" for key type OKP`,
 		}, {
 			"EC2 missing X", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2Y:     ec256y,
@@ -1766,7 +1767,7 @@ func TestKey_PublicKey(t *testing.T) {
 			ErrEC2NoPub.Error(),
 		}, {
 			"EC2 missing Y", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: CurveP256,
 					KeyLabelEC2X:     ec256x,
@@ -1776,7 +1777,7 @@ func TestKey_PublicKey(t *testing.T) {
 			ErrEC2NoPub.Error(),
 		}, {
 			"EC2 unknown curve", &Key{
-				KeyType: KeyTypeEC2,
+				Type: KeyTypeEC2,
 				Params: map[interface{}]interface{}{
 					KeyLabelEC2Curve: 70,
 					KeyLabelEC2X:     ec256x,
@@ -1802,13 +1803,14 @@ func TestKey_PublicKey(t *testing.T) {
 }
 
 func TestKeyType_String(t *testing.T) {
-	// test string conversions not exercised by other test cases
 	tests := []struct {
 		kt   KeyType
 		want string
 	}{
+		{KeyTypeReserved, "Reserved"},
 		{KeyTypeOKP, "OKP"},
 		{KeyTypeEC2, "EC2"},
+		{KeyTypeSymmetric, "Symmetric"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
@@ -1831,6 +1833,7 @@ func TestCurve_String(t *testing.T) {
 		{CurveX448, "X448"},
 		{CurveEd25519, "Ed25519"},
 		{CurveEd448, "Ed448"},
+		{CurveReserved, "Reserved"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

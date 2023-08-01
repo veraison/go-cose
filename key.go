@@ -33,9 +33,15 @@ const (
 	keyLabelBaseIV    int64 = 5
 )
 
+// KeyOp represents a key_ops value used to restrict purposes for which a Key
+// may be used.
+//
+// https://datatracker.ietf.org/doc/html/rfc8152#section-7.1
+type KeyOp int64
+
 const (
-	// An inviald key_op value
-	KeyOpInvalid KeyOp = 0
+	// Reserved value.
+	KeyOpReserved KeyOp = 0
 
 	// The key is used to create signatures. Requires private key fields.
 	KeyOpSign KeyOp = 1
@@ -69,10 +75,6 @@ const (
 	KeyOpMACVerify KeyOp = 10
 )
 
-// KeyOp represents a key_ops value used to restrict purposes for which a Key
-// may be used.
-type KeyOp int64
-
 // KeyOpFromString returns the KeyOp corresponding to the specified name.
 // The values are taken from https://www.rfc-editor.org/rfc/rfc7517#section-4.3
 func KeyOpFromString(val string) (KeyOp, bool) {
@@ -94,7 +96,7 @@ func KeyOpFromString(val string) (KeyOp, bool) {
 	case "deriveBits":
 		return KeyOpDeriveBits, true
 	default:
-		return KeyOpInvalid, false
+		return KeyOpReserved, false
 	}
 }
 
@@ -125,24 +127,22 @@ func (ko KeyOp) String() string {
 		return "MAC create"
 	case KeyOpMACVerify:
 		return "MAC verify"
+	case KeyOpReserved:
+		return "Reserved"
 	default:
 		return "unknown key_op value " + strconv.Itoa(int(ko))
 	}
 }
 
 // KeyType identifies the family of keys represented by the associated Key.
-// This determines which files within the Key must be set in order for it to be
-// valid.
+//
+// https://datatracker.ietf.org/doc/html/rfc8152#section-13
 type KeyType int64
 
 const (
-	// Invlaid key type
-	KeyTypeInvalid KeyType = 0
-	// Octet Key Pair
-	KeyTypeOKP KeyType = 1
-	// Elliptic Curve Keys w/ x- and y-coordinate pair
-	KeyTypeEC2 KeyType = 2
-	// Symmetric Keys
+	KeyTypeReserved  KeyType = 0
+	KeyTypeOKP       KeyType = 1
+	KeyTypeEC2       KeyType = 2
 	KeyTypeSymmetric KeyType = 4
 )
 
@@ -157,15 +157,21 @@ func (kt KeyType) String() string {
 		return "EC2"
 	case KeyTypeSymmetric:
 		return "Symmetric"
+	case KeyTypeReserved:
+		return "Reserved"
 	default:
 		return "unknown key type value " + strconv.Itoa(int(kt))
 	}
 }
 
-const (
+// Curve represents the EC2/OKP key's curve.
+//
+// https://datatracker.ietf.org/doc/html/rfc8152#section-13.1
+type Curve int64
 
-	// Invalid/unrecognised curve
-	CurveInvalid Curve = 0
+const (
+	// Reserved value
+	CurveReserved Curve = 0
 
 	// NIST P-256 also known as secp256r1
 	CurveP256 Curve = 1
@@ -189,10 +195,6 @@ const (
 	CurveEd448 Curve = 7
 )
 
-// Curve represents the EC2/OKP key's curve. See:
-// https://datatracker.ietf.org/doc/html/rfc8152#section-13.1
-type Curve int64
-
 // String returns a string representation of the Curve. Note does not
 // represent a valid value  of the corresponding serialized entry, and must
 // not be used as such.
@@ -212,6 +214,8 @@ func (c Curve) String() string {
 		return "Ed25519"
 	case CurveEd448:
 		return "Ed448"
+	case CurveReserved:
+		return "Reserved"
 	default:
 		return "unknown curve value " + strconv.Itoa(int(c))
 	}
@@ -220,17 +224,17 @@ func (c Curve) String() string {
 // Key represents a COSE_Key structure, as defined by RFC8152.
 // Note: currently, this does NOT support RFC8230 (RSA algorithms).
 type Key struct {
-	// KeyType identifies the family of keys for this structure, and thus,
+	// Type identifies the family of keys for this structure, and thus,
 	// which of the key-type-specific parameters need to be set.
-	KeyType KeyType
-	// KeyID is the identification value matched to the kid in the message.
-	KeyID []byte
+	Type KeyType
+	// ID is the identification value matched to the kid in the message.
+	ID []byte
 	// Algorithm is used to restrict the algorithm that is used with the
 	// key. If it is set, the application MUST verify that it matches the
 	// algorithm for which the Key is being used.
 	Algorithm Algorithm
-	// KeyOps can be set to restrict the set of operations that the Key is used for.
-	KeyOps []KeyOp
+	// Ops can be set to restrict the set of operations that the Key is used for.
+	Ops []KeyOp
 	// BaseIV is the Base IV to be xor-ed with Partial IVs.
 	BaseIV []byte
 
@@ -238,14 +242,14 @@ type Key struct {
 	Params map[interface{}]interface{}
 }
 
-// NewOKPKey returns a Key created using the provided Octet Key Pair data.
-func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
+// NewKeyOKP returns a Key created using the provided Octet Key Pair data.
+func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 	if alg != AlgorithmEdDSA {
 		return nil, fmt.Errorf("unsupported algorithm %q", alg)
 	}
 
 	key := &Key{
-		KeyType:   KeyTypeOKP,
+		Type:      KeyTypeOKP,
 		Algorithm: alg,
 		Params: map[interface{}]interface{}{
 			KeyLabelOKPCurve: CurveEd25519,
@@ -257,7 +261,7 @@ func NewOKPKey(alg Algorithm, x, d []byte) (*Key, error) {
 	if d != nil {
 		key.Params[KeyLabelOKPD] = d
 	}
-	if err := key.validate(KeyOpInvalid); err != nil {
+	if err := key.validate(KeyOpReserved); err != nil {
 		return nil, err
 	}
 	return key, nil
@@ -309,9 +313,9 @@ func (k *Key) OKP() (crv Curve, x []byte, d []byte) {
 	return
 }
 
-// NewEC2Key returns a Key created using the provided elliptic curve key
+// NewKeyEC2 returns a Key created using the provided elliptic curve key
 // data.
-func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
+func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 	var curve Curve
 
 	switch alg {
@@ -326,7 +330,7 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 	}
 
 	key := &Key{
-		KeyType:   KeyTypeEC2,
+		Type:      KeyTypeEC2,
 		Algorithm: alg,
 		Params: map[interface{}]interface{}{
 			KeyLabelEC2Curve: curve,
@@ -341,7 +345,7 @@ func NewEC2Key(alg Algorithm, x, y, d []byte) (*Key, error) {
 	if d != nil {
 		key.Params[KeyLabelEC2D] = d
 	}
-	if err := key.validate(KeyOpInvalid); err != nil {
+	if err := key.validate(KeyOpReserved); err != nil {
 		return nil, err
 	}
 	return key, nil
@@ -359,11 +363,11 @@ func (k *Key) EC2() (crv Curve, x []byte, y, d []byte) {
 	return
 }
 
-// NewSymmetricKey returns a Key created using the provided Symmetric key
+// NewKeySymmetric returns a Key created using the provided Symmetric key
 // bytes.
-func NewSymmetricKey(k []byte) *Key {
+func NewKeySymmetric(k []byte) *Key {
 	return &Key{
-		KeyType: KeyTypeSymmetric,
+		Type: KeyTypeSymmetric,
 		Params: map[interface{}]interface{}{
 			KeyLabelSymmetricK: k,
 		},
@@ -383,13 +387,13 @@ func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
 	case *ecdsa.PublicKey:
 		alg := algorithmFromEllipticCurve(vk.Curve)
 
-		if alg == AlgorithmInvalid {
+		if alg == AlgorithmReserved {
 			return nil, fmt.Errorf("unsupported curve: %v", vk.Curve)
 		}
 
-		return NewEC2Key(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
+		return NewKeyEC2(alg, vk.X.Bytes(), vk.Y.Bytes(), nil)
 	case ed25519.PublicKey:
-		return NewOKPKey(AlgorithmEdDSA, []byte(vk), nil)
+		return NewKeyOKP(AlgorithmEdDSA, []byte(vk), nil)
 	default:
 		return nil, ErrInvalidPubKey
 	}
@@ -402,13 +406,13 @@ func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 	case *ecdsa.PrivateKey:
 		alg := algorithmFromEllipticCurve(sk.Curve)
 
-		if alg == AlgorithmInvalid {
+		if alg == AlgorithmReserved {
 			return nil, fmt.Errorf("unsupported curve: %v", sk.Curve)
 		}
 
-		return NewEC2Key(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
+		return NewKeyEC2(alg, sk.X.Bytes(), sk.Y.Bytes(), sk.D.Bytes())
 	case ed25519.PrivateKey:
-		return NewOKPKey(AlgorithmEdDSA, []byte(sk[32:]), []byte(sk[:32]))
+		return NewKeyOKP(AlgorithmEdDSA, []byte(sk[32:]), []byte(sk[:32]))
 	default:
 		return nil, ErrInvalidPrivKey
 	}
@@ -427,7 +431,7 @@ var (
 // consistent (e.g., that the key type is appropriate to the curve).
 // It also checks that the key is valid for the requested operation.
 func (k Key) validate(op KeyOp) error {
-	switch k.KeyType {
+	switch k.Type {
 	case KeyTypeEC2:
 		crv, x, y, d := k.EC2()
 		switch op {
@@ -440,7 +444,7 @@ func (k Key) validate(op KeyOp) error {
 				return ErrNotPrivKey
 			}
 		}
-		if crv == CurveInvalid || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
+		if crv == CurveReserved || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
 			return errReqParamsMissing
 		}
 		if size := curveSize(crv); size > 0 {
@@ -471,7 +475,7 @@ func (k Key) validate(op KeyOp) error {
 				return ErrNotPrivKey
 			}
 		}
-		if crv == CurveInvalid || (len(x) == 0 && len(d) == 0) {
+		if crv == CurveReserved || (len(x) == 0 && len(d) == 0) {
 			return errReqParamsMissing
 		}
 		if (len(x) > 0 && len(x) != ed25519.PublicKeySize) || (len(d) > 0 && len(d) != ed25519.SeedSize) {
@@ -489,14 +493,14 @@ func (k Key) validate(op KeyOp) error {
 		if len(k) == 0 {
 			return errReqParamsMissing
 		}
-	case KeyTypeInvalid:
+	case KeyTypeReserved:
 		return fmt.Errorf("%w: kty value 0", ErrInvalidKey)
 	default:
 		// Unknown key type, we can't validate custom parameters.
 	}
 
 	// If Algorithm is set, it must match the specified key parameters.
-	if k.Algorithm != AlgorithmInvalid {
+	if k.Algorithm != AlgorithmReserved {
 		expectedAlg, err := k.deriveAlgorithm()
 		if err != nil {
 			return err
@@ -515,10 +519,10 @@ func (k Key) validate(op KeyOp) error {
 }
 
 func (k Key) canOp(op KeyOp) bool {
-	if k.KeyOps == nil {
+	if k.Ops == nil {
 		return true
 	}
-	for _, kop := range k.KeyOps {
+	for _, kop := range k.Ops {
 		if kop == op {
 			return true
 		}
@@ -529,16 +533,16 @@ func (k Key) canOp(op KeyOp) bool {
 // MarshalCBOR encodes Key into a COSE_Key object.
 func (k *Key) MarshalCBOR() ([]byte, error) {
 	tmp := map[interface{}]interface{}{
-		keyLabelKeyType: k.KeyType,
+		keyLabelKeyType: k.Type,
 	}
-	if k.KeyID != nil {
-		tmp[keyLabelKeyID] = k.KeyID
+	if k.ID != nil {
+		tmp[keyLabelKeyID] = k.ID
 	}
-	if k.Algorithm != AlgorithmInvalid {
+	if k.Algorithm != AlgorithmReserved {
 		tmp[keyLabelAlgorithm] = k.Algorithm
 	}
-	if k.KeyOps != nil {
-		tmp[keyLabelKeyOps] = k.KeyOps
+	if k.Ops != nil {
+		tmp[keyLabelKeyOps] = k.Ops
 	}
 	if k.BaseIV != nil {
 		tmp[keyLabelBaseIV] = k.BaseIV
@@ -555,7 +559,7 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 		existing[lbl] = struct{}{}
 		tmp[lbl] = v
 	}
-	if k.KeyType == KeyTypeEC2 {
+	if k.Type == KeyTypeEC2 {
 		// If EC2 key, ensure that x and y are padded to the correct size.
 		crv, x, y, _ := k.EC2()
 		if size := curveSize(crv); size > 0 {
@@ -585,11 +589,11 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 	if err != nil {
 		return fmt.Errorf("kty: %w", err)
 	}
-	k.KeyType = KeyType(kty)
-	if k.KeyType == KeyTypeInvalid {
+	k.Type = KeyType(kty)
+	if k.Type == KeyTypeReserved {
 		return errors.New("kty: invalid value 0")
 	}
-	k.KeyID, _, err = decodeBytes(tmp, keyLabelKeyID)
+	k.ID, _, err = decodeBytes(tmp, keyLabelKeyID)
 	if err != nil {
 		return fmt.Errorf("kid: %w", err)
 	}
@@ -603,14 +607,14 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 		return fmt.Errorf("key_ops: %w", err)
 	}
 	if len(key_ops) > 0 {
-		k.KeyOps = make([]KeyOp, len(key_ops))
+		k.Ops = make([]KeyOp, len(key_ops))
 		for i, op := range key_ops {
 			switch op := op.(type) {
 			case int64:
-				k.KeyOps[i] = KeyOp(op)
+				k.Ops[i] = KeyOp(op)
 			case string:
 				var ok bool
-				if k.KeyOps[i], ok = KeyOpFromString(op); !ok {
+				if k.Ops[i], ok = KeyOpFromString(op); !ok {
 					return fmt.Errorf("key_ops: unknown entry value %q", op)
 				}
 			default:
@@ -634,7 +638,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 		for lbl, v := range tmp {
 			switch lbl := lbl.(type) {
 			case int64:
-				if (k.KeyType == KeyTypeEC2 || k.KeyType == KeyTypeOKP) &&
+				if (k.Type == KeyTypeEC2 || k.Type == KeyTypeOKP) &&
 					(lbl == KeyLabelEC2Curve || lbl == KeyLabelOKPCurve) {
 					v = Curve(v.(int64))
 				}
@@ -646,7 +650,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 			}
 		}
 	}
-	return k.validate(KeyOpInvalid)
+	return k.validate(KeyOpReserved)
 }
 
 // PublicKey returns a crypto.PublicKey generated using Key's parameters.
@@ -746,7 +750,7 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 // Key.Curve. This method does NOT validate that Key.Algorithm, if set, aligns
 // with Key.Curve.
 func (k *Key) AlgorithmOrDefault() (Algorithm, error) {
-	if k.Algorithm != AlgorithmInvalid {
+	if k.Algorithm != AlgorithmReserved {
 		return k.Algorithm, nil
 	}
 
@@ -799,7 +803,7 @@ func (k *Key) Verifier() (Verifier, error) {
 // only used with P-256, etc. For other combinations, the Algorithm in the Key
 // must be explicitly set,so that this derivation is not used.
 func (k *Key) deriveAlgorithm() (Algorithm, error) {
-	switch k.KeyType {
+	switch k.Type {
 	case KeyTypeEC2:
 		crv, _, _, _ := k.EC2()
 		switch crv {
@@ -810,7 +814,7 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 		case CurveP521:
 			return AlgorithmES512, nil
 		default:
-			return AlgorithmInvalid, fmt.Errorf(
+			return AlgorithmReserved, fmt.Errorf(
 				"unsupported curve %q for key type EC2", crv.String())
 		}
 	case KeyTypeOKP:
@@ -819,12 +823,12 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 		case CurveEd25519:
 			return AlgorithmEdDSA, nil
 		default:
-			return AlgorithmInvalid, fmt.Errorf(
+			return AlgorithmReserved, fmt.Errorf(
 				"unsupported curve %q for key type OKP", crv.String())
 		}
 	default:
 		// Symmetric algorithms are not supported in the current inmplementation.
-		return AlgorithmInvalid, fmt.Errorf("unexpected key type %q", k.KeyType.String())
+		return AlgorithmReserved, fmt.Errorf("unexpected key type %q", k.Type.String())
 	}
 }
 
@@ -837,7 +841,7 @@ func algorithmFromEllipticCurve(c elliptic.Curve) Algorithm {
 	case elliptic.P521():
 		return AlgorithmES512
 	default:
-		return AlgorithmInvalid
+		return AlgorithmReserved
 	}
 }
 
