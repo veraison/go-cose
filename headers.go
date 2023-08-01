@@ -28,7 +28,7 @@ const (
 
 // ProtectedHeader contains parameters that are to be cryptographically
 // protected.
-type ProtectedHeader map[interface{}]interface{}
+type ProtectedHeader map[any]any
 
 // MarshalCBOR encodes the protected header into a CBOR bstr object.
 // A zero-length header is encoded as a zero-length string rather than as a
@@ -42,7 +42,7 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("protected header: %w", err)
 		}
-		encoded, err = encMode.Marshal(map[interface{}]interface{}(h))
+		encoded, err = encMode.Marshal(map[any]any(h))
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,7 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 		if err := validateHeaderLabelCBOR(encoded); err != nil {
 			return err
 		}
-		var header map[interface{}]interface{}
+		var header map[any]any
 		if err := decMode.Unmarshal(encoded, &header); err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 // processing a message is required to understand.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
-func (h ProtectedHeader) Critical() ([]interface{}, error) {
+func (h ProtectedHeader) Critical() ([]any, error) {
 	value, ok := h[HeaderLabelCritical]
 	if !ok {
 		return nil, nil
@@ -138,12 +138,12 @@ func (h ProtectedHeader) Critical() ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return value.([]interface{}), nil
+	return value.([]any), nil
 }
 
 // ensureCritical ensures all critical headers are present in the protected bucket.
-func ensureCritical(value interface{}, headers map[interface{}]interface{}) error {
-	labels, ok := value.([]interface{})
+func ensureCritical(value any, headers map[any]any) error {
+	labels, ok := value.([]any)
 	if !ok {
 		return errors.New("invalid crit header")
 	}
@@ -164,7 +164,7 @@ func ensureCritical(value interface{}, headers map[interface{}]interface{}) erro
 
 // UnprotectedHeader contains parameters that are not cryptographically
 // protected.
-type UnprotectedHeader map[interface{}]interface{}
+type UnprotectedHeader map[any]any
 
 // MarshalCBOR encodes the unprotected header into a CBOR map object.
 // A zero-length header is encoded as a zero-length map (encoded as h'a0').
@@ -175,7 +175,7 @@ func (h UnprotectedHeader) MarshalCBOR() ([]byte, error) {
 	if err := validateHeaderParameters(h, false); err != nil {
 		return nil, fmt.Errorf("unprotected header: %w", err)
 	}
-	return encMode.Marshal(map[interface{}]interface{}(h))
+	return encMode.Marshal(map[any]any(h))
 }
 
 // UnmarshalCBOR decodes a CBOR map object into UnprotectedHeader.
@@ -197,7 +197,7 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	if err := validateHeaderLabelCBOR(data); err != nil {
 		return err
 	}
-	var header map[interface{}]interface{}
+	var header map[any]any
 	if err := decMode.Unmarshal(data, &header); err != nil {
 		return err
 	}
@@ -376,14 +376,14 @@ func (h *Headers) ensureIV() error {
 }
 
 // hasLabel returns true if h contains label.
-func hasLabel(h map[interface{}]interface{}, label interface{}) bool {
+func hasLabel(h map[any]any, label any) bool {
 	_, ok := h[label]
 	return ok
 }
 
 // validateHeaderParameters validates all headers conform to the spec.
-func validateHeaderParameters(h map[interface{}]interface{}, protected bool) error {
-	existing := make(map[interface{}]struct{}, len(h))
+func validateHeaderParameters(h map[any]any, protected bool) error {
+	existing := make(map[any]struct{}, len(h))
 	for label, value := range h {
 		// Validate that all header labels are integers or strings.
 		// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
@@ -443,7 +443,7 @@ func validateHeaderParameters(h map[interface{}]interface{}, protected bool) err
 }
 
 // canUint reports whether v can be used as a CBOR uint type.
-func canUint(v interface{}) bool {
+func canUint(v any) bool {
 	switch v := v.(type) {
 	case uint, uint8, uint16, uint32, uint64:
 		return true
@@ -462,7 +462,7 @@ func canUint(v interface{}) bool {
 }
 
 // canInt reports whether v can be used as a CBOR int type.
-func canInt(v interface{}) bool {
+func canInt(v any) bool {
 	switch v.(type) {
 	case int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64:
@@ -472,20 +472,20 @@ func canInt(v interface{}) bool {
 }
 
 // canTstr reports whether v can be used as a CBOR tstr type.
-func canTstr(v interface{}) bool {
+func canTstr(v any) bool {
 	_, ok := v.(string)
 	return ok
 }
 
 // canBstr reports whether v can be used as a CBOR bstr type.
-func canBstr(v interface{}) bool {
+func canBstr(v any) bool {
 	_, ok := v.([]byte)
 	return ok
 }
 
 // normalizeLabel tries to cast label into a int64 or a string.
 // Returns (nil, false) if the label type is not valid.
-func normalizeLabel(label interface{}) (interface{}, bool) {
+func normalizeLabel(label any) (any, bool) {
 	switch v := label.(type) {
 	case int:
 		label = int64(v)
@@ -517,7 +517,7 @@ func normalizeLabel(label interface{}) (interface{}, bool) {
 
 // headerLabelValidator is used to validate the header label of a COSE header.
 type headerLabelValidator struct {
-	value interface{}
+	value any
 }
 
 // String prints the value without brackets `{}`. Useful in error printing.

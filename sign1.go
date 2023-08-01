@@ -174,7 +174,7 @@ func (m *Sign1Message) toBeSigned(external []byte) ([]byte, error) {
 	if external == nil {
 		external = []byte{}
 	}
-	sigStructure := []interface{}{
+	sigStructure := []any{
 		"Signature1", // context
 		protected,    // body_protected
 		external,     // external_aad

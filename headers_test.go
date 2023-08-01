@@ -17,7 +17,7 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			name: "valid header",
 			h: ProtectedHeader{
 				HeaderLabelAlgorithm: AlgorithmES256,
-				HeaderLabelCritical: []interface{}{
+				HeaderLabelCritical: []any{
 					HeaderLabelContentType,
 					"foo",
 				},
@@ -84,7 +84,7 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "empty critical",
 			h: ProtectedHeader{
-				HeaderLabelCritical: []interface{}{},
+				HeaderLabelCritical: []any{},
 			},
 			wantErr: "protected header: header parameter: crit: empty crit header",
 		},
@@ -98,7 +98,7 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "missing header marked as critical",
 			h: ProtectedHeader{
-				HeaderLabelCritical: []interface{}{
+				HeaderLabelCritical: []any{
 					HeaderLabelContentType,
 				},
 			},
@@ -107,7 +107,7 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "critical header contains non-label element",
 			h: ProtectedHeader{
-				HeaderLabelCritical: []interface{}{[]uint8{}},
+				HeaderLabelCritical: []any{[]uint8{}},
 			},
 			wantErr: "protected header: header parameter: crit: require int / tstr type, got '[]uint8': []",
 		},
@@ -199,7 +199,7 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			},
 			want: ProtectedHeader{
 				HeaderLabelAlgorithm: AlgorithmES256,
-				HeaderLabelCritical: []interface{}{
+				HeaderLabelCritical: []any{
 					HeaderLabelContentType,
 					"foo",
 				},
@@ -451,21 +451,21 @@ func TestProtectedHeader_Critical(t *testing.T) {
 	tests := []struct {
 		name    string
 		h       ProtectedHeader
-		want    []interface{}
+		want    []any
 		wantErr string
 	}{
 		{
 			name: "valid header",
 			h: ProtectedHeader{
 				HeaderLabelAlgorithm: AlgorithmES256,
-				HeaderLabelCritical: []interface{}{
+				HeaderLabelCritical: []any{
 					HeaderLabelContentType,
 					"foo",
 				},
 				HeaderLabelContentType: "text/plain",
 				"foo":                  "bar",
 			},
-			want: []interface{}{
+			want: []any{
 				HeaderLabelContentType,
 				"foo",
 			},
@@ -490,7 +490,7 @@ func TestProtectedHeader_Critical(t *testing.T) {
 		{
 			name: "empty critical",
 			h: ProtectedHeader{
-				HeaderLabelCritical: []interface{}{},
+				HeaderLabelCritical: []any{},
 			},
 			wantErr: "empty crit header",
 		},
