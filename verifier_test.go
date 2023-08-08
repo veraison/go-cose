@@ -114,7 +114,12 @@ func TestNewVerifier(t *testing.T) {
 		{
 			name:    "unknown algorithm",
 			alg:     0,
-			wantErr: "algorithm not supported",
+			wantErr: "can't create new Verifier for Reserved: algorithm not supported",
+		},
+		{
+			name:    "unassigned algorithm",
+			alg:     -1,
+			wantErr: "can't create new Verifier for unknown algorithm value -1: algorithm not supported",
 		},
 		{
 			name:    "bogus ecdsa public key (point not on curve)",

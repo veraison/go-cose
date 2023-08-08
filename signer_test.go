@@ -118,7 +118,12 @@ func TestNewSigner(t *testing.T) {
 		{
 			name:    "unknown algorithm",
 			alg:     0,
-			wantErr: "algorithm not supported",
+			wantErr: "can't create new Signer for Reserved: algorithm not supported",
+		},
+		{
+			name:    "unassigned algorithm",
+			alg:     -1,
+			wantErr: "can't create new Signer for unknown algorithm value -1: algorithm not supported",
 		},
 	}
 	for _, tt := range tests {
