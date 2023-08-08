@@ -88,6 +88,8 @@ func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 		return &ed25519Signer{
 			key: key,
 		}, nil
+	case AlgorithmRS256:
+		return nil, fmt.Errorf("can't create Signer for %s: %w", alg, ErrAlgorithmNotSupported)
 	default:
 		return nil, ErrAlgorithmNotSupported
 	}

@@ -308,6 +308,8 @@ func mustNameToAlg(name string) cose.Algorithm {
 		return cose.AlgorithmPS384
 	case "PS512":
 		return cose.AlgorithmPS512
+	case "RS256":
+		return cose.AlgorithmRS256
 	case "ES256":
 		return cose.AlgorithmES256
 	case "ES384":

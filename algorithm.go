@@ -22,6 +22,12 @@ const (
 	// Requires an available crypto.SHA512.
 	AlgorithmPS512 Algorithm = -39
 
+	// RSASSA-PKCS1-v1_5 using SHA-256 by RFC 8812.
+	// Requires an available crypto.SHA256.
+	// TODO(hs): add a note that this can only be used with an
+	// externally supplied cose.Signer/Verifier
+	AlgorithmRS256 Algorithm = -257
+
 	// ECDSA w/ SHA-256 by RFC 8152.
 	// Requires an available crypto.SHA256.
 	AlgorithmES256 Algorithm = -7
@@ -65,6 +71,8 @@ func (a Algorithm) String() string {
 		return "PS384"
 	case AlgorithmPS512:
 		return "PS512"
+	case AlgorithmRS256:
+		return "RS256"
 	case AlgorithmES256:
 		return "ES256"
 	case AlgorithmES384:
