@@ -58,7 +58,7 @@ func FuzzSign1Message_UnmarshalCBOR(f *testing.F) {
 	enc, _ := cbor.CanonicalEncOptions().EncMode()
 	dec, _ := cbor.DecOptions{IntDec: cbor.IntDecConvertSigned}.DecMode()
 	isCanonical := func(b []byte) bool {
-		var tmp interface{}
+		var tmp any
 		err := dec.Unmarshal(b, &tmp)
 		if err != nil {
 			return false

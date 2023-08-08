@@ -239,7 +239,7 @@ type Key struct {
 	BaseIV []byte
 
 	// Any additional parameter (label,value) pairs.
-	Params map[interface{}]interface{}
+	Params map[any]any
 }
 
 // NewKeyOKP returns a Key created using the provided Octet Key Pair data.
@@ -251,7 +251,7 @@ func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 	key := &Key{
 		Type:      KeyTypeOKP,
 		Algorithm: alg,
-		Params: map[interface{}]interface{}{
+		Params: map[any]any{
 			KeyLabelOKPCurve: CurveEd25519,
 		},
 	}
@@ -269,35 +269,35 @@ func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 
 // ParamBytes returns the value of the parameter with the given label, if it
 // exists and is of type []byte or can be converted to []byte.
-func (k *Key) ParamBytes(label interface{}) ([]byte, bool) {
+func (k *Key) ParamBytes(label any) ([]byte, bool) {
 	v, ok, err := decodeBytes(k.Params, label)
 	return v, ok && err == nil
 }
 
 // ParamInt returns the value of the parameter with the given label, if it
 // exists and is of type int64 or can be converted to int64.
-func (k *Key) ParamInt(label interface{}) (int64, bool) {
+func (k *Key) ParamInt(label any) (int64, bool) {
 	v, ok, err := decodeInt(k.Params, label)
 	return v, ok && err == nil
 }
 
 // ParamUint returns the value of the parameter with the given label, if it
 // exists and is of type uint64 or can be converted to uint64.
-func (k *Key) ParamUint(label interface{}) (uint64, bool) {
+func (k *Key) ParamUint(label any) (uint64, bool) {
 	v, ok, err := decodeUint(k.Params, label)
 	return v, ok && err == nil
 }
 
 // ParamString returns the value of the parameter with the given label, if it
 // exists and is of type string or can be converted to string.
-func (k *Key) ParamString(label interface{}) (string, bool) {
+func (k *Key) ParamString(label any) (string, bool) {
 	v, ok, err := decodeString(k.Params, label)
 	return v, ok && err == nil
 }
 
 // ParamBool returns the value of the parameter with the given label, if it
 // exists and is of type bool or can be converted to bool.
-func (k *Key) ParamBool(label interface{}) (bool, bool) {
+func (k *Key) ParamBool(label any) (bool, bool) {
 	v, ok, err := decodeBool(k.Params, label)
 	return v, ok && err == nil
 }
@@ -332,7 +332,7 @@ func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 	key := &Key{
 		Type:      KeyTypeEC2,
 		Algorithm: alg,
-		Params: map[interface{}]interface{}{
+		Params: map[any]any{
 			KeyLabelEC2Curve: curve,
 		},
 	}
@@ -368,7 +368,7 @@ func (k *Key) EC2() (crv Curve, x []byte, y, d []byte) {
 func NewKeySymmetric(k []byte) *Key {
 	return &Key{
 		Type: KeyTypeSymmetric,
-		Params: map[interface{}]interface{}{
+		Params: map[any]any{
 			KeyLabelSymmetricK: k,
 		},
 	}
@@ -532,7 +532,7 @@ func (k Key) canOp(op KeyOp) bool {
 
 // MarshalCBOR encodes Key into a COSE_Key object.
 func (k *Key) MarshalCBOR() ([]byte, error) {
-	tmp := map[interface{}]interface{}{
+	tmp := map[any]any{
 		keyLabelKeyType: k.Type,
 	}
 	if k.ID != nil {
@@ -547,7 +547,7 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 	if k.BaseIV != nil {
 		tmp[keyLabelBaseIV] = k.BaseIV
 	}
-	existing := make(map[interface{}]struct{}, len(k.Params))
+	existing := make(map[any]struct{}, len(k.Params))
 	for label, v := range k.Params {
 		lbl, ok := normalizeLabel(label)
 		if !ok {
@@ -576,7 +576,7 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 
 // UnmarshalCBOR decodes a COSE_Key object into Key.
 func (k *Key) UnmarshalCBOR(data []byte) error {
-	var tmp map[interface{}]interface{}
+	var tmp map[any]any
 	if err := decMode.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
@@ -634,7 +634,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 	delete(tmp, keyLabelBaseIV)
 
 	if len(tmp) > 0 {
-		k.Params = make(map[interface{}]interface{}, len(tmp))
+		k.Params = make(map[any]any, len(tmp))
 		for lbl, v := range tmp {
 			switch lbl := lbl.(type) {
 			case int64:
@@ -858,7 +858,7 @@ func curveSize(crv Curve) int {
 	return (bitSize + 7) / 8
 }
 
-func decodeBytes(dic map[interface{}]interface{}, lbl interface{}) (b []byte, ok bool, err error) {
+func decodeBytes(dic map[any]any, lbl any) (b []byte, ok bool, err error) {
 	val, ok := dic[lbl]
 	if !ok {
 		return nil, false, nil
@@ -874,7 +874,7 @@ func decodeBytes(dic map[interface{}]interface{}, lbl interface{}) (b []byte, ok
 	return reflect.ValueOf(val).Bytes(), true, nil
 }
 
-func decodeInt(dic map[interface{}]interface{}, lbl interface{}) (int64, bool, error) {
+func decodeInt(dic map[any]any, lbl any) (int64, bool, error) {
 	val, ok := dic[lbl]
 	if !ok {
 		return 0, false, nil
@@ -888,7 +888,7 @@ func decodeInt(dic map[interface{}]interface{}, lbl interface{}) (int64, bool, e
 	return 0, true, fmt.Errorf("invalid type: expected int64, got %T", val)
 }
 
-func decodeUint(dic map[interface{}]interface{}, lbl interface{}) (uint64, bool, error) {
+func decodeUint(dic map[any]any, lbl any) (uint64, bool, error) {
 	val, ok := dic[lbl]
 	if !ok {
 		return 0, false, nil
@@ -908,7 +908,7 @@ func decodeUint(dic map[interface{}]interface{}, lbl interface{}) (uint64, bool,
 	return 0, true, fmt.Errorf("invalid type: expected uint64, got %T", val)
 }
 
-func decodeString(dic map[interface{}]interface{}, lbl interface{}) (string, bool, error) {
+func decodeString(dic map[any]any, lbl any) (string, bool, error) {
 	val, ok := dic[lbl]
 	if !ok {
 		return "", false, nil
@@ -922,7 +922,7 @@ func decodeString(dic map[interface{}]interface{}, lbl interface{}) (string, boo
 	return "", true, fmt.Errorf("invalid type: expected uint64, got %T", val)
 }
 
-func decodeBool(dic map[interface{}]interface{}, lbl interface{}) (bool, bool, error) {
+func decodeBool(dic map[any]any, lbl any) (bool, bool, error) {
 	val, ok := dic[lbl]
 	if !ok {
 		return false, false, nil
@@ -936,14 +936,14 @@ func decodeBool(dic map[interface{}]interface{}, lbl interface{}) (bool, bool, e
 	return false, true, fmt.Errorf("invalid type: expected uint64, got %T", val)
 }
 
-func decodeSlice(dic map[interface{}]interface{}, lbl interface{}) ([]interface{}, error) {
+func decodeSlice(dic map[any]any, lbl any) ([]any, error) {
 	v, ok := dic[lbl]
 	if !ok {
 		return nil, nil
 	}
-	arr, ok := v.([]interface{})
+	arr, ok := v.([]any)
 	if !ok {
-		return nil, fmt.Errorf("invalid type: expected []interface{}, got %T", v)
+		return nil, fmt.Errorf("invalid type: expected []any, got %T", v)
 	}
 	return arr, nil
 }
