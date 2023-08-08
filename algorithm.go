@@ -22,12 +22,6 @@ const (
 	// Requires an available crypto.SHA512.
 	AlgorithmPS512 Algorithm = -39
 
-	// RSASSA-PKCS1-v1_5 using SHA-256 by RFC 8812.
-	// Requires an available crypto.SHA256.
-	// TODO(hs): add a note that this can only be used with an
-	// externally supplied cose.Signer/Verifier
-	AlgorithmRS256 Algorithm = -257
-
 	// ECDSA w/ SHA-256 by RFC 8152.
 	// Requires an available crypto.SHA256.
 	AlgorithmES256 Algorithm = -7
@@ -53,6 +47,25 @@ const (
 	AlgorithmReserved Algorithm = 0
 )
 
+// Algorithms known, but not supported by this library.
+//
+// Signers and Verifiers requiring the algorithms below are not
+// directly supported by this library. They need to be provided
+// as an external [cose.Signer] or [cose.Verifier] implementation.
+//
+// An example use case where RS256 is allowed and used is in
+// WebAuthn: https://www.w3.org/TR/webauthn-2/#sctn-sample-registration.
+const (
+	// RSASSA-PKCS1-v1_5 using SHA-256 by RFC 8812.
+	AlgorithmRS256 Algorithm = -257
+
+	// RSASSA-PKCS1-v1_5 using SHA-384 by RFC 8812.
+	AlgorithmRS384 Algorithm = -258
+
+	// RSASSA-PKCS1-v1_5 using SHA-512 by RFC 8812.
+	AlgorithmRS512 Algorithm = -259
+)
+
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
 //
 // # See Also
@@ -73,6 +86,10 @@ func (a Algorithm) String() string {
 		return "PS512"
 	case AlgorithmRS256:
 		return "RS256"
+	case AlgorithmRS384:
+		return "RS384"
+	case AlgorithmRS512:
+		return "RS512"
 	case AlgorithmES256:
 		return "ES256"
 	case AlgorithmES384:

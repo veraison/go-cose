@@ -113,7 +113,7 @@ func TestNewSigner(t *testing.T) {
 		{
 			name:    "unsupported rsa signing algorithm",
 			alg:     AlgorithmRS256,
-			wantErr: "can't create Signer for RS256: algorithm not supported",
+			wantErr: "can't create new Signer for RS256: algorithm not supported",
 		},
 		{
 			name:    "unknown algorithm",

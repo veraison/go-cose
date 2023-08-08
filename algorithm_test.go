@@ -19,6 +19,8 @@ func TestAlgorithm_String(t *testing.T) {
 		{AlgorithmPS384, "PS384"},
 		{AlgorithmPS512, "PS512"},
 		{AlgorithmRS256, "RS256"},
+		{AlgorithmRS384, "RS384"},
+		{AlgorithmRS512, "RS512"},
 		{AlgorithmES256, "ES256"},
 		{AlgorithmES384, "ES384"},
 		{AlgorithmES512, "ES512"},

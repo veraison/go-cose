@@ -74,8 +74,8 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		return &ed25519Verifier{
 			key: vk,
 		}, nil
-	case AlgorithmRS256:
-		return nil, fmt.Errorf("can't create Verifier for %s: %w", alg, ErrAlgorithmNotSupported)
+	case AlgorithmRS256, AlgorithmRS384, AlgorithmRS512:
+		return nil, fmt.Errorf("can't create new Verifier for %s: %w", alg, ErrAlgorithmNotSupported)
 	default:
 		return nil, ErrAlgorithmNotSupported
 	}

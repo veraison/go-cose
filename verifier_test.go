@@ -109,7 +109,7 @@ func TestNewVerifier(t *testing.T) {
 		{
 			name:    "unsupported rsa signing algorithm",
 			alg:     AlgorithmRS256,
-			wantErr: "can't create Verifier for RS256: algorithm not supported",
+			wantErr: "can't create new Verifier for RS256: algorithm not supported",
 		},
 		{
 			name:    "unknown algorithm",
