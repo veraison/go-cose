@@ -75,6 +75,6 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 			key: vk,
 		}, nil
 	default:
-		return nil, ErrAlgorithmNotSupported
+		return nil, fmt.Errorf("can't create new Verifier for %s: %w", alg, ErrAlgorithmNotSupported)
 	}
 }

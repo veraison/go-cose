@@ -107,9 +107,19 @@ func TestNewVerifier(t *testing.T) {
 			wantErr: "RSA key must be at least 2048 bits long",
 		},
 		{
+			name:    "unsupported rsa signing algorithm",
+			alg:     AlgorithmRS256,
+			wantErr: "can't create new Verifier for RS256: algorithm not supported",
+		},
+		{
 			name:    "unknown algorithm",
 			alg:     0,
-			wantErr: "algorithm not supported",
+			wantErr: "can't create new Verifier for Reserved: algorithm not supported",
+		},
+		{
+			name:    "unassigned algorithm",
+			alg:     -1,
+			wantErr: "can't create new Verifier for unknown algorithm value -1: algorithm not supported",
 		},
 		{
 			name:    "bogus ecdsa public key (point not on curve)",
