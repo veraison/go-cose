@@ -423,7 +423,7 @@ func TestProtectedHeader_Algorithm(t *testing.T) {
 			h: ProtectedHeader{
 				HeaderLabelAlgorithm: "foo",
 			},
-			wantErr: errors.New("unknown algorithm value \"foo\""),
+			wantErr: errors.New("Algorithm(\"foo\")"),
 		},
 		{
 			name: "invalid algorithm",

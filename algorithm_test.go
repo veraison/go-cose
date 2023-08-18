@@ -26,7 +26,7 @@ func TestAlgorithm_String(t *testing.T) {
 		{AlgorithmES512, "ES512"},
 		{AlgorithmEdDSA, "EdDSA"},
 		{AlgorithmReserved, "Reserved"},
-		{7, "unknown algorithm value 7"},
+		{7, "Algorithm(7)"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {

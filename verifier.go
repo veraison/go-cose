@@ -39,6 +39,7 @@ type DigestVerifier interface {
 //
 // The returned signer for rsa and ecdsa keys also implements `cose.DigestSigner`.
 func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
+	var errReason string
 	switch alg {
 	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512:
 		vk, ok := key.(*rsa.PublicKey)
@@ -74,7 +75,12 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		return &ed25519Verifier{
 			key: vk,
 		}, nil
+	case AlgorithmReserved:
+		errReason = "can't be implemented"
+	case AlgorithmRS256, AlgorithmRS384, AlgorithmRS512:
+		errReason = "no built-in implementation available"
 	default:
-		return nil, fmt.Errorf("can't create new Verifier for %s: %w", alg, ErrAlgorithmNotSupported)
+		errReason = "unknown algorithm"
 	}
+	return nil, fmt.Errorf("can't create new Verifier for %s: %s: %w", alg, errReason, ErrAlgorithmNotSupported)
 }
