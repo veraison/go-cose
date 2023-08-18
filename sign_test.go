@@ -654,13 +654,13 @@ func TestSignature_Sign_Internal(t *testing.T) {
 					},
 				},
 			},
-			protected: []byte{0x40, 0xa1, 0x00, 0x00},
+			protected: []byte{0x43, 0xa1, 0x00, 0x00},
 			payload:   []byte("hello world"),
 			external:  []byte{},
 			toBeSigned: []byte{
 				0x85,                                                       // array type
 				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
-				0x40, 0xa1, 0x00, 0x00, // body_protected
+				0x43, 0xa1, 0x00, 0x00, // body_protected
 				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
 				0x40,                                                                   // external
 				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
@@ -2222,7 +2222,7 @@ func TestSignature_toBeSigned(t *testing.T) {
 		payload   []byte
 		external  []byte
 		want      []byte
-		wantErr   bool
+		wantErr   string
 	}{
 		{
 			name: "valid signature",
@@ -2233,12 +2233,12 @@ func TestSignature_toBeSigned(t *testing.T) {
 					},
 				},
 			},
-			protected: []byte{0x40, 0xa1, 0x00, 0x00},
+			protected: []byte{0x43, 0xa1, 0x00, 0x00},
 			payload:   []byte("hello world"),
 			want: []byte{
 				0x85,                                                       // array type
 				0x69, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, // context
-				0x40, 0xa1, 0x00, 0x00, // body_protected
+				0x43, 0xa1, 0x00, 0x00, // body_protected
 				0x47, 0xa1, 0x01, 0x3a, 0x6d, 0x6f, 0x63, 0x6a, // sign_protected
 				0x40,                                                                   // external
 				0x4b, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, // payload
@@ -2255,7 +2255,20 @@ func TestSignature_toBeSigned(t *testing.T) {
 			},
 			protected: []byte{0x00},
 			payload:   []byte{},
-			wantErr:   true,
+			wantErr:   "cbor: require bstr type",
+		},
+		{
+			name: "extraneous protected data",
+			s: &Signature{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelAlgorithm: algorithmMock,
+					},
+				},
+			},
+			protected: []byte{0x40, 0xa1, 0x00, 0x00},
+			payload:   []byte("hello world"),
+			wantErr:   "cbor: 3 bytes of extraneous data starting at index 1",
 		},
 		{
 			name: "invalid sign protected header",
@@ -2268,7 +2281,7 @@ func TestSignature_toBeSigned(t *testing.T) {
 			},
 			protected: []byte{0x40},
 			payload:   []byte{},
-			wantErr:   true,
+			wantErr:   "protected header: header label: require int / tstr type",
 		},
 		{
 			name: "invalid raw sign protected header",
@@ -2279,15 +2292,17 @@ func TestSignature_toBeSigned(t *testing.T) {
 			},
 			protected: []byte{0x40},
 			payload:   []byte{},
-			wantErr:   true,
+			wantErr:   "cbor: require bstr type",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.s.toBeSigned(tt.protected, tt.payload, tt.external)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Signature.toBeSigned() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Fatalf("Signature.toBeSigned() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && (tt.wantErr != "") {
+				t.Fatalf("Signature.toBeSigned() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Signature.toBeSigned() = %v, want %v", got, tt.want)
