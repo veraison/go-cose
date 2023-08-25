@@ -113,17 +113,17 @@ func TestNewSigner(t *testing.T) {
 		{
 			name:    "unsupported rsa signing algorithm",
 			alg:     AlgorithmRS256,
-			wantErr: "can't create new Signer for RS256: algorithm not supported",
+			wantErr: "can't create new Signer for RS256: no built-in implementation available: algorithm not supported",
 		},
 		{
-			name:    "unknown algorithm",
-			alg:     0,
-			wantErr: "can't create new Signer for Reserved: algorithm not supported",
+			name:    "reserved algorithm",
+			alg:     AlgorithmReserved,
+			wantErr: "can't create new Signer for Reserved: can't be implemented: algorithm not supported",
 		},
 		{
 			name:    "unassigned algorithm",
 			alg:     -1,
-			wantErr: "can't create new Signer for unknown algorithm value -1: algorithm not supported",
+			wantErr: "can't create new Signer for Algorithm(-1): unknown algorithm: algorithm not supported",
 		},
 	}
 	for _, tt := range tests {

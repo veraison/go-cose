@@ -119,7 +119,7 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	case int64:
 		return Algorithm(alg), nil
 	case string:
-		return AlgorithmReserved, fmt.Errorf("unknown algorithm value %q", alg)
+		return AlgorithmReserved, fmt.Errorf("Algorithm(%q)", alg)
 	default:
 		return AlgorithmReserved, ErrInvalidAlgorithm
 	}

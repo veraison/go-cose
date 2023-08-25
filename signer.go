@@ -50,6 +50,7 @@ type DigestSigner interface {
 // Note: `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and `ed25519.PrivateKey`
 // implement `crypto.Signer`.
 func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
+	var errReason string
 	switch alg {
 	case AlgorithmPS256, AlgorithmPS384, AlgorithmPS512:
 		vk, ok := key.Public().(*rsa.PublicKey)
@@ -88,7 +89,12 @@ func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 		return &ed25519Signer{
 			key: key,
 		}, nil
+	case AlgorithmReserved:
+		errReason = "can't be implemented"
+	case AlgorithmRS256, AlgorithmRS384, AlgorithmRS512:
+		errReason = "no built-in implementation available"
 	default:
-		return nil, fmt.Errorf("can't create new Signer for %s: %w", alg, ErrAlgorithmNotSupported)
+		errReason = "unknown algorithm"
 	}
+	return nil, fmt.Errorf("can't create new Signer for %s: %s: %w", alg, errReason, ErrAlgorithmNotSupported)
 }

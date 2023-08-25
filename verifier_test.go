@@ -109,17 +109,17 @@ func TestNewVerifier(t *testing.T) {
 		{
 			name:    "unsupported rsa signing algorithm",
 			alg:     AlgorithmRS256,
-			wantErr: "can't create new Verifier for RS256: algorithm not supported",
+			wantErr: "can't create new Verifier for RS256: no built-in implementation available: algorithm not supported",
 		},
 		{
-			name:    "unknown algorithm",
-			alg:     0,
-			wantErr: "can't create new Verifier for Reserved: algorithm not supported",
+			name:    "reserved algorithm",
+			alg:     AlgorithmReserved,
+			wantErr: "can't create new Verifier for Reserved: can't be implemented: algorithm not supported",
 		},
 		{
 			name:    "unassigned algorithm",
 			alg:     -1,
-			wantErr: "can't create new Verifier for unknown algorithm value -1: algorithm not supported",
+			wantErr: "can't create new Verifier for Algorithm(-1): unknown algorithm: algorithm not supported",
 		},
 		{
 			name:    "bogus ecdsa public key (point not on curve)",

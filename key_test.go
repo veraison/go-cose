@@ -861,7 +861,7 @@ func TestNewKeyOKP(t *testing.T) {
 		}, {
 			name: "invalid alg", args: args{Algorithm(-100), x, d},
 			want:    nil,
-			wantErr: `unsupported algorithm "unknown algorithm value -100"`,
+			wantErr: `unsupported algorithm "Algorithm(-100)"`,
 		}, {
 			name: "x and d missing", args: args{AlgorithmEdDSA, nil, nil},
 			want:    nil,
@@ -940,7 +940,7 @@ func TestNewNewKeyEC2(t *testing.T) {
 		}, {
 			name: "invalid alg", args: args{Algorithm(-100), ec256x, ec256y, ec256d},
 			want:    nil,
-			wantErr: `unsupported algorithm "unknown algorithm value -100"`,
+			wantErr: `unsupported algorithm "Algorithm(-100)"`,
 		}, {
 			name: "x, y and d missing", args: args{AlgorithmES512, nil, nil, nil},
 			want:    nil,
