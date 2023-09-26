@@ -2,6 +2,7 @@ package cose
 
 import (
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -34,6 +35,39 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			},
 		},
 		{
+			name: "header with MinInt64 alg",
+			h: ProtectedHeader{
+				HeaderLabelAlgorithm: math.MinInt64,
+			},
+			want: []byte{
+				0x4b,                                                       // bstr
+				0xa1,                                                       // map
+				0x01, 0x3b, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // alg
+			},
+		},
+		{
+			name: "canonical ordering",
+			h: ProtectedHeader{
+				HeaderLabelAlgorithm:   1,
+				HeaderLabelCritical:    []any{HeaderLabelAlgorithm},
+				HeaderLabelContentType: 16,
+				HeaderLabelKeyID:       []byte{1, 2, 3},
+				HeaderLabelIV:          []byte{1, 2, 3},
+				0x46:                   0x47,
+				0x66:                   0x67,
+			},
+			want: []byte{
+				0x58, 0x1a, // bstr
+				0xa7,       // map
+				0x01, 0x01, // alg
+				0x02, 0x81, 0x01, // crit
+				0x03, 0x10, // cty
+				0x04, 0x43, 0x01, 0x02, 0x03, // kid
+				0x05, 0x43, 0x01, 0x02, 0x03, // iv
+				0x18, 0x46, 0x18, 0x47, // 0x46: 0x47
+				0x18, 0x66, 0x18, 0x67, // 0x66: 0x67
+			},
+		}, {
 			name: "nil header",
 			h:    nil,
 			want: []byte{0x40},
