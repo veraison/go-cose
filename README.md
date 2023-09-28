@@ -174,7 +174,8 @@ It is possible to countersign `cose.Sign1Message`, `cose.SignMessage`, `cose.Sig
 `cose.Countersignature` objects and add them as unprotected headers. In order to do so, first create
 a countersignature holder with `cose.NewCountersignature()` and call its `Sign` function passing
 the parent object which is going to be countersigned. Then assign the countersignature as an
-unprotected header `cose.HeaderLabelCounterSignatureV2`.
+unprotected header `cose.HeaderLabelCounterSignatureV2` or, if preferred, maintain it as a
+detached countersignature.
 
 When verifying countersignatures, it is necessary to pass the parent object in the `Verify` function
 of the countersignature holder.
