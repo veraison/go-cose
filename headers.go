@@ -257,7 +257,10 @@ func unmarshalAsCountersignature(value cbor.RawMessage) (any, error) {
 func unmarshalAsAny(value cbor.RawMessage) (any, error) {
 	var result any
 	err := decMode.Unmarshal(value, &result)
-	return result, err
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Headers represents "two buckets of information that are not

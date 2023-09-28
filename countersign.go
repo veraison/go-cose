@@ -163,6 +163,8 @@ func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawM
 	var payload []byte
 
 	switch t := target.(type) {
+	case *SignMessage:
+		return countersignToBeSigned(abbreviated, *t, signProtected, external)
 	case SignMessage:
 		if len(t.Signatures) == 0 {
 			return nil, errors.New("SignMessage has no signatures yet")
@@ -175,6 +177,8 @@ func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawM
 			return nil, ErrMissingPayload
 		}
 		payload = t.Payload
+	case *Sign1Message:
+		return countersignToBeSigned(abbreviated, *t, signProtected, external)
 	case Sign1Message:
 		if len(t.Signature) == 0 {
 			return nil, errors.New("Sign1Message was not signed yet")
@@ -196,6 +200,8 @@ func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawM
 			return nil, err
 		}
 		otherFields = []cbor.RawMessage{signature}
+	case *Signature:
+		return countersignToBeSigned(abbreviated, *t, signProtected, external)
 	case Signature:
 		bodyProtected, err = t.Headers.MarshalProtected()
 		if err != nil {
@@ -205,6 +211,8 @@ func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawM
 			return nil, errors.New("Signature was not signed yet")
 		}
 		payload = t.Signature
+	case *Countersignature:
+		return countersignToBeSigned(abbreviated, *t, signProtected, external)
 	case Countersignature:
 		bodyProtected, err = t.Headers.MarshalProtected()
 		if err != nil {
@@ -219,15 +227,18 @@ func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawM
 	}
 
 	var context string
-	switch {
-	case len(otherFields) == 0 && abbreviated == false:
-		context = "CounterSignature"
-	case len(otherFields) == 0 && abbreviated == true:
-		context = "CounterSignature0"
-	case len(otherFields) > 0 && abbreviated == false:
-		context = "CounterSignatureV2"
-	case len(otherFields) > 0 && abbreviated == true:
-		context = "CounterSignature0V2"
+	if len(otherFields) == 0 {
+		if abbreviated {
+			context = "CounterSignature0"
+		} else {
+			context = "CounterSignature"
+		}
+	} else {
+		if abbreviated {
+			context = "CounterSignature0V2"
+		} else {
+			context = "CounterSignatureV2"
+		}
 	}
 
 	bodyProtected, err = deterministicBinaryString(bodyProtected)
@@ -273,12 +284,7 @@ func Countersign0(rand io.Reader, signer Signer, parent any, external []byte) ([
 	if err != nil {
 		return nil, err
 	}
-	sig, err := signer.Sign(rand, toBeSigned)
-	if err != nil {
-		return nil, err
-	}
-
-	return sig, nil
+	return signer.Sign(rand, toBeSigned)
 }
 
 // VerifyCountersign0 verifies an abbreviated signature over a parent message
