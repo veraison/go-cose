@@ -165,14 +165,14 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "invalid counter signature",
 			h: ProtectedHeader{
-				HeaderLabelCounterSignature: Countersignature{},
+				HeaderLabelCounterSignature: &Countersignature{},
 			},
 			wantErr: "protected header: header parameter: counter signature: not allowed",
 		},
 		{
 			name: "invalid counter signature version 2",
 			h: ProtectedHeader{
-				HeaderLabelCounterSignatureV2: Countersignature{},
+				HeaderLabelCounterSignatureV2: &Countersignature{},
 			},
 			wantErr: "protected header: header parameter: Countersignature version 2: not allowed",
 		},
@@ -656,7 +656,7 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "counter signature without signature",
 			h: UnprotectedHeader{
-				HeaderLabelCounterSignature: []Countersignature{
+				HeaderLabelCounterSignature: []*Countersignature{
 					{
 						Headers: Headers{
 							Protected: ProtectedHeader{
@@ -674,7 +674,7 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "complete counter signature",
 			h: UnprotectedHeader{
-				HeaderLabelCounterSignature: []Countersignature{
+				HeaderLabelCounterSignature: []*Countersignature{
 					{
 						Headers: Headers{
 							Protected: ProtectedHeader{
@@ -719,7 +719,7 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "Countersignature version 2 without signature",
 			h: UnprotectedHeader{
-				HeaderLabelCounterSignatureV2: Countersignature{
+				HeaderLabelCounterSignatureV2: &Countersignature{
 					Headers: Headers{
 						Protected: ProtectedHeader{
 							HeaderLabelAlgorithm: AlgorithmEd25519,
@@ -735,7 +735,7 @@ func TestUnprotectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "complete Countersignature version 2",
 			h: UnprotectedHeader{
-				HeaderLabelCounterSignatureV2: Countersignature{
+				HeaderLabelCounterSignatureV2: &Countersignature{
 					Headers: Headers{
 						Protected: ProtectedHeader{
 							HeaderLabelAlgorithm: AlgorithmEd25519,
@@ -977,7 +977,7 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 				0xf2, 0x43, 0x8a, 0x45, 0x61, 0x59, 0xa2, 0x0a,
 			},
 			want: UnprotectedHeader{
-				HeaderLabelCounterSignature: Countersignature{
+				HeaderLabelCounterSignature: &Countersignature{
 					Headers: Headers{
 						RawProtected: []byte{0x43, 0xa1, 0x01, 0x27},
 						Protected: ProtectedHeader{
@@ -1019,7 +1019,7 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 				0xf2, 0x43, 0x8a, 0x45, 0x61, 0x59, 0xa2, 0x0a,
 			},
 			want: UnprotectedHeader{
-				HeaderLabelCounterSignatureV2: []Countersignature{
+				HeaderLabelCounterSignatureV2: []*Countersignature{
 					{
 						Headers: Headers{
 							RawProtected: []byte{0x43, 0xa1, 0x01, 0x27},

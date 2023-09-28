@@ -243,9 +243,9 @@ func unmarshalAsCountersignature(value cbor.RawMessage) (any, error) {
 	var result1 Countersignature
 	err := decMode.Unmarshal(value, &result1)
 	if err == nil {
-		return result1, nil
+		return &result1, nil
 	}
-	var result2 []Countersignature
+	var result2 []*Countersignature
 	err = decMode.Unmarshal(value, &result2)
 	if err == nil {
 		return result2, nil
@@ -496,8 +496,8 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 			if protected {
 				return errors.New("header parameter: counter signature: not allowed")
 			}
-			if _, ok := value.(Countersignature); !ok {
-				if _, ok := value.([]Countersignature); !ok {
+			if _, ok := value.(*Countersignature); !ok {
+				if _, ok := value.([]*Countersignature); !ok {
 					return errors.New("header parameter: counter signature is not a Countersignature or a list")
 				}
 			}
@@ -512,8 +512,8 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 			if protected {
 				return errors.New("header parameter: Countersignature version 2: not allowed")
 			}
-			if _, ok := value.(Countersignature); !ok {
-				if _, ok := value.([]Countersignature); !ok {
+			if _, ok := value.(*Countersignature); !ok {
+				if _, ok := value.([]*Countersignature); !ok {
 					return errors.New("header parameter: Countersignature version 2 is not a Countersignature or a list")
 				}
 			}

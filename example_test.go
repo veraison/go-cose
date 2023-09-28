@@ -268,8 +268,8 @@ func ExampleCountersignature() {
 	}
 
 	// add countersignature as message unprotected header; notice the
-	// countersignature should be assigned as value not reference
-	msgToSign.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2] = *msgCountersig
+	// countersignature should be assigned as reference
+	msgToSign.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2] = msgCountersig
 
 	// create a countersignature holder for the signature
 	sigCountersig := cose.NewCountersignature()
@@ -283,8 +283,8 @@ func ExampleCountersignature() {
 	}
 
 	// add countersignature as signature unprotected header; notice the
-	// countersignature should be assigned as value not reference
-	sigHolder.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2] = *sigCountersig
+	// countersignature should be assigned as reference
+	sigHolder.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2] = sigCountersig
 
 	sig, err := msgToSign.MarshalCBOR()
 	if err != nil {
@@ -310,7 +310,7 @@ func ExampleCountersignature() {
 	// single countersignature, but real code would consider checking if it
 	// consists in a slice of countersignatures too.
 	msgCountersigHdr := msgToVerify.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2]
-	msgCountersigToVerify := msgCountersigHdr.(cose.Countersignature)
+	msgCountersigToVerify := msgCountersigHdr.(*cose.Countersignature)
 
 	// verify message countersignature
 	err = msgCountersigToVerify.Verify(verifier, msgToVerify, nil)
@@ -324,7 +324,7 @@ func ExampleCountersignature() {
 	// consists in a slice of countersignatures too.
 	sig0 := msgToVerify.Signatures[0]
 	sigCountersigHdr := sig0.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2]
-	sigCountersigToVerify := sigCountersigHdr.(cose.Countersignature)
+	sigCountersigToVerify := sigCountersigHdr.(*cose.Countersignature)
 
 	// verify signature countersignature
 	err = sigCountersigToVerify.Verify(verifier, sig0, nil)
