@@ -168,6 +168,20 @@ These are the required packages for each built-in cose.Algorithm:
 - cose.AlgorithmPS384, cose.AlgorithmPS512, cose.AlgorithmES384, cose.AlgorithmES512: `crypto/sha512`
 - cose.AlgorithmEdDSA: none
 
+### Countersigning
+
+It is possible to countersign `cose.Sign1Message`, `cose.SignMessage`, `cose.Signature` and
+`cose.Countersignature` objects and add them as unprotected headers. In order to do so, first create
+a countersignature holder with `cose.NewCountersignature()` and call its `Sign` function passing
+the parent object which is going to be countersigned. Then assign the countersignature as an
+unprotected header `cose.HeaderLabelCounterSignatureV2` or, if preferred, maintain it as a
+detached countersignature.
+
+When verifying countersignatures, it is necessary to pass the parent object in the `Verify` function
+of the countersignature holder.
+
+See [example_test.go](./example_test.go) for examples.
+
 ## Features
 
 ### Signing and Verifying Objects
@@ -176,6 +190,11 @@ go-cose supports two different signature structures:
 - [cose.Sign1Message](https://pkg.go.dev/github.com/veraison/go-cose#Sign1Message) implements [COSE_Sign1](https://datatracker.ietf.org/doc/html/rfc8152#section-4.2).
 - [cose.SignMessage](https://pkg.go.dev/github.com/veraison/go-cose#SignMessage) implements [COSE_Sign](https://datatracker.ietf.org/doc/html/rfc8152#section-4.1).
 > :warning: The COSE_Sign API is currently **EXPERIMENTAL** and may be changed or removed in a later release.  In addition, the amount of functional and security testing it has received so far is significantly lower than the COSE_Sign1 API.
+
+### Countersignatures
+
+go-cose supports [COSE_Countersignature](https://tools.ietf.org/html/rfc9338#section-3.1), check [cose.Countersignature](https://pkg.go.dev/github.com/veraison/go-cose#Countersignature).
+> :warning: The COSE_Countersignature API is currently **EXPERIMENTAL** and may be changed or removed in a later release.
 
 ### Built-in Algorithms
 

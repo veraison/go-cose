@@ -229,3 +229,120 @@ func ExampleDigestSigner() {
 	// Output:
 	// digest signed
 }
+
+// This example demonstrates signing and verifying countersignatures.
+//
+// The COSE Countersignature API is EXPERIMENTAL and may be changed or removed in a later
+// release.
+func ExampleCountersignature() {
+	// create a signature holder
+	sigHolder := cose.NewSignature()
+	sigHolder.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+	sigHolder.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
+
+	// create message to be signed
+	msgToSign := cose.NewSignMessage()
+	msgToSign.Payload = []byte("hello world")
+	msgToSign.Signatures = append(msgToSign.Signatures, sigHolder)
+
+	// create a signer
+	privateKey, _ := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	signer, _ := cose.NewSigner(cose.AlgorithmES512, privateKey)
+
+	// sign message
+	msgToSign.Sign(rand.Reader, nil, signer)
+
+	// create a countersignature holder for the message
+	msgCountersig := cose.NewCountersignature()
+	msgCountersig.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+	msgCountersig.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("11")
+
+	// create a countersigner
+	counterPrivateKey, _ := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	countersigner, _ := cose.NewSigner(cose.AlgorithmES512, counterPrivateKey)
+
+	// countersign message
+	err := msgCountersig.Sign(rand.Reader, countersigner, msgToSign, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// add countersignature as message unprotected header; notice the
+	// countersignature should be assigned as reference
+	msgToSign.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2] = msgCountersig
+
+	// create a countersignature holder for the signature
+	sigCountersig := cose.NewCountersignature()
+	sigCountersig.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+	sigCountersig.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("11")
+
+	// countersign signature
+	err = sigCountersig.Sign(rand.Reader, countersigner, sigHolder, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// add countersignature as signature unprotected header; notice the
+	// countersignature should be assigned as reference
+	sigHolder.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2] = sigCountersig
+
+	sig, err := msgToSign.MarshalCBOR()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("message signed and countersigned")
+
+	// create a verifier from a trusted public key
+	publicKey := counterPrivateKey.Public()
+	verifier, err := cose.NewVerifier(cose.AlgorithmES512, publicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// decode COSE_Sign message containing countersignatures
+	var msgToVerify cose.SignMessage
+	err = msgToVerify.UnmarshalCBOR(sig)
+	if err != nil {
+		panic(err)
+	}
+
+	// unwrap the message countersignature; the example assumes the header is a
+	// single countersignature, but real code would consider checking if it
+	// consists in a slice of countersignatures too.
+	msgCountersigHdr := msgToVerify.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2]
+	msgCountersigToVerify := msgCountersigHdr.(*cose.Countersignature)
+
+	// verify message countersignature
+	err = msgCountersigToVerify.Verify(verifier, msgToVerify, nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("message countersignature verified")
+
+	// unwrap the signature countersignature; the example assumes the header is a
+	// single countersignature, but real code would consider checking if it
+	// consists in a slice of countersignatures too.
+	sig0 := msgToVerify.Signatures[0]
+	sigCountersigHdr := sig0.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2]
+	sigCountersigToVerify := sigCountersigHdr.(*cose.Countersignature)
+
+	// verify signature countersignature
+	err = sigCountersigToVerify.Verify(verifier, sig0, nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("signature countersignature verified")
+
+	// tamper the message and verification should fail
+	msgToVerify.Payload = []byte("foobar")
+	err = msgCountersigToVerify.Verify(verifier, msgToVerify, nil)
+	if err != cose.ErrVerification {
+		panic(err)
+	}
+	fmt.Println("verification error as expected")
+	// Output:
+	// message signed and countersigned
+	// message countersignature verified
+	// signature countersignature verified
+	// verification error as expected
+}

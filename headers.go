@@ -12,18 +12,20 @@ import (
 //
 // Reference: https://www.iana.org/assignments/cose/cose.xhtml#header-parameters
 const (
-	HeaderLabelAlgorithm         int64 = 1
-	HeaderLabelCritical          int64 = 2
-	HeaderLabelContentType       int64 = 3
-	HeaderLabelKeyID             int64 = 4
-	HeaderLabelIV                int64 = 5
-	HeaderLabelPartialIV         int64 = 6
-	HeaderLabelCounterSignature  int64 = 7
-	HeaderLabelCounterSignature0 int64 = 9
-	HeaderLabelX5Bag             int64 = 32
-	HeaderLabelX5Chain           int64 = 33
-	HeaderLabelX5T               int64 = 34
-	HeaderLabelX5U               int64 = 35
+	HeaderLabelAlgorithm           int64 = 1
+	HeaderLabelCritical            int64 = 2
+	HeaderLabelContentType         int64 = 3
+	HeaderLabelKeyID               int64 = 4
+	HeaderLabelIV                  int64 = 5
+	HeaderLabelPartialIV           int64 = 6
+	HeaderLabelCounterSignature    int64 = 7
+	HeaderLabelCounterSignature0   int64 = 9
+	HeaderLabelCounterSignatureV2  int64 = 11
+	HeaderLabelCounterSignature0V2 int64 = 12
+	HeaderLabelX5Bag               int64 = 32
+	HeaderLabelX5Chain             int64 = 33
+	HeaderLabelX5T                 int64 = 34
+	HeaderLabelX5U                 int64 = 35
 )
 
 // ProtectedHeader contains parameters that are to be cryptographically
@@ -197,15 +199,68 @@ func (h *UnprotectedHeader) UnmarshalCBOR(data []byte) error {
 	if err := validateHeaderLabelCBOR(data); err != nil {
 		return err
 	}
-	var header map[any]any
-	if err := decMode.Unmarshal(data, &header); err != nil {
+
+	// In order to unmarshal Countersignature structs, it is required to make it
+	// in two steps instead of one.
+	var partialHeader map[any]cbor.RawMessage
+	if err := decMode.Unmarshal(data, &partialHeader); err != nil {
 		return err
 	}
+	header := make(map[any]any, len(partialHeader))
+	for k, v := range partialHeader {
+		v, err := unmarshalUnprotected(k, v)
+		if err != nil {
+			return err
+		}
+		header[k] = v
+	}
+
 	if err := validateHeaderParameters(header, false); err != nil {
 		return fmt.Errorf("unprotected header: %w", err)
 	}
 	*h = header
 	return nil
+}
+
+// unmarshalUnprotected produces known structs such as counter signature
+// headers, otherwise it defaults to regular unmarshaling to simple types.
+func unmarshalUnprotected(key any, value cbor.RawMessage) (any, error) {
+	label, ok := normalizeLabel(key)
+	if ok {
+		switch label {
+		case HeaderLabelCounterSignature, HeaderLabelCounterSignatureV2:
+			return unmarshalAsCountersignature(value)
+		default:
+		}
+	}
+
+	return unmarshalAsAny(value)
+}
+
+// unmarshalAsCountersignature produces a Countersignature struct or a list of
+// Countersignatures.
+func unmarshalAsCountersignature(value cbor.RawMessage) (any, error) {
+	var result1 Countersignature
+	err := decMode.Unmarshal(value, &result1)
+	if err == nil {
+		return &result1, nil
+	}
+	var result2 []*Countersignature
+	err = decMode.Unmarshal(value, &result2)
+	if err == nil {
+		return result2, nil
+	}
+	return nil, errors.New("invalid Countersignature object / list of objects")
+}
+
+// unmarshalAsAny produces simple types.
+func unmarshalAsAny(value cbor.RawMessage) (any, error) {
+	var result any
+	err := decMode.Unmarshal(value, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Headers represents "two buckets of information that are not
@@ -436,6 +491,38 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 			}
 			if hasLabel(h, HeaderLabelIV) {
 				return errors.New("header parameter: IV and PartialIV: parameters must not both be present")
+			}
+		case HeaderLabelCounterSignature:
+			if protected {
+				return errors.New("header parameter: counter signature: not allowed")
+			}
+			if _, ok := value.(*Countersignature); !ok {
+				if _, ok := value.([]*Countersignature); !ok {
+					return errors.New("header parameter: counter signature is not a Countersignature or a list")
+				}
+			}
+		case HeaderLabelCounterSignature0:
+			if protected {
+				return errors.New("header parameter: countersignature0: not allowed")
+			}
+			if !canBstr(value) {
+				return errors.New("header parameter: countersignature0: require bstr type")
+			}
+		case HeaderLabelCounterSignatureV2:
+			if protected {
+				return errors.New("header parameter: Countersignature version 2: not allowed")
+			}
+			if _, ok := value.(*Countersignature); !ok {
+				if _, ok := value.([]*Countersignature); !ok {
+					return errors.New("header parameter: Countersignature version 2 is not a Countersignature or a list")
+				}
+			}
+		case HeaderLabelCounterSignature0V2:
+			if protected {
+				return errors.New("header parameter: Countersignature0 version 2: not allowed")
+			}
+			if !canBstr(value) {
+				return errors.New("header parameter: Countersignature0 version 2: require bstr type")
 			}
 		}
 	}
