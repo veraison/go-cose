@@ -210,6 +210,41 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 			},
 			wantErr: "protected header: header parameter: Countersignature version 2: not allowed",
 		},
+		{
+			name: "content type empty",
+			h: ProtectedHeader{
+				HeaderLabelContentType: "",
+			},
+			wantErr: "protected header: header parameter: content type: require non-empty string",
+		},
+		{
+			name: "content type leading space",
+			h: ProtectedHeader{
+				HeaderLabelContentType: " a/b",
+			},
+			wantErr: "protected header: header parameter: content type: require no leading/trailing whitespace",
+		},
+		{
+			name: "content type trailing space",
+			h: ProtectedHeader{
+				HeaderLabelContentType: "a/b ",
+			},
+			wantErr: "protected header: header parameter: content type: require no leading/trailing whitespace",
+		},
+		{
+			name: "content type no slash",
+			h: ProtectedHeader{
+				HeaderLabelContentType: "ab",
+			},
+			wantErr: "protected header: header parameter: content type: require text of form type/subtype",
+		},
+		{
+			name: "content type too many slashes",
+			h: ProtectedHeader{
+				HeaderLabelContentType: "a/b/c",
+			},
+			wantErr: "protected header: header parameter: content type: require text of form type/subtype",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

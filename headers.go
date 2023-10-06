@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 )
@@ -471,8 +472,23 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 				return fmt.Errorf("header parameter: crit: %w", err)
 			}
 		case HeaderLabelContentType:
-			if !canTstr(value) && !canUint(value) {
+			is_tstr := canTstr(value)
+			if !is_tstr && !canUint(value) {
 				return errors.New("header parameter: content type: require tstr / uint type")
+			}
+			if is_tstr {
+				v := value.(string)
+				if len(v) == 0 {
+					return errors.New("header parameter: content type: require non-empty string")
+				}
+				if v[0] == ' ' || v[len(v)-1] == ' ' {
+					return errors.New("header parameter: content type: require no leading/trailing whitespace")
+				}
+				// Basic check that the content type is of form type/subtype.
+				// We don't check the precise definition though (RFC 6838 Section 4.2).
+				if strings.Count(v, "/") != 1 {
+					return errors.New("header parameter: content type: require text of form type/subtype")
+				}
 			}
 		case HeaderLabelKeyID:
 			if !canBstr(value) {
