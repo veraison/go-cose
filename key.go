@@ -2,9 +2,11 @@ package cose
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"math/big"
@@ -703,8 +705,29 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		var curve elliptic.Curve
+		_, x, y, d := k.EC2()
+		if len(x) == 0 || len(y) == 0 {
+			var curve ecdh.Curve
+			switch alg {
+			case AlgorithmES256:
+				curve = ecdh.P256()
+			case AlgorithmES384:
+				curve = ecdh.P384()
+			case AlgorithmES512:
+				curve = ecdh.P521()
+			}
+			key, err := curve.NewPrivateKey(d)
+			if err != nil {
+				return nil, err
+			}
+			encodedKey, err := x509.MarshalPKCS8PrivateKey(key)
+			if err != nil {
+				return nil, err
+			}
+			return x509.ParsePKCS8PrivateKey(encodedKey)
+		}
 
+		var curve elliptic.Curve
 		switch alg {
 		case AlgorithmES256:
 			curve = elliptic.P256()
@@ -714,14 +737,8 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 			curve = elliptic.P521()
 		}
 
-		_, x, y, d := k.EC2()
-		var bx, by *big.Int
-		if len(x) == 0 || len(y) == 0 {
-			bx, by = curve.ScalarBaseMult(d)
-		} else {
-			bx = new(big.Int).SetBytes(x)
-			by = new(big.Int).SetBytes(y)
-		}
+		bx := new(big.Int).SetBytes(x)
+		by := new(big.Int).SetBytes(y)
 		bd := new(big.Int).SetBytes(d)
 
 		return &ecdsa.PrivateKey{
