@@ -23,6 +23,7 @@ const (
 	HeaderLabelCounterSignature0   int64 = 9
 	HeaderLabelCounterSignatureV2  int64 = 11
 	HeaderLabelCounterSignature0V2 int64 = 12
+	HeaderLabelCWTClaim            int64 = 15
 	HeaderLabelX5Bag               int64 = 32
 	HeaderLabelX5Chain             int64 = 33
 	HeaderLabelX5T                 int64 = 34
