@@ -6,18 +6,24 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	// "github.com/fxamacker/cbor/v2"
 	"github.com/veraison/go-cose"
 )
 
 // This example demonstrates signing and verifying COSE_Sign1 signatures.
 func ExampleCWTMessage() {
 
-	fmt.Println("begin ExampleCWTMessage")
-
 	// create message to be signed
 	msgToSign := cose.NewSign1Message()
 	msgToSign.Payload = []byte("hello world")
 	msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
+
+	claims := make(cose.CWTClaims)
+	claims[cose.CWTClaimIssuer] = "issuer.example"
+	claims[cose.CWTClaimSubject] = "subject.example"
+
+	msgToSign.Headers.Protected.SetCWTClaims(claims)
+
 	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
 
 	// create a signer
@@ -40,6 +46,10 @@ func ExampleCWTMessage() {
 		panic(err)
 	}
 	fmt.Println("message signed")
+
+	// coseSign1Diagnostic, err := cbor.Diagnose(sig)
+	// fmt.Println(coseSign1Diagnostic)
+	// 18([h'a20138230fa2016e6973737565722e6578616d706c65026f7375626a6563742e6578616d706c65', {4: h'31'}, h'68656c6c6f20776f726c64', h'00528f74d41bae106bba113c3802d3ca69efac4e65e59e99e8d7b74a067adebc769c4982ef389cf21be044e7b5dbed86b20c94a70ce02a20693e04f6ee94669974030147db61af96137d415961a83ae0cde53d4fd4fc6cf224692e25067c0eb17e9f18717e88f64775f11d505b4cb6175e4f6a5c75897001ab480f59437ad52cf65bfcef'])
 
 	// create a verifier from a trusted public key
 	publicKey := privateKey.Public()
@@ -68,7 +78,6 @@ func ExampleCWTMessage() {
 	}
 	fmt.Println("verification error as expected")
 	// Output:
-	// begin ExampleCWTMessage
 	// message signed
 	// message verified
 	// verification error as expected

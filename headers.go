@@ -23,7 +23,7 @@ const (
 	HeaderLabelCounterSignature0   int64 = 9
 	HeaderLabelCounterSignatureV2  int64 = 11
 	HeaderLabelCounterSignature0V2 int64 = 12
-	HeaderLabelCWTClaim            int64 = 15
+	HeaderLabelCWTClaims           int64 = 15
 	HeaderLabelX5Bag               int64 = 32
 	HeaderLabelX5Chain             int64 = 33
 	HeaderLabelX5T                 int64 = 34
@@ -98,9 +98,15 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// SetAlgorithm sets the algorithm value to the algorithm header.
+// SetAlgorithm sets the algorithm value of the protected header.
 func (h ProtectedHeader) SetAlgorithm(alg Algorithm) {
 	h[HeaderLabelAlgorithm] = alg
+}
+
+// SetCWTClaims sets the CWT Claims value of the protected header.
+func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) {
+	// TODO: validate claims, for example ensuring that 1 and 2 are tstr, not bstr
+	h[HeaderLabelCWTClaims] = claims
 }
 
 // Algorithm gets the algorithm value from the algorithm header.
