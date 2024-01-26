@@ -12,7 +12,7 @@ import (
 // This example demonstrates signing and verifying COSE_Sign1 signatures.
 func ExampleCWTMessage() {
 
-	fmt.Println("begin2 ExampleCWTMessage")
+	fmt.Println("begin ExampleCWTMessage")
 
 	// create message to be signed
 	msgToSign := cose.NewSign1Message()
