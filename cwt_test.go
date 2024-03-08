@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	// "github.com/fxamacker/cbor/v2"
 	"github.com/veraison/go-cose"
 )
 
