@@ -17,10 +17,10 @@ func ExampleCWTMessage() {
 	msgToSign.Payload = []byte("hello world")
 	msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
 
+	msgToSign.Headers.Protected.SetType("application/cwt")
 	claims := make(cose.CWTClaims)
 	claims[cose.CWTClaimIssuer] = "issuer.example"
 	claims[cose.CWTClaimSubject] = "subject.example"
-
 	msgToSign.Headers.Protected.SetCWTClaims(claims)
 
 	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
@@ -41,11 +41,13 @@ func ExampleCWTMessage() {
 		panic(err)
 	}
 	sig, err := msgToSign.MarshalCBOR()
+	// uncomment to review EDN
+	// coseSign1Diagnostic, err := cbor.Diagnose(sig)
+	// fmt.Println(coseSign1Diagnostic)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("message signed")
-
 
 	// create a verifier from a trusted public key
 	publicKey := privateKey.Public()
