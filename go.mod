@@ -1,6 +1,6 @@
 module github.com/veraison/go-cose
 
-go 1.18
+go 1.21
 
 require github.com/fxamacker/cbor/v2 v2.5.0
 
