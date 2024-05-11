@@ -172,18 +172,6 @@ func generateTestECDSAKey(t *testing.T) *ecdsa.PrivateKey {
 	return key
 }
 
-func Test_customCurveKeySigner(t *testing.T) {
-	// https://github.com/veraison/go-cose/issues/59
-	pCustom := *elliptic.P256().Params()
-	pCustom.Name = "P-custom"
-	pCustom.BitSize /= 2
-	key, err := ecdsa.GenerateKey(&pCustom, rand.Reader)
-	if err != nil {
-		t.Fatalf("ecdsa.GenerateKey() error = %v", err)
-	}
-	testSignVerify(t, AlgorithmES256, key, false)
-}
-
 func Test_ecdsaKeySigner(t *testing.T) {
 	key := generateTestECDSAKey(t)
 	testSignVerify(t, AlgorithmES256, key, false)

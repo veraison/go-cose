@@ -36,8 +36,11 @@ type DigestVerifier interface {
 // NewVerifier returns a verifier with a given public key.
 // Only golang built-in crypto public keys of type `*rsa.PublicKey`,
 // `*ecdsa.PublicKey`, and `ed25519.PublicKey` are accepted.
+// When `*ecdsa.PublicKey` is specified, its curve must be supported by
+// crypto/ecdh.
 //
-// The returned signer for rsa and ecdsa keys also implements `cose.DigestSigner`.
+// The returned signer for rsa and ecdsa keys also implements
+// `cose.DigestSigner`.
 func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 	var errReason string
 	switch alg {
@@ -60,8 +63,11 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
 		}
-		if !vk.Curve.IsOnCurve(vk.X, vk.Y) {
-			return nil, errors.New("public key point is not on curve")
+		if _, err := vk.ECDH(); err != nil {
+			if err.Error() == "ecdsa: invalid public key" {
+				return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
+			}
+			return nil, fmt.Errorf("%v: %w: %v", alg, ErrInvalidPubKey, err)
 		}
 		return &ecdsaVerifier{
 			alg: alg,

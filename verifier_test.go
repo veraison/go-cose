@@ -48,6 +48,13 @@ func TestNewVerifier(t *testing.T) {
 	// craft an EC public key with the x-coord not on curve
 	ecdsaKeyPointNotOnCurve := generateBogusECKey()
 
+	// craft an EC public key with a curve not supported by crypto/ecdh
+	ecdsaKeyUnsupportedCurve := &ecdsa.PublicKey{
+		Curve: ecdsaKey.Curve.Params(),
+		X:     ecdsaKey.X,
+		Y:     ecdsaKey.Y,
+	}
+
 	// run tests
 	tests := []struct {
 		name    string
@@ -125,7 +132,13 @@ func TestNewVerifier(t *testing.T) {
 			name:    "bogus ecdsa public key (point not on curve)",
 			alg:     AlgorithmES256,
 			key:     ecdsaKeyPointNotOnCurve,
-			wantErr: "public key point is not on curve",
+			wantErr: "ES256: invalid public key",
+		},
+		{
+			name:    "ecdsa public key with unsupported curve",
+			alg:     AlgorithmES256,
+			key:     ecdsaKeyUnsupportedCurve,
+			wantErr: "ES256: invalid public key: ecdsa: unsupported curve by crypto/ecdh",
 		},
 	}
 	for _, tt := range tests {
