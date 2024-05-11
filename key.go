@@ -692,6 +692,7 @@ func (k *Key) PublicKey() (crypto.PublicKey, error) {
 }
 
 // PrivateKey returns a crypto.PrivateKey generated using Key's parameters.
+// Compressed point is not supported for EC2 keys.
 func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 	if err := k.validate(KeyOpSign); err != nil {
 		return nil, err
@@ -703,8 +704,12 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
-		var curve elliptic.Curve
+		_, x, y, d := k.EC2()
+		if len(x) == 0 || len(y) == 0 {
+			return nil, fmt.Errorf("%w: compressed point not supported", ErrInvalidPrivKey)
+		}
 
+		var curve elliptic.Curve
 		switch alg {
 		case AlgorithmES256:
 			curve = elliptic.P256()
@@ -714,14 +719,8 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 			curve = elliptic.P521()
 		}
 
-		_, x, y, d := k.EC2()
-		var bx, by *big.Int
-		if len(x) == 0 || len(y) == 0 {
-			bx, by = curve.ScalarBaseMult(d)
-		} else {
-			bx = new(big.Int).SetBytes(x)
-			by = new(big.Int).SetBytes(y)
-		}
+		bx := new(big.Int).SetBytes(x)
+		by := new(big.Int).SetBytes(y)
 		bd := new(big.Int).SetBytes(d)
 
 		return &ecdsa.PrivateKey{

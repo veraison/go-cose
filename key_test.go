@@ -1487,15 +1487,8 @@ func TestKey_PrivateKey(t *testing.T) {
 					KeyLabelEC2D:     ec256d,
 				},
 			},
-			&ecdsa.PrivateKey{
-				PublicKey: ecdsa.PublicKey{
-					Curve: elliptic.P256(),
-					X:     new(big.Int).SetBytes(ec256x),
-					Y:     new(big.Int).SetBytes(ec256y),
-				},
-				D: new(big.Int).SetBytes(ec256d),
-			},
-			"",
+			nil,
+			"invalid private key: compressed point not supported",
 		}, {
 			"CurveP384", &Key{
 				Type: KeyTypeEC2,
