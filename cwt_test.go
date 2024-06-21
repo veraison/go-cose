@@ -11,16 +11,16 @@ import (
 
 // This example demonstrates signing and verifying COSE_Sign1 signatures.
 func ExampleCWTMessage() {
-
 	// create message to be signed
 	msgToSign := cose.NewSign1Message()
 	msgToSign.Payload = []byte("hello world")
 	msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
 
 	msgToSign.Headers.Protected.SetType("application/cwt")
-	claims := make(cose.CWTClaims)
-	claims[cose.CWTClaimIssuer] = "issuer.example"
-	claims[cose.CWTClaimSubject] = "subject.example"
+	claims := cose.CWTClaims{
+		cose.CWTClaimIssuer:  "issuer.example",
+		cose.CWTClaimSubject: "subject.example",
+	}
 	msgToSign.Headers.Protected.SetCWTClaims(claims)
 
 	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
