@@ -18,9 +18,10 @@ func ExampleCWTMessage() {
 	msgToSign.Headers.Protected.SetAlgorithm(cose.AlgorithmES512)
 
 	msgToSign.Headers.Protected.SetType("application/cwt")
-	claims := make(cose.CWTClaims)
-	claims[cose.CWTClaimIssuer] = "issuer.example"
-	claims[cose.CWTClaimSubject] = "subject.example"
+	claims := cose.CWTClaims{
+		cose.CWTClaimIssuer:  "issuer.example",
+		cose.CWTClaimSubject: "subject.example",
+	}
 	msgToSign.Headers.Protected.SetCWTClaims(claims)
 
 	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
