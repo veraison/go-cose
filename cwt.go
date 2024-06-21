@@ -1,6 +1,6 @@
 package cose
 
-// https://www.iana.org/assignments/cwt/cwt.xhtml
+// https://www.iana.org/assignments/cwt/cwt.xhtml#claims-registry
 const (
 	CWTClaimIssuer         int64 = 1
 	CWTClaimSubject        int64 = 2
