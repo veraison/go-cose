@@ -11,7 +11,6 @@ import (
 
 // This example demonstrates signing and verifying COSE_Sign1 signatures.
 func ExampleCWTMessage() {
-
 	// create message to be signed
 	msgToSign := cose.NewSign1Message()
 	msgToSign.Payload = []byte("hello world")
