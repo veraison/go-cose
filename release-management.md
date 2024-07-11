@@ -56,7 +56,7 @@ Each major release will go through one or more `-alpha.n` and `-rc.n` pre-releas
 
 ### Minor Releases
 
-The go-cose project will issue minor releases when incremental improvements, or bug fixes are added to existing functionality in a [Major Release](#major-releases).
+The go-cose project will issue minor releases when incremental improvements, or bug fixes are added to existing functionality.
 Minor releases will increment the minor field within the [semver][sem-ver] format.
 
 Each minor release will go through one or more `-alpha.n` and `-rc.n` pre-release phases.
