@@ -7,7 +7,7 @@ This document describes [go-cose][go-cose] project release management, which inc
 The go-cose project maintainers strive to provide a stable go-lang implementation for interacting with [COSE][ietf-cose] constructs.
 Stable implies appropriate and measured changes to the library assuring consumers have the necessary functionality to interact with COSE objects.
 If you or your project require added functionality, or bug fixes, please open an issue or create a pull request.
-The project welcomes all contributions from adding functionality, implementing testing to security reviews.
+The project welcomes all contributions from adding functionality, implementing testing, security reviews to the release management.
 Please see [here](https://github.com/veraison#contributing) for how to contribute.
 
 ## Release Versioning
@@ -43,12 +43,14 @@ All version and branch names are lower case.
 
 ### Major Releases
 
-The go-cose project will issue major releases when substantial functionality has changed, including:
+As a best practice, consumers should opt-into new capabilities through major releases.
+The go-cose project will not add new functionality to patches or minor releases as this could create a new surface area that may be exploited.
+Consumers should make explicit opt-in decisions to upgrade, or possibly downgrade if necessary due to unexpected breaking changes.
 
-- New capabilities consumers may want to opt-into, rather than automatically get as a result of getting the latest minor release or patch.
-New and unexpected capabilities _can_ be an attack vector.
-Making explicit opt-in decisions to upgrade, or possibly downgrade should be the choice of a project consuming go-cose.
-- Breaking Changes, where projects should make an implicit decision to upgrade, and adjust for breaking changes.
+The go-cose project will issue major releases when:
+
+- Functionality has changed
+- Breaking changes are required
 
 Each major release will go through one or more `-alpha.n` and `-rc.n` pre-release phases.
 
