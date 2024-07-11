@@ -4,6 +4,8 @@
 
 This document describes the checklist to publish a release via GitHub workflow.
 
+The maintainers may periodically update this checklist based on feedback.
+
 NOTE: Make sure the dependencies in `go.mod` file are expected by the release.
 For example, if there are dependencies on certain version of notation library (notation-go or notation-core-go) or ORAS library (oras-go), make sure that version of library is released first, and the version number is updated accordingly in `go.mod` file.
 After updating go.mod file, run `go mod tidy` to ensure the go.sum file is also updated with any potential changes.

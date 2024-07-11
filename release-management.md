@@ -10,6 +10,8 @@ If you or your project require added functionality, or bug fixes, please open an
 The project welcomes all contributions from adding functionality, implementing testing, security reviews to the release management.
 Please see [here](https://github.com/veraison#contributing) for how to contribute.
 
+The maintainers may periodically update this policy based on feedback.
+
 ## Release Versioning
 
 Consumers of the go-cose project may build directly from main, or pull from released builds.
