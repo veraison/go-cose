@@ -87,7 +87,7 @@ Pre-releases go through one or more `-alpha.n` releases, followed by one or more
 To minimize branch management, no additional branches are maintained for each incremental release.
   - Considered an unstable release which should only be used for early development purposes.
   - Released incrementally until no additional issues and prs are made against the release.
-  - Once no triaged issues or prs are scoped to the release, an rc is cut.
+  - Once no triaged issues or pull requests (prs) are scoped to the release, a release candidate (rc) is cut.
   - To minimize confusion, and the risk of an alpha being widely deployed, alpha branches and released binaries may be removed at the discretion, and a [two-thirds supermajority][super-majority] vote, of the maintainers.
 Maintainers will create an Issue, and vote upon it for transparency to the decision to remove a release and/or branch.
   - Not [supported](#supported-releases)
