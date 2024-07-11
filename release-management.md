@@ -90,17 +90,17 @@ To minimize branch management, no additional branches are maintained for each in
   - Once no triaged issues or prs are scoped to the release, an rc is cut.
   - To minimize confusion, and the risk of an alpha being widely deployed, alpha branches and released binaries may be removed at the discretion, and a [two-thirds supermajority][super-majority] vote, of the maintainers.
 Maintainers will create an Issue, and vote upon it for transparency to the decision to remove a release and/or branch.
-  - Not supported
+  - Not [supported](#supported-releases)
 - **rc.n:** `X.Y.Z-rc.n`
   - Released as needed before a final version is released
   - Bugfixes on new features only as reported through usage
   - An rc is not expected to revert to an alpha release.
   - Once no triaged issues or prs are scoped to the release, an final version is cut.
   - A release candidate will typically have at least two weeks of bake time, providing the community time to provide feedback.
-  - Release candidate are cut from the branch where the work is done.
+  - Release candidates are cut from the branch where the work is done.
   - To minimize confusion, and the risk of an rc being widely deployed, rc branches and released binaries may be removed at the discretion, and a [two-thirds supermajority][super-majority] vote, of the maintainers.
 Maintainers will create an Issue, and vote upon it for transparency to the decision to remove a release and/or branch.
-  - Not supported
+  - Not [supported](#supported-releases)
 
 ## Supported Releases
 
