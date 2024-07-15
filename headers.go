@@ -23,6 +23,8 @@ const (
 	HeaderLabelCounterSignature0   int64 = 9
 	HeaderLabelCounterSignatureV2  int64 = 11
 	HeaderLabelCounterSignature0V2 int64 = 12
+	HeaderLabelCWTClaims           int64 = 15
+	HeaderLabelType                int64 = 16
 	HeaderLabelX5Bag               int64 = 32
 	HeaderLabelX5Chain             int64 = 33
 	HeaderLabelX5T                 int64 = 34
@@ -97,9 +99,33 @@ func (h *ProtectedHeader) UnmarshalCBOR(data []byte) error {
 	return nil
 }
 
-// SetAlgorithm sets the algorithm value to the algorithm header.
+// SetAlgorithm sets the algorithm value of the protected header.
 func (h ProtectedHeader) SetAlgorithm(alg Algorithm) {
 	h[HeaderLabelAlgorithm] = alg
+}
+
+// SetType sets the type of the cose object in the protected header.
+func (h ProtectedHeader) SetType(typ any) (any, error) {
+	if !canTstr(typ) && !canUint(typ) {
+		return typ, errors.New("header parameter: type: require tstr / uint type")
+	}
+	h[HeaderLabelType] = typ
+	return typ, nil
+}
+
+// SetCWTClaims sets the CWT Claims value of the protected header.
+func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
+	iss, hasIss := claims[1]
+	if hasIss && !canTstr(iss) {
+		return claims, errors.New("cwt claim: iss: require tstr")
+	}
+	sub, hasSub := claims[2]
+	if hasSub && !canTstr(sub) {
+		return claims, errors.New("cwt claim: sub: require tstr")
+	}
+	// TODO: validate claims, other claims
+	h[HeaderLabelCWTClaims] = claims
+	return claims, nil
 }
 
 // Algorithm gets the algorithm value from the algorithm header.
@@ -460,8 +486,8 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 		// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
 		switch label {
 		case HeaderLabelAlgorithm:
-			_, is_alg := value.(Algorithm)
-			if !is_alg && !canInt(value) && !canTstr(value) {
+			_, isAlg := value.(Algorithm)
+			if !isAlg && !canInt(value) && !canTstr(value) {
 				return errors.New("header parameter: alg: require int / tstr type")
 			}
 		case HeaderLabelCritical:
@@ -471,12 +497,31 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 			if err := ensureCritical(value, h); err != nil {
 				return fmt.Errorf("header parameter: crit: %w", err)
 			}
+		case HeaderLabelType:
+			isTstr := canTstr(value)
+			if !isTstr && !canUint(value) {
+				return errors.New("header parameter: type: require tstr / uint type")
+			}
+			if isTstr {
+				v := value.(string)
+				if len(v) == 0 {
+					return errors.New("header parameter: type: require non-empty string")
+				}
+				if v[0] == ' ' || v[len(v)-1] == ' ' {
+					return errors.New("header parameter: type: require no leading/trailing whitespace")
+				}
+				// Basic check that the content type is of form type/subtype.
+				// We don't check the precise definition though (RFC 6838 Section 4.2).
+				if strings.Count(v, "/") != 1 {
+					return errors.New("header parameter: type: require text of form type/subtype")
+				}
+			}
 		case HeaderLabelContentType:
-			is_tstr := canTstr(value)
-			if !is_tstr && !canUint(value) {
+			isTstr := canTstr(value)
+			if !isTstr && !canUint(value) {
 				return errors.New("header parameter: content type: require tstr / uint type")
 			}
-			if is_tstr {
+			if isTstr {
 				v := value.(string)
 				if len(v) == 0 {
 					return errors.New("header parameter: content type: require non-empty string")
