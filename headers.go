@@ -486,8 +486,8 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 		// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-3.1
 		switch label {
 		case HeaderLabelAlgorithm:
-			_, is_alg := value.(Algorithm)
-			if !is_alg && !canInt(value) && !canTstr(value) {
+			_, isAlg := value.(Algorithm)
+			if !isAlg && !canInt(value) && !canTstr(value) {
 				return errors.New("header parameter: alg: require int / tstr type")
 			}
 		case HeaderLabelCritical:
@@ -498,11 +498,11 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 				return fmt.Errorf("header parameter: crit: %w", err)
 			}
 		case HeaderLabelType:
-			is_tstr := canTstr(value)
-			if !is_tstr && !canUint(value) {
+			isTstr := canTstr(value)
+			if !isTstr && !canUint(value) {
 				return errors.New("header parameter: type: require tstr / uint type")
 			}
-			if is_tstr {
+			if isTstr {
 				v := value.(string)
 				if len(v) == 0 {
 					return errors.New("header parameter: type: require non-empty string")
@@ -517,11 +517,11 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 				}
 			}
 		case HeaderLabelContentType:
-			is_tstr := canTstr(value)
-			if !is_tstr && !canUint(value) {
+			isTstr := canTstr(value)
+			if !isTstr && !canUint(value) {
 				return errors.New("header parameter: content type: require tstr / uint type")
 			}
-			if is_tstr {
+			if isTstr {
 				v := value.(string)
 				if len(v) == 0 {
 					return errors.New("header parameter: content type: require non-empty string")
