@@ -246,4 +246,4 @@ go test -fuzz=FuzzSign1
 [mozilla-go-cose]:      http://github.com/mozilla-services/go-cose
 [veraison-go-cose]:     https://github.com/veraison/go-cose
 [current-release]:      https://github.com/veraison/go-cose/releases/tag/v1.1.0
-[current-pre-release]:  https://github.com/veraison/go-cose/releases/tag/v1.2.0-alpha.1
+[current-pre-release]:  https://github.com/veraison/go-cose/releases/tag/v1.3.0-alpha.1
