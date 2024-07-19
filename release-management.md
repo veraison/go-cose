@@ -15,11 +15,10 @@ The maintainers may periodically update this policy based on feedback.
 ## Release Versioning
 
 Consumers of the go-cose project may build directly from main, or pull from released builds.
-Builds from main must reference the git-commit as the version: `v1.0.0-2300d5c`
 
 All go-cose [releases][releases] follow a go-lang flavored derivation (`v*`) of the [semver][sem-ver] format, with optional pre-release labels.
 
-Logical Progression of a release: `v1.0.0-2300d5c` --> `v1.0.0-alpha.1` --> `v1.0.0-alpha.2` --> `v1.0.0-rc.1` --> `v1.0.0`
+Logical Progression of a release: `v1.0.0-alpha.1` --> `v1.0.0-alpha.2` --> `v1.0.0-rc.1` --> `v1.0.0`
 
 A new major or minor release will not have an automated build/release posted until the branch reaches alpha quality.
 
