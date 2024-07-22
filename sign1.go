@@ -87,12 +87,35 @@ func (m *Sign1Message) UnmarshalCBOR(data []byte) error {
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) error {
+	return m.sign(rand, nil, external, signer)
+}
+
+// SignDetached signs a Sign1Message using the provided Signer.
+// The signature is stored in m.Signature.
+//
+// Note that m.Signature is only valid as long as m.Headers.Protected
+// remains unchanged after calling this method.
+// It is possible to modify m.Headers.Unprotected after signing,
+// i.e., add counter signatures or timestamps.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (m *Sign1Message) SignDetached(rand io.Reader, detached, external []byte, signer Signer) error {
+	if detached == nil {
+		return ErrMissingPayload
+	}
+	return m.sign(rand, detached, external, signer)
+}
+
+func (m *Sign1Message) sign(rand io.Reader, detached, external []byte, signer Signer) error {
 	if m == nil {
 		return errors.New("signing nil Sign1Message")
 	}
-	if m.Payload == nil {
-		return ErrMissingPayload
+
+	payload, err := checkPayload(m.Payload, detached)
+	if err != nil {
+		return err
 	}
+
 	if len(m.Signature) > 0 {
 		return errors.New("Sign1Message signature already has signature bytes")
 	}
@@ -100,13 +123,13 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 	// check algorithm if present.
 	// `alg` header MUST be present if there is no externally supplied data.
 	alg := signer.Algorithm()
-	err := m.Headers.ensureSigningAlgorithm(alg, external)
+	err = m.Headers.ensureSigningAlgorithm(alg, external)
 	if err != nil {
 		return err
 	}
 
 	// sign the message
-	toBeSigned, err := m.toBeSigned(external)
+	toBeSigned, err := m.toBeSigned(external, payload)
 	if err != nil {
 		return err
 	}
@@ -124,12 +147,30 @@ func (m *Sign1Message) Sign(rand io.Reader, external []byte, signer Signer) erro
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
+	return m.verify(nil, external, verifier)
+}
+
+// VerifyDetached verifies the signature on the Sign1Message returning nil on
+// success or a suitable error if verification fails.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (m *Sign1Message) VerifyDetached(detached, external []byte, verifier Verifier) error {
+	if detached == nil {
+		return ErrMissingPayload
+	}
+	return m.verify(detached, external, verifier)
+}
+
+func (m *Sign1Message) verify(detached, external []byte, verifier Verifier) error {
 	if m == nil {
 		return errors.New("verifying nil Sign1Message")
 	}
-	if m.Payload == nil {
-		return ErrMissingPayload
+
+	payload, err := checkPayload(m.Payload, detached)
+	if err != nil {
+		return err
 	}
+
 	if len(m.Signature) == 0 {
 		return ErrEmptySignature
 	}
@@ -137,13 +178,13 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 	// check algorithm if present.
 	// `alg` header MUST present if there is no externally supplied data.
 	alg := verifier.Algorithm()
-	err := m.Headers.ensureVerificationAlgorithm(alg, external)
+	err = m.Headers.ensureVerificationAlgorithm(alg, external)
 	if err != nil {
 		return err
 	}
 
 	// verify the message
-	toBeSigned, err := m.toBeSigned(external)
+	toBeSigned, err := m.toBeSigned(external, payload)
 	if err != nil {
 		return err
 	}
@@ -153,7 +194,7 @@ func (m *Sign1Message) Verify(external []byte, verifier Verifier) error {
 // toBeSigned constructs Sig_structure, computes and returns ToBeSigned.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func (m *Sign1Message) toBeSigned(external []byte) ([]byte, error) {
+func (m *Sign1Message) toBeSigned(external []byte, payload []byte) ([]byte, error) {
 	// create a Sig_structure and populate it with the appropriate fields.
 	//
 	//   Sig_structure = [
@@ -178,7 +219,7 @@ func (m *Sign1Message) toBeSigned(external []byte) ([]byte, error) {
 		"Signature1", // context
 		protected,    // body_protected
 		external,     // external_aad
-		m.Payload,    // payload
+		payload,      // payload
 	}
 
 	// create the value ToBeSigned by encoding the Sig_structure to a byte
@@ -238,12 +279,28 @@ func (m *Sign1Message) doUnmarshal(data []byte) error {
 // This method is a wrapper of `Sign1Message.Sign()`.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func Sign1(rand io.Reader, signer Signer, headers Headers, payload []byte, external []byte) ([]byte, error) {
+func Sign1(rand io.Reader, signer Signer, headers Headers, payload, external []byte) ([]byte, error) {
 	msg := Sign1Message{
 		Headers: headers,
 		Payload: payload,
 	}
 	err := msg.Sign(rand, external, signer)
+	if err != nil {
+		return nil, err
+	}
+	return msg.MarshalCBOR()
+}
+
+// Sign1Detached signs a Sign1Message using the provided Signer.
+//
+// This method is a wrapper of `Sign1Message.SignDetached()`.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func Sign1Detached(rand io.Reader, signer Signer, headers Headers, detached, external []byte) ([]byte, error) {
+	msg := Sign1Message{
+		Headers: headers,
+	}
+	err := msg.SignDetached(rand, detached, external, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +350,19 @@ func (m *UntaggedSign1Message) Sign(rand io.Reader, external []byte, signer Sign
 	return (*Sign1Message)(m).Sign(rand, external, signer)
 }
 
+// SignDetached signs an UntaggedSign1Message using the provided Signer.
+// The signature is stored in m.Signature.
+//
+// Note that m.Signature is only valid as long as m.Headers.Protected
+// remains unchanged after calling this method.
+// It is possible to modify m.Headers.Unprotected after signing,
+// i.e., add counter signatures or timestamps.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (m *UntaggedSign1Message) SignDetached(rand io.Reader, detached, external []byte, signer Signer) error {
+	return (*Sign1Message)(m).SignDetached(rand, detached, external, signer)
+}
+
 // Verify verifies the signature on the UntaggedSign1Message returning nil on success or
 // a suitable error if verification fails.
 //
@@ -301,17 +371,41 @@ func (m *UntaggedSign1Message) Verify(external []byte, verifier Verifier) error 
 	return (*Sign1Message)(m).Verify(external, verifier)
 }
 
+// VerifyDetached verifies the signature on the UntaggedSign1Message returning
+// nil on success or a suitable error if verification fails.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (m *UntaggedSign1Message) VerifyDetached(detached, external []byte, verifier Verifier) error {
+	return (*Sign1Message)(m).VerifyDetached(detached, external, verifier)
+}
+
 // Sign1Untagged signs an UntaggedSign1Message using the provided Signer.
 //
 // This method is a wrapper of `UntaggedSign1Message.Sign()`.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
-func Sign1Untagged(rand io.Reader, signer Signer, headers Headers, payload []byte, external []byte) ([]byte, error) {
+func Sign1Untagged(rand io.Reader, signer Signer, headers Headers, payload, external []byte) ([]byte, error) {
 	msg := UntaggedSign1Message{
 		Headers: headers,
 		Payload: payload,
 	}
 	err := msg.Sign(rand, external, signer)
+	if err != nil {
+		return nil, err
+	}
+	return msg.MarshalCBOR()
+}
+
+// Sign1UntaggedDetached signs an UntaggedSign1Message using the provided Signer.
+//
+// This method is a wrapper of `UntaggedSign1Message.SignDetached()`.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func Sign1UntaggedDetached(rand io.Reader, signer Signer, headers Headers, detached, external []byte) ([]byte, error) {
+	msg := UntaggedSign1Message{
+		Headers: headers,
+	}
+	err := msg.SignDetached(rand, detached, external, signer)
 	if err != nil {
 		return nil, err
 	}
