@@ -27,3 +27,4 @@ vendor/
 
 # Editor files
 .vscode/
+.idea/
