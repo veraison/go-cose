@@ -14,6 +14,8 @@ var (
 	ErrNoSignatures          = errors.New("no signatures attached")
 	ErrUnavailableHashFunc   = errors.New("hash function is not available")
 	ErrVerification          = errors.New("verification error")
+	ErrEmptyTag              = errors.New("empty tag")
+	ErrAuthentication        = errors.New("authentication error")
 	ErrInvalidKey            = errors.New("invalid key")
 	ErrInvalidPubKey         = errors.New("invalid public key")
 	ErrInvalidPrivKey        = errors.New("invalid private key")

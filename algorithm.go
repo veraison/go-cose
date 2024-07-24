@@ -43,6 +43,15 @@ const (
 	// PureEdDSA by RFC 8152.
 	AlgorithmEdDSA Algorithm = -8
 
+	// HMAC w/ SHA-256
+	AlgorithmHMAC256_256 Algorithm = 5
+
+	// HMAC w/ SHA-384
+	AlgorithmHMAC384_384 Algorithm = 6
+
+	// HMAC w/ SHA-512
+	AlgorithmHMAC512_512 Algorithm = 7
+
 	// Reserved value.
 	AlgorithmReserved Algorithm = 0
 )
@@ -64,6 +73,21 @@ const (
 
 	// RSASSA-PKCS1-v1_5 using SHA-512 by RFC 8812.
 	AlgorithmRS512 Algorithm = -259
+
+	// HMAC w/ SHA-256 truncated to 64 bits
+	AlgorithmHMAC256_64 Algorithm = 4
+
+	// AES-MAC 128-bit key, 64-bit tag
+	AlgorithmAESMAC128_64 Algorithm = 14
+
+	// AES-MAC 256-bit key, 64-bit tag
+	AlgorithmAESMAC256_64 Algorithm = 15
+
+	// AES-MAC 128-bit key, 128-bit tag
+	AlgorithmAESMAC128_128 Algorithm = 25
+
+	// AES-MAC 256-bit key, 128-bit tag
+	AlgorithmAESMAC256_128 Algorithm = 26
 )
 
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
@@ -100,6 +124,22 @@ func (a Algorithm) String() string {
 		// As stated in RFC 8152 8.2, only the pure EdDSA version is used for
 		// COSE.
 		return "EdDSA"
+	case AlgorithmHMAC256_64:
+		return "HMAC246/64"
+	case AlgorithmHMAC256_256:
+		return "HMAC256/256"
+	case AlgorithmHMAC384_384:
+		return "HMAC384/384"
+	case AlgorithmHMAC512_512:
+		return "HMAC512/512"
+	case AlgorithmAESMAC128_64:
+		return "AESMAC128/64"
+	case AlgorithmAESMAC256_64:
+		return "AESMAC256/64"
+	case AlgorithmAESMAC128_128:
+		return "AESMAC128/128"
+	case AlgorithmAESMAC256_128:
+		return "AESMAC256/128"
 	case AlgorithmReserved:
 		return "Reserved"
 	default:
@@ -111,11 +151,12 @@ func (a Algorithm) String() string {
 // library.
 func (a Algorithm) hashFunc() crypto.Hash {
 	switch a {
-	case AlgorithmPS256, AlgorithmES256:
+	case AlgorithmPS256, AlgorithmES256, AlgorithmAESMAC256_64,
+		AlgorithmHMAC256_256:
 		return crypto.SHA256
-	case AlgorithmPS384, AlgorithmES384:
+	case AlgorithmPS384, AlgorithmES384, AlgorithmHMAC384_384:
 		return crypto.SHA384
-	case AlgorithmPS512, AlgorithmES512:
+	case AlgorithmPS512, AlgorithmES512, AlgorithmHMAC512_512:
 		return crypto.SHA512
 	default:
 		return 0
