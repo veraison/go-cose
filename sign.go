@@ -398,11 +398,27 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 // Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
 // later release.
 func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) error {
+	return m.sign(rand, external, nil, signers)
+}
+
+// SignDetached signs a SignMessage using the provided signers corresponding to the
+// signatures.
+//
+// See `Signature.Sign()` for advanced signing scenarios.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+//
+// # Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+func (m *SignMessage) SignDetached(rand io.Reader, external, detachedPayload []byte, signers ...Signer) error {
+	return m.sign(rand, external, detachedPayload, signers)
+}
+
+func (m *SignMessage) sign(rand io.Reader, external, detachedPayload []byte, signers []Signer) error {
 	if m == nil {
 		return errors.New("signing nil SignMessage")
-	}
-	if m.Payload == nil {
-		return ErrMissingPayload
 	}
 	switch len(m.Signatures) {
 	case 0:
@@ -413,16 +429,21 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) e
 		return fmt.Errorf("%d signers for %d signatures", len(signers), len(m.Signatures))
 	}
 
+	payload, err := resolvePayload(m.Payload, detachedPayload)
+	if err != nil {
+		return err
+	}
+
 	// populate common parameters
 	var protected cbor.RawMessage
-	protected, err := m.Headers.MarshalProtected()
+	protected, err = m.Headers.MarshalProtected()
 	if err != nil {
 		return err
 	}
 
 	// sign message accordingly
 	for i, signature := range m.Signatures {
-		if err := signature.Sign(rand, signers[i], protected, m.Payload, external); err != nil {
+		if err := signature.Sign(rand, signers[i], protected, payload, external); err != nil {
 			return err
 		}
 	}
@@ -443,11 +464,28 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) e
 // Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
 // later release.
 func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error {
+	return m.verify(external, nil, verifiers...)
+}
+
+// VerifyDetached verifies the signatures on the SignMessage against the corresponding
+// verifier, returning nil on success or a suitable error if verification fails.
+//
+// See `Signature.Verify()` for advanced verification scenarios like threshold
+// policies.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+//
+// # Experimental
+//
+// Notice: The COSE Sign API is EXPERIMENTAL and may be changed or removed in a
+// later release.
+func (m *SignMessage) VerifyDetached(external, detachedPayload []byte, verifiers ...Verifier) error {
+	return m.verify(external, detachedPayload, verifiers...)
+}
+
+func (m *SignMessage) verify(external, detachedPayload []byte, verifiers ...Verifier) error {
 	if m == nil {
 		return errors.New("verifying nil SignMessage")
-	}
-	if m.Payload == nil {
-		return ErrMissingPayload
 	}
 	switch len(m.Signatures) {
 	case 0:
@@ -458,18 +496,41 @@ func (m *SignMessage) Verify(external []byte, verifiers ...Verifier) error {
 		return fmt.Errorf("%d verifiers for %d signatures", len(verifiers), len(m.Signatures))
 	}
 
+	payload, err := resolvePayload(m.Payload, detachedPayload)
+	if err != nil {
+		return err
+	}
+
 	// populate common parameters
 	var protected cbor.RawMessage
-	protected, err := m.Headers.MarshalProtected()
+	protected, err = m.Headers.MarshalProtected()
 	if err != nil {
 		return err
 	}
 
 	// verify message accordingly
 	for i, signature := range m.Signatures {
-		if err := signature.Verify(verifiers[i], protected, m.Payload, external); err != nil {
+		if err := signature.Verify(verifiers[i], protected, payload, external); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func resolvePayload(payloads ...[]byte) ([]byte, error) {
+	var payload []byte
+	for _, candidatePayload := range payloads {
+		if candidatePayload != nil {
+			if payload == nil {
+				payload = candidatePayload
+			} else {
+				return nil, ErrMultiplePayloads
+			}
+		}
+	}
+	if payload == nil {
+		return nil, ErrMissingPayload
+	} else {
+		return payload, nil
+	}
 }

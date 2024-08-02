@@ -1968,6 +1968,133 @@ func TestSignMessage_Sign(t *testing.T) {
 		})
 	}
 
+	// detached payloads
+	detachedTests := []struct {
+		name            string
+		msg             *SignMessage
+		detachedPayload []byte
+		wantErr         string
+	}{
+		{
+			name: "valid message",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: []byte("42"),
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			detachedPayload: []byte("lorem ipsum"),
+		},
+		{
+			name: "multiple payloads",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Payload: []byte("lorem ipsum"),
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: []byte("42"),
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			detachedPayload: []byte("lorem ipsum"),
+			wantErr:         "multiple payloads",
+		},
+		{
+			name: "missing payload",
+			msg: &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: []byte("42"),
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			},
+			wantErr: "missing payload",
+		},
+	}
+	for _, tt := range detachedTests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.SignDetached(rand.Reader, nil, tt.detachedPayload, signers...)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Errorf("SignMessage.Sign() error = %v, wantErr %v", err, tt.wantErr)
+				}
+				return
+			} else if tt.wantErr != "" {
+				t.Errorf("SignMessage.Sign() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err := tt.msg.VerifyDetached(nil, tt.detachedPayload, verifiers...); err != nil {
+				t.Errorf("SignMessage.Verify() error = %v", err)
+			}
+		})
+	}
+
 	// special cases
 	t.Run("no signer", func(t *testing.T) {
 		msg := &SignMessage{
@@ -2167,6 +2294,77 @@ func TestSignMessage_Verify(t *testing.T) {
 		})
 	}
 
+	// detached payloads
+	detachedTests := []struct {
+		name                    string
+		detachedPayloadOnSign   []byte
+		detachedPayloadOnVerify []byte
+		wantErr                 string
+	}{
+		{
+			name:                    "round trip on valid detached message",
+			detachedPayloadOnSign:   []byte("lorem ipsum"),
+			detachedPayloadOnVerify: []byte("lorem ipsum"),
+		},
+		{
+			name:                  "missing payload",
+			detachedPayloadOnSign: []byte("lorem ipsum"),
+			wantErr:               "missing payload",
+		},
+		{
+			name:                    "changes payload",
+			detachedPayloadOnSign:   []byte("lorem ipsum"),
+			detachedPayloadOnVerify: []byte("lorem ipsum dolor sit amet"),
+			wantErr:                 "verification error",
+		},
+	}
+	for _, tt := range detachedTests {
+		t.Run(tt.name, func(t *testing.T) {
+			// generate message and sign
+			msg := &SignMessage{
+				Headers: Headers{
+					Protected: ProtectedHeader{
+						HeaderLabelContentType: "text/plain",
+					},
+					Unprotected: UnprotectedHeader{
+						"extra": "test",
+					},
+				},
+				Signatures: []*Signature{
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES256,
+							},
+							Unprotected: UnprotectedHeader{
+								HeaderLabelKeyID: []byte("42"),
+							},
+						},
+					},
+					{
+						Headers: Headers{
+							Protected: ProtectedHeader{
+								HeaderLabelAlgorithm: AlgorithmES512,
+							},
+						},
+					},
+				},
+			}
+			if err := msg.SignDetached(rand.Reader, nil, tt.detachedPayloadOnSign, signers...); err != nil {
+				t.Errorf("SignMessage.SignDetached() error = %v", err)
+				return
+			}
+
+			// verify message
+			err := msg.VerifyDetached(nil, tt.detachedPayloadOnVerify, verifiers...)
+			if err != nil && (err.Error() != tt.wantErr) {
+				t.Errorf("SignMessage.VerifyDetached() error = %v, wantErr %v", err, tt.wantErr)
+			} else if err == nil && (tt.wantErr != "") {
+				t.Errorf("SignMessage.VerifyDetached() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
 	// special cases
 	t.Run("nil payload", func(t *testing.T) { // payload is detached
 		msg := &SignMessage{
@@ -2306,6 +2504,68 @@ func TestSignature_toBeSigned(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Signature.toBeSigned() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSign_resolvePayload(t *testing.T) {
+	tests := []struct {
+		name     string
+		payloads [][]byte
+		want     []byte
+		wantErr  error
+	}{
+		{
+			name:    "nil payloads",
+			wantErr: ErrMissingPayload,
+		},
+		{
+			name:     "empty payloads",
+			payloads: [][]byte{},
+			wantErr:  ErrMissingPayload,
+		},
+		{
+			name: "single nil payload",
+			payloads: [][]byte{
+				nil,
+			},
+			wantErr: ErrMissingPayload,
+		},
+		{
+			name: "single payload",
+			payloads: [][]byte{
+				{1},
+			},
+			want: []byte{1},
+		},
+		{
+			name: "single payload with nil payloads",
+			payloads: [][]byte{
+				nil,
+				{1},
+				nil,
+			},
+			want: []byte{1},
+		},
+		{
+			name: "multiple payloads",
+			payloads: [][]byte{
+				{1},
+				{2},
+			},
+			wantErr: ErrMultiplePayloads,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolvePayload(tt.payloads...)
+			if err != tt.wantErr {
+				t.Fatalf("resolvePayload: err = %v, wantErr = %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(tt.want, got) {
+				t.Fatalf("resolvePayload: got = %v, want = %v", got, tt.want)
 			}
 		})
 	}
