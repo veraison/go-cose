@@ -490,7 +490,9 @@ func (m *SignMessage) VerifyDetached(detached, external []byte, verifiers ...Ver
 	if detached == nil {
 		return ErrMissingPayload
 	}
-	return m.verify(detached, external, verifiers...)
+	msg := *m
+	msg.Payload = detached
+	return msg.Verify(external, verifiers...)
 }
 
 func (m *SignMessage) verify(detached, external []byte, verifiers ...Verifier) error {
