@@ -8,7 +8,8 @@ A golang library for the [COSE specification][cose-spec]
 
 ## Project Status
 
-The verasion/go-cose project is actively maintained. See [current releases](https://github.com/veraison/go-cose/releases) managed through github
+The verasion/go-cose project is actively maintained.
+See [current releases](https://github.com/veraison/go-cose/releases).
 
 The project was *initially* forked from the  upstream [mozilla-services/go-cose][mozilla-go-cose] project, however the Veraison and Mozilla maintainers have agreed to retire the mozilla-services/go-cose project and focus on [veraison/go-cose][veraison-go-cose] as the active project.
 
