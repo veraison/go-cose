@@ -8,9 +8,8 @@ A golang library for the [COSE specification][cose-spec]
 
 ## Project Status
 
-**Current Supported Release**: [go-cose v1.1.0][current-release]
-
-**Current Pre-Release**: [go-cose v1.3.0-alpha.1][current-pre-release]
+The verasion/go-cose project is actively maintained.
+See [current releases](https://github.com/veraison/go-cose/releases).
 
 The project was *initially* forked from the  upstream [mozilla-services/go-cose][mozilla-go-cose] project, however the Veraison and Mozilla maintainers have agreed to retire the mozilla-services/go-cose project and focus on [veraison/go-cose][veraison-go-cose] as the active project.
 
@@ -245,5 +244,3 @@ go test -fuzz=FuzzSign1
 [mozilla-contributors]: https://github.com/mozilla-services/go-cose/graphs/contributors
 [mozilla-go-cose]:      http://github.com/mozilla-services/go-cose
 [veraison-go-cose]:     https://github.com/veraison/go-cose
-[current-release]:      https://github.com/veraison/go-cose/releases/tag/v1.1.0
-[current-pre-release]:  https://github.com/veraison/go-cose/releases/tag/v1.3.0-alpha.1
