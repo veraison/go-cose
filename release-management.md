@@ -8,8 +8,10 @@ The go-cose project maintainers strive to provide a stable go-lang implementatio
 Stable implies appropriate and measured changes to the library assuring consumers have the necessary functionality to interact with COSE objects.
 If you or your project require added functionality, or bug fixes, please open an issue or create a pull request.
 The project welcomes all contributions from adding functionality, implementing testing, security reviews to the release management.
-Please see [here](https://github.com/veraison#contributing) for how to contribute.
 
+To cut a release, see [Release Checklist](./release-checklist.md).
+
+> [!NOTE]
 The maintainers may periodically update this policy based on feedback.
 
 ## Release Versioning
@@ -33,16 +35,10 @@ A new major or minor release will not have an automated release posted until the
 The suffix will be a single digit.
   - If > 9 builds do occur, the format will simply use two digit indicators (`v1.0.0-alpha.10`)
 
-> [!IMPORTANT]
-> Pre-releases will NOT use the github pre-release flag.
-
 ## Branch Management
 
-To meet the projects stability goals, go-cose does not currently operate with multiple feature branches.
-All active development happens in `main`.
-For each release, a branch is created for servicing, following the versioning name.
-`v1.0.0-alpha-1` would have an associated [v1.0.0-alpha.1](https://github.com/veraison/go-cose/tree/v1.0.0-alpha.1) branch.
-All version and branch names are lower case.
+To meet the projects stability goals, go-cose does not typically operate with multiple feature branches.
+All active development happens in `main`, with releases made on a specific commit.
 
 ### Major Releases
 
@@ -77,8 +73,8 @@ Principals of a patch release:
 - No breaking changes.
 - No feature or surface area changes.
 - A "bug fix" that may be a breaking change may require a major release.
-- Applicable fixes, including security fixes, may be cherry-picked from main into the latest supported minor `release-X.Y` branches.
-- Patch releases are cut from a `release-X.Y` branch.
+- If a patched release is necessary, deviating from main, a new branch will be created, based on the commit of the patched release.
+- Applicable fixes, including security fixes, may be cherry-picked from main into the patched `release-X.Y.Z` branch.
 
 Each patch release will go through one or more `-alpha.n` and `-rc.n` pre-release phases.
 
