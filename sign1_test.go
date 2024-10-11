@@ -967,7 +967,7 @@ func TestSign1Message_toBeSigned(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.m.toBeSigned(tt.external)
+			got, err := tt.m.toBeSigned(tt.external, tt.m.Payload)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Sign1Message.toBeSigned() error = %v, wantErr %v", err, tt.wantErr)
 				return
