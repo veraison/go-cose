@@ -12,8 +12,14 @@ import (
 //
 // Reference: https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml#tags
 const (
+	CBORTagMacMessage   = 97
 	CBORTagSignMessage  = 98
 	CBORTagSign1Message = 18
+)
+
+const (
+	cborMajorTypeMask       byte = 0b111_00000
+	cborMajorTypeByteString byte = 0b010_00000
 )
 
 // Pre-configured modes for CBOR encoding and decoding.

@@ -441,6 +441,26 @@ func (h *Headers) ensureVerificationAlgorithm(alg Algorithm, external []byte) er
 	return err
 }
 
+// ensureAuthenticationAlgorithm ensures the presence of the `alg` header if there
+// is no externally supplied data for verification.
+//
+// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
+func (h *Headers) ensureAuthenticationAlgorithm(alg Algorithm, external []byte) error {
+	candidate, err := h.Protected.Algorithm()
+	switch err {
+	case nil:
+		if candidate != alg {
+			return fmt.Errorf("%w: authenticator %v: header %v", ErrAlgorithmMismatch, alg, candidate)
+		}
+		return nil
+	case ErrAlgorithmNotFound:
+		if len(external) > 0 {
+			return nil
+		}
+	}
+	return err
+}
+
 // ensureIV ensures IV and Partial IV are not both present
 // in the protected and unprotected headers.
 // It does not check if they are both present within one header,
