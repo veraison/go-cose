@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-// rsaSigner is a RSASSA-PSS based signer with a generic crypto.Signer.
+// rsaSigner is a RSASSA-PSS based signer with a generic [crypto.Signer].
 //
 // Reference: https://www.rfc-editor.org/rfc/rfc8230.html#section-2
 type rsaSigner struct {
@@ -56,7 +56,7 @@ func (rv *rsaVerifier) Algorithm() Algorithm {
 
 // Verify verifies message content with the public key, returning nil for
 // success.
-// Otherwise, it returns ErrVerification.
+// Otherwise, it returns [ErrVerification].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
 func (rv *rsaVerifier) Verify(content []byte, signature []byte) error {
@@ -69,7 +69,7 @@ func (rv *rsaVerifier) Verify(content []byte, signature []byte) error {
 
 // VerifyDigest verifies message digest with the public key, returning nil
 // for success.
-// Otherwise, it returns ErrVerification.
+// Otherwise, it returns [ErrVerification].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func (rv *rsaVerifier) VerifyDigest(digest []byte, signature []byte) error {

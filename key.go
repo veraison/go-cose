@@ -100,11 +100,11 @@ func KeyOpFromString(val string) (KeyOp, bool) {
 	}
 }
 
-// String returns a string representation of the KeyType. Note does not
+// String returns a string representation of the KeyOp. Note does not
 // represent a valid value  of the corresponding serialized entry, and must not
 // be used as such. (The values returned _mostly_ correspond to those accepted
 // by KeyOpFromString, except for MAC create/verify, which are not defined by
-// RFC7517).
+// RFC 7517).
 func (ko KeyOp) String() string {
 	switch ko {
 	case KeyOpSign:
@@ -147,8 +147,8 @@ const (
 )
 
 // String returns a string representation of the KeyType. Note does not
-// represent a valid value  of the corresponding serialized entry, and must
-// not be used as such.
+// represent a valid value of the corresponding serialized entry, and must not
+// be used as such.
 func (kt KeyType) String() string {
 	switch kt {
 	case KeyTypeOKP:
@@ -196,8 +196,8 @@ const (
 )
 
 // String returns a string representation of the Curve. Note does not
-// represent a valid value  of the corresponding serialized entry, and must
-// not be used as such.
+// represent a valid value of the corresponding serialized entry, and must not
+// be used as such.
 func (c Curve) String() string {
 	switch c {
 	case CurveP256:
@@ -221,8 +221,8 @@ func (c Curve) String() string {
 	}
 }
 
-// Key represents a COSE_Key structure, as defined by RFC8152.
-// Note: currently, this does NOT support RFC8230 (RSA algorithms).
+// Key represents a COSE_Key structure, as defined by RFC 8152.
+// Note: currently, this does NOT support RFC 8230 (RSA algorithms).
 type Key struct {
 	// Type identifies the family of keys for this structure, and thus,
 	// which of the key-type-specific parameters need to be set.
@@ -380,8 +380,8 @@ func (key *Key) Symmetric() (k []byte) {
 	return
 }
 
-// NewKeyFromPublic returns a Key created using the provided crypto.PublicKey.
-// Supported key formats are: *ecdsa.PublicKey and ed25519.PublicKey
+// NewKeyFromPublic returns a Key created using the provided [crypto.PublicKey].
+// Supported key formats are: [*ecdsa.PublicKey] and [ed25519.PublicKey].
 func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
 	switch vk := pub.(type) {
 	case *ecdsa.PublicKey:
@@ -399,8 +399,8 @@ func NewKeyFromPublic(pub crypto.PublicKey) (*Key, error) {
 	}
 }
 
-// NewKeyFromPrivate returns a Key created using provided crypto.PrivateKey.
-// Supported key formats are: *ecdsa.PrivateKey and ed25519.PrivateKey
+// NewKeyFromPrivate returns a Key created using provided [crypto.PrivateKey].
+// Supported key formats are: [*ecdsa.PrivateKey] and [ed25519.PrivateKey].
 func NewKeyFromPrivate(priv crypto.PrivateKey) (*Key, error) {
 	switch sk := priv.(type) {
 	case *ecdsa.PrivateKey:
@@ -448,10 +448,10 @@ func (k Key) validate(op KeyOp) error {
 			return errReqParamsMissing
 		}
 		if size := curveSize(crv); size > 0 {
-			// RFC 8152 Section 13.1.1 says that x and y leading zero octets MUST be preserved,
-			// but the Go crypto/elliptic package trims them. So we relax the check
-			// here to allow for omitted leading zero octets, we will add them back
-			// when marshaling.
+			// RFC 8152 Section 13.1.1 says that x and y leading zero octets
+			// MUST be preserved, but the Go crypto/elliptic package trims them.
+			// So we relax the check here to allow for omitted leading zero
+			// octets, we will add them back when marshaling.
 			if len(x) > size || len(y) > size || len(d) > size {
 				return errCoordOverflow
 			}
@@ -653,7 +653,7 @@ func (k *Key) UnmarshalCBOR(data []byte) error {
 	return k.validate(KeyOpReserved)
 }
 
-// PublicKey returns a crypto.PublicKey generated using Key's parameters.
+// PublicKey returns a [crypto.PublicKey] generated using Key's parameters.
 func (k *Key) PublicKey() (crypto.PublicKey, error) {
 	if err := k.validate(KeyOpVerify); err != nil {
 		return nil, err
@@ -691,7 +691,7 @@ func (k *Key) PublicKey() (crypto.PublicKey, error) {
 	}
 }
 
-// PrivateKey returns a crypto.PrivateKey generated using Key's parameters.
+// PrivateKey returns a [crypto.PrivateKey] generated using Key's parameters.
 // Compressed point is not supported for EC2 keys.
 func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 	if err := k.validate(KeyOpSign); err != nil {
@@ -744,10 +744,10 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 	}
 }
 
-// AlgorithmOrDefault returns the Algorithm associated with Key. If Key.Algorithm is
-// set, that is what is returned. Otherwise, the algorithm is inferred using
-// Key.Curve. This method does NOT validate that Key.Algorithm, if set, aligns
-// with Key.Curve.
+// AlgorithmOrDefault returns the Algorithm associated with Key. If
+// Key.Algorithm is set, that is what is returned. Otherwise, the algorithm is
+// inferred using Key.Curve. This method does NOT validate that Key.Algorithm,
+// if set, aligns with Key.Curve.
 func (k *Key) AlgorithmOrDefault() (Algorithm, error) {
 	if k.Algorithm != AlgorithmReserved {
 		return k.Algorithm, nil
@@ -798,7 +798,7 @@ func (k *Key) Verifier() (Verifier, error) {
 }
 
 // deriveAlgorithm derives the intended algorithm for the key from its curve.
-// The deriviation is based on the recommendation in RFC8152 that SHA-256 is
+// The derivation is based on the recommendation in RFC 8152 that SHA-256 is
 // only used with P-256, etc. For other combinations, the Algorithm in the Key
 // must be explicitly set,so that this derivation is not used.
 func (k *Key) deriveAlgorithm() (Algorithm, error) {
@@ -826,7 +826,7 @@ func (k *Key) deriveAlgorithm() (Algorithm, error) {
 				"unsupported curve %q for key type OKP", crv.String())
 		}
 	default:
-		// Symmetric algorithms are not supported in the current inmplementation.
+		// Symmetric algorithms are not supported in the current implementation.
 		return AlgorithmReserved, fmt.Errorf("unexpected key type %q", k.Type.String())
 	}
 }

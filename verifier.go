@@ -16,31 +16,32 @@ type Verifier interface {
 
 	// Verify verifies message content with the public key, returning nil for
 	// success.
-	// Otherwise, it returns ErrVerification.
+	// Otherwise, it returns [ErrVerification].
 	//
 	// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8
 	Verify(content, signature []byte) error
 }
 
-// DigestVerifier is an interface for public keys to verify digested COSE signatures.
+// DigestVerifier is an interface for public keys to verify digested COSE
+// signatures.
 type DigestVerifier interface {
 	// Algorithm returns the signing algorithm associated with the public key.
 	Algorithm() Algorithm
 
 	// VerifyDigest verifies message digest with the public key, returning nil
 	// for success.
-	// Otherwise, it returns ErrVerification.
+	// Otherwise, it returns [ErrVerification].
 	VerifyDigest(digest, signature []byte) error
 }
 
 // NewVerifier returns a verifier with a given public key.
-// Only golang built-in crypto public keys of type `*rsa.PublicKey`,
-// `*ecdsa.PublicKey`, and `ed25519.PublicKey` are accepted.
-// When `*ecdsa.PublicKey` is specified, its curve must be supported by
+// Only golang built-in crypto public keys of type [*rsa.PublicKey],
+// [*ecdsa.PublicKey], and [ed25519.PublicKey] are accepted.
+// When [*ecdsa.PublicKey] is specified, its curve must be supported by
 // crypto/ecdh.
 //
 // The returned signer for rsa and ecdsa keys also implements
-// `cose.DigestSigner`.
+// [cose.DigestSigner].
 func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 	var errReason string
 	switch alg {
@@ -49,7 +50,8 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
 		}
-		// RFC 8230 6.1 requires RSA keys having a minimun size of 2048 bits.
+		// RFC 8230 section 6.1 requires RSA keys having a minimum size of 2048
+		// bits.
 		// Reference: https://www.rfc-editor.org/rfc/rfc8230.html#section-6.1
 		if vk.N.BitLen() < 2048 {
 			return nil, errors.New("RSA key must be at least 2048 bits long")

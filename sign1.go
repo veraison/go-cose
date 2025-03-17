@@ -233,9 +233,9 @@ func (m *Sign1Message) doUnmarshal(data []byte) error {
 	return nil
 }
 
-// Sign1 signs a Sign1Message using the provided Signer.
+// Sign1 signs a [Sign1Message] using the provided [Signer].
 //
-// This method is a wrapper of `Sign1Message.Sign()`.
+// This method is a wrapper of [Sign1Message.Sign].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func Sign1(rand io.Reader, signer Signer, headers Headers, payload []byte, external []byte) ([]byte, error) {
@@ -280,7 +280,7 @@ func (m *UntaggedSign1Message) UnmarshalCBOR(data []byte) error {
 	return (*Sign1Message)(m).doUnmarshal(data)
 }
 
-// Sign signs an UnttaggedSign1Message using the provided Signer.
+// Sign signs an UnttaggedSign1Message using the provided [Signer].
 // The signature is stored in m.Signature.
 //
 // Note that m.Signature is only valid as long as m.Headers.Protected and
@@ -301,9 +301,9 @@ func (m *UntaggedSign1Message) Verify(external []byte, verifier Verifier) error 
 	return (*Sign1Message)(m).Verify(external, verifier)
 }
 
-// Sign1Untagged signs an UntaggedSign1Message using the provided Signer.
+// Sign1Untagged signs an UntaggedSign1Message using the provided [Signer].
 //
-// This method is a wrapper of `UntaggedSign1Message.Sign()`.
+// This method is a wrapper of [UntaggedSign1Message.Sign].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 func Sign1Untagged(rand io.Reader, signer Signer, headers Headers, payload []byte, external []byte) ([]byte, error) {

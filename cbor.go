@@ -122,7 +122,7 @@ func deterministicBinaryString(data cbor.RawMessage) (cbor.RawMessage, error) {
 	}
 
 	// slow path: convert by re-encoding
-	// error checking is not required since `data` has been validataed
+	// error checking is not required since `data` has been validated
 	var s []byte
 	_ = decModeWithTagsForbidden.Unmarshal(data, &s)
 	return encMode.Marshal(s)

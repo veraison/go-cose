@@ -39,7 +39,7 @@ func (ev *ed25519Verifier) Algorithm() Algorithm {
 
 // Verify verifies message content with the public key, returning nil for
 // success.
-// Otherwise, it returns ErrVerification.
+// Otherwise, it returns [ErrVerification].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.2
 func (ev *ed25519Verifier) Verify(content []byte, signature []byte) error {

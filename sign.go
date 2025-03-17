@@ -389,7 +389,7 @@ func (m *SignMessage) UnmarshalCBOR(data []byte) error {
 // Sign signs a SignMessage using the provided signers corresponding to the
 // signatures.
 //
-// See `Signature.Sign()` for advanced signing scenarios.
+// See [Signature.Sign] for advanced signing scenarios.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
 //
@@ -433,7 +433,7 @@ func (m *SignMessage) Sign(rand io.Reader, external []byte, signers ...Signer) e
 // Verify verifies the signatures on the SignMessage against the corresponding
 // verifier, returning nil on success or a suitable error if verification fails.
 //
-// See `Signature.Verify()` for advanced verification scenarios like threshold
+// See [Signature.Verify] for advanced verification scenarios like threshold
 // policies.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
