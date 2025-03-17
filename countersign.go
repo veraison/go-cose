@@ -95,8 +95,8 @@ func (s *Countersignature) Sign(rand io.Reader, signer Signer, parent any, exter
 	return nil
 }
 
-// Verify verifies the countersignature, returning nil on success or a suitable error
-// if verification fails.
+// Verify verifies the countersignature, returning nil on success or a suitable
+// error if verification fails.
 // Verifying a COSE_Countersignature requires the parent message.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-4.4
@@ -141,11 +141,13 @@ func (s *Countersignature) toBeSigned(target any, external []byte) ([]byte, erro
 	return countersignToBeSigned(false, target, signProtected, external)
 }
 
-// countersignToBeSigned constructs Countersign_structure, computes and returns ToBeSigned.
+// countersignToBeSigned constructs Countersign_structure, computes and returns
+// ToBeSigned.
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc9338#section-3.3
 func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawMessage, external []byte) ([]byte, error) {
-	// create a Countersign_structure and populate it with the appropriate fields.
+	// create a Countersign_structure and populate it with the appropriate
+	// fields.
 	//
 	//   Countersign_structure = [
 	//       context : "CounterSignature" / "CounterSignature0" /
@@ -263,8 +265,8 @@ func countersignToBeSigned(abbreviated bool, target any, signProtected cbor.RawM
 		countersigStructure = append(countersigStructure, otherFields)
 	}
 
-	// create the value ToBeSigned by encoding the Countersign_structure to a byte
-	// string.
+	// create the value ToBeSigned by encoding the Countersign_structure to a
+	// byte string.
 	return encMode.Marshal(countersigStructure)
 }
 

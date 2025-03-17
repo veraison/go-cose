@@ -158,7 +158,7 @@ func (ev *ecdsaVerifier) Algorithm() Algorithm {
 
 // Verify verifies message content with the public key, returning nil for
 // success.
-// Otherwise, it returns ErrVerification.
+// Otherwise, it returns [ErrVerification].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func (ev *ecdsaVerifier) Verify(content []byte, signature []byte) error {
@@ -172,7 +172,7 @@ func (ev *ecdsaVerifier) Verify(content []byte, signature []byte) error {
 
 // VerifyDigest verifies message digest with the public key, returning nil
 // for success.
-// Otherwise, it returns ErrVerification.
+// Otherwise, it returns [ErrVerification].
 //
 // Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-8.1
 func (ev *ecdsaVerifier) VerifyDigest(digest []byte, signature []byte) error {

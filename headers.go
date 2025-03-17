@@ -170,7 +170,8 @@ func (h ProtectedHeader) Critical() ([]any, error) {
 	return value.([]any), nil
 }
 
-// ensureCritical ensures all critical headers are present in the protected bucket.
+// ensureCritical ensures all critical headers are present in the protected
+// bucket.
 func ensureCritical(value any, headers map[any]any) error {
 	labels, ok := value.([]any)
 	if !ok {

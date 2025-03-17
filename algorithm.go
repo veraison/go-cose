@@ -36,7 +36,7 @@ const (
 
 	// PureEdDSA by RFC 8152.
 	//
-	// Deprecated: use AlgorithmEdDSA instead, which has
+	// Deprecated: use [AlgorithmEdDSA] instead, which has
 	// the same value but with a more accurate name.
 	AlgorithmEd25519 Algorithm = -8
 
@@ -51,7 +51,7 @@ const (
 //
 // Signers and Verifiers requiring the algorithms below are not
 // directly supported by this library. They need to be provided
-// as an external [cose.Signer] or [cose.Verifier] implementation.
+// as an external [Signer] or [Verifier] implementation.
 //
 // An example use case where RS256 is allowed and used is in
 // WebAuthn: https://www.w3.org/TR/webauthn-2/#sctn-sample-registration.
@@ -72,7 +72,7 @@ const (
 //
 // COSE Algorithms: https://www.iana.org/assignments/cose/cose.xhtml#algorithms
 //
-// RFC 8152 16.4: https://datatracker.ietf.org/doc/html/rfc8152#section-16.4
+// RFC 8152 section 16.4: https://datatracker.ietf.org/doc/html/rfc8152#section-16.4
 type Algorithm int64
 
 // String returns the name of the algorithm
@@ -97,8 +97,8 @@ func (a Algorithm) String() string {
 	case AlgorithmES512:
 		return "ES512"
 	case AlgorithmEdDSA:
-		// As stated in RFC 8152 8.2, only the pure EdDSA version is used for
-		// COSE.
+		// As stated in RFC 8152 section 8.2, only the pure EdDSA version is
+		// used for COSE.
 		return "EdDSA"
 	case AlgorithmReserved:
 		return "Reserved"
