@@ -31,6 +31,18 @@ const (
 	HeaderLabelX5U                 int64 = 35
 )
 
+// Temporary COSE Header labels registered in the IANA "COSE Header Parameters"
+// registry.
+// These labels are not intended to be used in production code and are subject
+// to change without notice.
+//
+// Reference: https://www.iana.org/assignments/cose/cose.xhtml#header-parameters
+const (
+	HeaderLabelPayloadHashAlgorithm       int64 = 258 // registered 2025-03-05, expires 2026-03-05
+	HeaderLabelPayloadPreimageContentType int64 = 259 // registered 2025-03-05, expires 2026-03-05
+	HeaderLabelPayloadLocation            int64 = 260 // registered 2025-03-05, expires 2026-03-05
+)
+
 // ProtectedHeader contains parameters that are to be cryptographically
 // protected.
 type ProtectedHeader map[any]any
@@ -128,6 +140,42 @@ func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
 	return claims, nil
 }
 
+// SetPayloadHashAlgorithm sets the payload hash algorithm value of the
+// protected header.
+//
+// # Experimental
+//
+// Notice: The COSE SetPayloadHashAlgorithm API is EXPERIMENTAL and may be
+// changed or removed in a later release.
+func (h ProtectedHeader) SetPayloadHashAlgorithm(alg Algorithm) {
+	h[HeaderLabelPayloadHashAlgorithm] = alg
+}
+
+// SetPayloadPreimageContentType sets the payload preimage content type value
+// of the protected header.
+//
+// # Experimental
+//
+// Notice: The COSE SetPayloadPreimageContentType API is EXPERIMENTAL and may be
+// changed or removed in a later release.
+func (h ProtectedHeader) SetPayloadPreimageContentType(typ any) error {
+	if !canUint(typ) && !canTstr(typ) {
+		return errors.New("header parameter: payload preimage content type: require uint / tstr type")
+	}
+	h[HeaderLabelPayloadPreimageContentType] = typ
+	return nil
+}
+
+// SetPayloadLocation sets the payload location value of the protected header.
+//
+// # Experimental
+//
+// Notice: The COSE SetPayloadLocation API is EXPERIMENTAL and may be changed or
+// removed in a later release.
+func (h ProtectedHeader) SetPayloadLocation(location string) {
+	h[HeaderLabelPayloadLocation] = location
+}
+
 // Algorithm gets the algorithm value from the algorithm header.
 func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	value, ok := h[HeaderLabelAlgorithm]
@@ -149,6 +197,36 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 		return Algorithm(alg), nil
 	case string:
 		return AlgorithmReserved, fmt.Errorf("Algorithm(%q)", alg)
+	default:
+		return AlgorithmReserved, ErrInvalidAlgorithm
+	}
+}
+
+// PayloadHashAlgorithm gets the payload hash algorithm value from the protected
+// header.
+//
+// # Experimental
+//
+// Notice: The COSE PayloadHashAlgorithm API is EXPERIMENTAL and may be changed
+// or removed in a later release.
+func (h ProtectedHeader) PayloadHashAlgorithm() (Algorithm, error) {
+	value, ok := h[HeaderLabelPayloadHashAlgorithm]
+	if !ok {
+		return AlgorithmReserved, ErrAlgorithmNotFound
+	}
+	switch alg := value.(type) {
+	case Algorithm:
+		return alg, nil
+	case int:
+		return Algorithm(alg), nil
+	case int8:
+		return Algorithm(alg), nil
+	case int16:
+		return Algorithm(alg), nil
+	case int32:
+		return Algorithm(alg), nil
+	case int64:
+		return Algorithm(alg), nil
 	default:
 		return AlgorithmReserved, ErrInvalidAlgorithm
 	}
