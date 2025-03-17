@@ -280,7 +280,7 @@ func (m *UntaggedSign1Message) UnmarshalCBOR(data []byte) error {
 	return (*Sign1Message)(m).doUnmarshal(data)
 }
 
-// Sign signs an UnttaggedSign1Message using the provided [Signer].
+// Sign signs an UntaggedSign1Message using the provided [Signer].
 // The signature is stored in m.Signature.
 //
 // Note that m.Signature is only valid as long as m.Headers.Protected and
