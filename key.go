@@ -130,7 +130,7 @@ func (ko KeyOp) String() string {
 	case KeyOpReserved:
 		return "Reserved"
 	default:
-		return "unknown key_op value " + strconv.Itoa(int(ko))
+		return "unknown key_op value " + strconv.FormatInt(int64(ko), 10)
 	}
 }
 
@@ -160,7 +160,7 @@ func (kt KeyType) String() string {
 	case KeyTypeReserved:
 		return "Reserved"
 	default:
-		return "unknown key type value " + strconv.Itoa(int(kt))
+		return "unknown key type value " + strconv.FormatInt(int64(kt), 10)
 	}
 }
 
@@ -217,7 +217,7 @@ func (c Curve) String() string {
 	case CurveReserved:
 		return "Reserved"
 	default:
-		return "unknown curve value " + strconv.Itoa(int(c))
+		return "unknown curve value " + strconv.FormatInt(int64(c), 10)
 	}
 }
 

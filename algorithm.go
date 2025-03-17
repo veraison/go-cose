@@ -103,7 +103,7 @@ func (a Algorithm) String() string {
 	case AlgorithmReserved:
 		return "Reserved"
 	default:
-		return "Algorithm(" + strconv.Itoa(int(a)) + ")"
+		return "Algorithm(" + strconv.FormatInt(int64(a), 10) + ")"
 	}
 }
 
