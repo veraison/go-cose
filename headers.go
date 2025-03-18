@@ -123,7 +123,34 @@ func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
 	if hasSub && !canTstr(sub) {
 		return claims, errors.New("cwt claim: sub: require tstr")
 	}
-	// TODO: validate claims, other claims
+	aud, hasAud := claims[3]
+	if hasAud && !canTstr(aud) {
+		return claims, errors.New("cwt claim: aud: require tstr")
+	}
+	exp, hasExp := claims[4]
+	if hasExp && !canInt(exp) && !canFloat(exp) {
+		return claims, errors.New("cwt claim: exp: require int or float")
+	}
+	nbf, hasNbf := claims[5]
+	if hasNbf && !canInt(nbf) && !canFloat(nbf) {
+		return claims, errors.New("cwt claim: nbf: require int or float")
+	}
+	iat, hasIat := claims[6]
+	if hasIat && !canInt(iat) && !canFloat(iat) {
+		return claims, errors.New("cwt claim: iat: require int or float")
+	}
+	cti, hasCti := claims[7]
+	if hasCti && !canBstr(cti) {
+		return claims, errors.New("cwt claim: cti: require tstr")
+	}
+	cnf, hasCnf := claims[8]
+	if hasCnf && !canMap(cnf) {
+		return claims, errors.New("cwt claim: cnf: require map")
+	}
+	scope, hasScope := claims[9]
+	if hasScope && !canBstr(scope) && !canTstr(scope) {
+		return claims, errors.New("cwt claim: scope: require bstr or tstr")
+	}
 	h[HeaderLabelCWTClaims] = claims
 	return claims, nil
 }
@@ -620,6 +647,15 @@ func canInt(v any) bool {
 	return false
 }
 
+// canFloat reports whether v can be used as a CBOR float type
+func canFloat(v any) bool {
+	switch v.(type) {
+	case float32, float64:
+		return true
+	}
+	return false
+}
+
 // canTstr reports whether v can be used as a CBOR tstr type.
 func canTstr(v any) bool {
 	_, ok := v.(string)
@@ -629,6 +665,12 @@ func canTstr(v any) bool {
 // canBstr reports whether v can be used as a CBOR bstr type.
 func canBstr(v any) bool {
 	_, ok := v.([]byte)
+	return ok
+}
+
+// canMap reports whether v can be used as a CBOR map type.
+func canMap(v any) bool {
+	_, ok := v.(map[any]any)
 	return ok
 }
 
