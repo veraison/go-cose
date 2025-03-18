@@ -165,7 +165,7 @@ func validateHashEnvelopeHeaders(headers *Headers) error {
 			return errors.New("protected header parameter: content type: not allowed")
 		case HeaderLabelPayloadHashAlgorithm:
 			_, isAlg := value.(Algorithm)
-			if !isAlg && !canInt(value) && !canTstr(value) {
+			if !isAlg && !canInt(value) {
 				return errors.New("protected header parameter: payload hash alg: require int type")
 			}
 			foundPayloadHashAlgorithm = true
