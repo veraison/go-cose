@@ -178,9 +178,15 @@ func (h ProtectedHeader) SetPayloadLocation(location string) {
 
 // Algorithm gets the algorithm value from the algorithm header.
 func (h ProtectedHeader) Algorithm() (Algorithm, error) {
-	value, ok := h[HeaderLabelAlgorithm]
+	return h.algorithm(HeaderLabelAlgorithm)
+}
+
+// algorithm gets the algorithm value from the protected header by a specific
+// label.
+func (h ProtectedHeader) algorithm(headerLabel int64) (Algorithm, error) {
+	value, ok := h[headerLabel]
 	if !ok {
-		return 0, ErrAlgorithmNotFound
+		return AlgorithmReserved, ErrAlgorithmNotFound
 	}
 	switch alg := value.(type) {
 	case Algorithm:
@@ -210,26 +216,7 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 // Notice: The COSE PayloadHashAlgorithm API is EXPERIMENTAL and may be changed
 // or removed in a later release.
 func (h ProtectedHeader) PayloadHashAlgorithm() (Algorithm, error) {
-	value, ok := h[HeaderLabelPayloadHashAlgorithm]
-	if !ok {
-		return AlgorithmReserved, ErrAlgorithmNotFound
-	}
-	switch alg := value.(type) {
-	case Algorithm:
-		return alg, nil
-	case int:
-		return Algorithm(alg), nil
-	case int8:
-		return Algorithm(alg), nil
-	case int16:
-		return Algorithm(alg), nil
-	case int32:
-		return Algorithm(alg), nil
-	case int64:
-		return Algorithm(alg), nil
-	default:
-		return AlgorithmReserved, ErrInvalidAlgorithm
-	}
+	return h.algorithm(HeaderLabelPayloadHashAlgorithm)
 }
 
 // Critical indicates which protected header labels an application that is
