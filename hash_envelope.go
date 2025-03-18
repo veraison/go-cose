@@ -118,11 +118,11 @@ func VerifyHashEnvelope(verifier Verifier, envelope []byte) (*Sign1Message, erro
 	return &message, nil
 }
 
-// validateHash checks the validity of the hash.
+// validateHash checks the validity of the known hash.
 func validateHash(alg Algorithm, value []byte) error {
 	hash := alg.hashFunc()
 	if hash == 0 {
-		return fmt.Errorf("%v: %w", alg, ErrAlgorithmNotSupported)
+		return nil // no check on unsupported hash algorithms
 	}
 	if size := hash.Size(); size != len(value) {
 		return fmt.Errorf("%v: size mismatch: expected %d, got %d", alg, size, len(value))
