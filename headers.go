@@ -140,42 +140,6 @@ func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
 	return claims, nil
 }
 
-// SetPayloadHashAlgorithm sets the payload hash algorithm value of the
-// protected header.
-//
-// # Experimental
-//
-// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
-// removed in a later release.
-func (h ProtectedHeader) SetPayloadHashAlgorithm(alg Algorithm) {
-	h[HeaderLabelPayloadHashAlgorithm] = alg
-}
-
-// SetPayloadPreimageContentType sets the payload preimage content type value
-// of the protected header.
-//
-// # Experimental
-//
-// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
-// removed in a later release.
-func (h ProtectedHeader) SetPayloadPreimageContentType(typ any) error {
-	if !canUint(typ) && !canTstr(typ) {
-		return errors.New("header parameter: payload preimage content type: require uint / tstr type")
-	}
-	h[HeaderLabelPayloadPreimageContentType] = typ
-	return nil
-}
-
-// SetPayloadLocation sets the payload location value of the protected header.
-//
-// # Experimental
-//
-// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
-// removed in a later release.
-func (h ProtectedHeader) SetPayloadLocation(location string) {
-	h[HeaderLabelPayloadLocation] = location
-}
-
 // Algorithm gets the algorithm value from the algorithm header.
 func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	value, ok := h[HeaderLabelAlgorithm]

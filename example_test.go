@@ -533,11 +533,7 @@ func Example_hashEnvelope() {
 	fmt.Println("message verified")
 
 	// check payload
-	hashAlgorithm, err := msg.Headers.Protected.PayloadHashAlgorithm()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("payload hash: %v: %x\n", hashAlgorithm, msg.Payload)
+	fmt.Printf("payload hash: %v: %x\n", msg.Headers.Protected[cose.HeaderLabelPayloadHashAlgorithm], msg.Payload)
 	fmt.Println("payload content type:", msg.Headers.Protected[cose.HeaderLabelPayloadPreimageContentType])
 	fmt.Println("payload location:", msg.Headers.Protected[cose.HeaderLabelPayloadLocation])
 	// Output:

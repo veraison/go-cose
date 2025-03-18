@@ -24,6 +24,7 @@ type HashEnvelopePayload struct {
 	// PreimageContentType is the content type of the data that has been hashed.
 	// The value is either an unsigned integer (RFC 7252 Section 12.3) or a
 	// string (RFC 9110 Section 8.3).
+	// This field is optional.
 	//
 	// References:
 	// - https://www.iana.org/assignments/core-parameters/core-parameters.xhtml
@@ -31,20 +32,8 @@ type HashEnvelopePayload struct {
 	PreimageContentType any // uint / string
 
 	// Location is the location of the hash value in the payload.
-	// This is an optional field.
+	// This field is optional.
 	Location string
-}
-
-// validateHash checks the validity of the [HashEnvelopePayload].
-func (p *HashEnvelopePayload) validateHash() error {
-	hash := p.HashAlgorithm.hashFunc()
-	if hash == 0 {
-		return fmt.Errorf("%v: %w", p.HashAlgorithm, ErrAlgorithmNotSupported)
-	}
-	if size := hash.Size(); size != len(p.HashValue) {
-		return fmt.Errorf("%v: size mismatch: expected %d, got %d", p.HashAlgorithm, size, len(p.HashValue))
-	}
-	return nil
 }
 
 // SignHashEnvelope signs a [Sign1Message] using the provided [Signer] and
@@ -78,15 +67,11 @@ func (p *HashEnvelopePayload) validateHash() error {
 // Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
 // removed in a later release.
 func SignHashEnvelope(rand io.Reader, signer Signer, headers Headers, payload HashEnvelopePayload) ([]byte, error) {
-	err := payload.validateHash()
-	if err != nil {
+	if err := validateHash(payload.HashAlgorithm, payload.HashValue); err != nil {
 		return nil, err
 	}
 
-	headers.Protected, err = setHashEnvelopeProtectedHeader(headers.Protected, &payload)
-	if err != nil {
-		return nil, err
-	}
+	headers.Protected = setHashEnvelopeProtectedHeader(headers.Protected, &payload)
 	headers.RawProtected = nil
 	if err := validateHashEnvelopeHeaders(&headers); err != nil {
 		return nil, err
@@ -104,6 +89,7 @@ func SignHashEnvelope(rand io.Reader, signer Signer, headers Headers, payload Ha
 // Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
 // removed in a later release.
 func VerifyHashEnvelope(verifier Verifier, envelope []byte) (*Sign1Message, error) {
+	// parse and validate the Hash_Envelope object
 	var message Sign1Message
 	if err := message.UnmarshalCBOR(envelope); err != nil {
 		return nil, err
@@ -111,27 +97,54 @@ func VerifyHashEnvelope(verifier Verifier, envelope []byte) (*Sign1Message, erro
 	if err := validateHashEnvelopeHeaders(&message.Headers); err != nil {
 		return nil, err
 	}
+
+	// verify the Hash_Envelope object
 	if err := message.Verify(nil, verifier); err != nil {
 		return nil, err
 	}
+
+	// cast to type Algorithm
+	hashAlgorithm, err := message.Headers.Protected.PayloadHashAlgorithm()
+	if err != nil {
+		return nil, err
+	}
+	message.Headers.Protected[HeaderLabelPayloadHashAlgorithm] = hashAlgorithm
+
+	// validate the hash value
+	if err := validateHash(hashAlgorithm, message.Payload); err != nil {
+		return nil, err
+	}
+
 	return &message, nil
+}
+
+// validateHash checks the validity of the hash.
+func validateHash(alg Algorithm, value []byte) error {
+	hash := alg.hashFunc()
+	if hash == 0 {
+		return fmt.Errorf("%v: %w", alg, ErrAlgorithmNotSupported)
+	}
+	if size := hash.Size(); size != len(value) {
+		return fmt.Errorf("%v: size mismatch: expected %d, got %d", alg, size, len(value))
+	}
+	return nil
 }
 
 // setHashEnvelopeProtectedHeader sets the protected header for a Hash_Envelope
 // object.
-func setHashEnvelopeProtectedHeader(base ProtectedHeader, payload *HashEnvelopePayload) (ProtectedHeader, error) {
+func setHashEnvelopeProtectedHeader(base ProtectedHeader, payload *HashEnvelopePayload) ProtectedHeader {
 	header := maps.Clone(base)
 	if header == nil {
 		header = make(ProtectedHeader)
 	}
-	header.SetPayloadHashAlgorithm(payload.HashAlgorithm)
-	if err := header.SetPayloadPreimageContentType(payload.PreimageContentType); err != nil {
-		return nil, err
+	header[HeaderLabelPayloadHashAlgorithm] = payload.HashAlgorithm
+	if payload.PreimageContentType != nil {
+		header[HeaderLabelPayloadPreimageContentType] = payload.PreimageContentType
 	}
 	if payload.Location != "" {
-		header.SetPayloadLocation(payload.Location)
+		header[HeaderLabelPayloadLocation] = payload.Location
 	}
-	return header, nil
+	return header
 }
 
 // validateHashEnvelopeHeaders validates the headers of a Hash_Envelope object.
