@@ -26,12 +26,45 @@ func TestAlgorithm_String(t *testing.T) {
 		{AlgorithmES512, "ES512"},
 		{AlgorithmEdDSA, "EdDSA"},
 		{AlgorithmReserved, "Reserved"},
+		{AlgorithmSHA256, "SHA-256"},
+		{AlgorithmSHA384, "SHA-384"},
+		{AlgorithmSHA512, "SHA-512"},
 		{7, "Algorithm(7)"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
 			if got := tt.alg.String(); got != tt.want {
 				t.Errorf("Algorithm.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAlgorithm_hashFunc(t *testing.T) {
+	tests := []struct {
+		alg  Algorithm
+		want crypto.Hash
+	}{
+		{AlgorithmPS256, crypto.SHA256},
+		{AlgorithmPS384, crypto.SHA384},
+		{AlgorithmPS512, crypto.SHA512},
+		{AlgorithmRS256, 0}, // crypto.SHA256 but not supported as intended
+		{AlgorithmRS384, 0}, // crypto.SHA384 but not supported as intended
+		{AlgorithmRS512, 0}, // crypto.SHA512 but not supported as intended
+		{AlgorithmES256, crypto.SHA256},
+		{AlgorithmES384, crypto.SHA384},
+		{AlgorithmES512, crypto.SHA512},
+		{AlgorithmEdDSA, 0},
+		{AlgorithmReserved, 0},
+		{AlgorithmSHA256, crypto.SHA256},
+		{AlgorithmSHA384, crypto.SHA384},
+		{AlgorithmSHA512, crypto.SHA512},
+		{7, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.alg.String(), func(t *testing.T) {
+			if got := tt.alg.hashFunc(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Algorithm.hashFunc() = %v, want %v", got, tt.want)
 			}
 		})
 	}
