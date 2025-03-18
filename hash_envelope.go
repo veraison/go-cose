@@ -12,8 +12,8 @@ import (
 //
 // # Experimental
 //
-// Notice: The COSE HashEnvelopePayload struct is EXPERIMENTAL and may be
-// changed or removed in a later release.
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
 type HashEnvelopePayload struct {
 	// HashAlgorithm is the hash algorithm used to produce the hash value.
 	HashAlgorithm Algorithm
@@ -75,7 +75,7 @@ func (p *HashEnvelopePayload) validateHash() error {
 //
 // # Experimental
 //
-// Notice: The COSE SignHashEnvelope API is EXPERIMENTAL and may be changed or
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
 // removed in a later release.
 func SignHashEnvelope(rand io.Reader, signer Signer, headers Headers, payload HashEnvelopePayload) ([]byte, error) {
 	err := payload.validateHash()
@@ -101,7 +101,7 @@ func SignHashEnvelope(rand io.Reader, signer Signer, headers Headers, payload Ha
 //
 // # Experimental
 //
-// Notice: The COSE VerifyHashEnvelope API is EXPERIMENTAL and may be changed or
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
 // removed in a later release.
 func VerifyHashEnvelope(verifier Verifier, envelope []byte) (*Sign1Message, error) {
 	var message Sign1Message

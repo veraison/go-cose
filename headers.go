@@ -145,8 +145,8 @@ func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
 //
 // # Experimental
 //
-// Notice: The COSE SetPayloadHashAlgorithm API is EXPERIMENTAL and may be
-// changed or removed in a later release.
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
 func (h ProtectedHeader) SetPayloadHashAlgorithm(alg Algorithm) {
 	h[HeaderLabelPayloadHashAlgorithm] = alg
 }
@@ -156,8 +156,8 @@ func (h ProtectedHeader) SetPayloadHashAlgorithm(alg Algorithm) {
 //
 // # Experimental
 //
-// Notice: The COSE SetPayloadPreimageContentType API is EXPERIMENTAL and may be
-// changed or removed in a later release.
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
 func (h ProtectedHeader) SetPayloadPreimageContentType(typ any) error {
 	if !canUint(typ) && !canTstr(typ) {
 		return errors.New("header parameter: payload preimage content type: require uint / tstr type")
@@ -170,7 +170,7 @@ func (h ProtectedHeader) SetPayloadPreimageContentType(typ any) error {
 //
 // # Experimental
 //
-// Notice: The COSE SetPayloadLocation API is EXPERIMENTAL and may be changed or
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
 // removed in a later release.
 func (h ProtectedHeader) SetPayloadLocation(location string) {
 	h[HeaderLabelPayloadLocation] = location
@@ -213,8 +213,8 @@ func (h ProtectedHeader) algorithm(headerLabel int64) (Algorithm, error) {
 //
 // # Experimental
 //
-// Notice: The COSE PayloadHashAlgorithm API is EXPERIMENTAL and may be changed
-// or removed in a later release.
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
 func (h ProtectedHeader) PayloadHashAlgorithm() (Algorithm, error) {
 	return h.algorithm(HeaderLabelPayloadHashAlgorithm)
 }

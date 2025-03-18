@@ -485,8 +485,8 @@ func ExampleCountersignature() {
 //
 // Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-03.html
 //
-// The COSE SignHashEnvelope and VerifyHashEnvelope API are EXPERIMENTAL and may
-// be changed or removed in a later release.
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
 func Example_hashEnvelope() {
 	// create message to be signed
 	digested := sha512.Sum512([]byte("hello world"))
