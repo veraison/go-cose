@@ -40,27 +40,27 @@ type HashEnvelopePayload struct {
 // produces a Hash_Envelope object.
 //
 //	Hash_Envelope_Protected_Header = {
-//		? &(alg: 1) => int,
-//		&(payload_hash_alg: 258) => int
-//		&(payload_preimage_content_type: 259) => uint / tstr
-//		? &(payload_location: 260) => tstr
-//		* int / tstr => any
+//	    ? &(alg: 1) => int,
+//	    &(payload_hash_alg: 258) => int
+//	    &(payload_preimage_content_type: 259) => uint / tstr
+//	    ? &(payload_location: 260) => tstr
+//	    * int / tstr => any
 //	}
 //
 //	Hash_Envelope_Unprotected_Header = {
-//		* int / tstr => any
+//	    * int / tstr => any
 //	}
 //
 //	Hash_Envelope_as_COSE_Sign1 = [
-//		protected : bstr .cbor Hash_Envelope_Protected_Header,
-//		unprotected : Hash_Envelope_Unprotected_Header,
-//		payload: bstr / nil,
-//		signature : bstr
+//	    protected : bstr .cbor Hash_Envelope_Protected_Header,
+//	    unprotected : Hash_Envelope_Unprotected_Header,
+//	    payload: bstr / nil,
+//	    signature : bstr
 //	]
 //
 //	Hash_Envelope = #6.18(Hash_Envelope_as_COSE_Sign1)
 //
-// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-03.html
+// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-04.html
 //
 // # Experimental
 //
@@ -148,7 +148,7 @@ func setHashEnvelopeProtectedHeader(base ProtectedHeader, payload *HashEnvelopeP
 }
 
 // validateHashEnvelopeHeaders validates the headers of a Hash_Envelope object.
-// See https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-03.html
+// See https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-04.html
 // section 4 for more details.
 func validateHashEnvelopeHeaders(headers *Headers) error {
 	var foundPayloadHashAlgorithm bool
