@@ -524,7 +524,7 @@ func TestProtectedHeader_Algorithm(t *testing.T) {
 			h: ProtectedHeader{
 				HeaderLabelAlgorithm: "foo",
 			},
-			wantErr: errors.New("Algorithm(\"foo\")"),
+			wantErr: errors.New(`Algorithm("foo"): algorithm not supported`),
 		},
 		{
 			name: "invalid algorithm",
@@ -543,6 +543,101 @@ func TestProtectedHeader_Algorithm(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ProtectedHeader.Algorithm() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProtectedHeader_PayloadHashAlgorithm(t *testing.T) {
+	tests := []struct {
+		name    string
+		h       ProtectedHeader
+		want    Algorithm
+		wantErr error
+	}{
+		{
+			name: "algorithm",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: AlgorithmES256,
+			},
+			want: AlgorithmES256,
+		},
+		{
+			name: "int",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: int(AlgorithmES256),
+			},
+			want: AlgorithmES256,
+		},
+		{
+			name: "int8",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: int8(AlgorithmES256),
+			},
+			want: AlgorithmES256,
+		},
+		{
+			name: "int16",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: int16(AlgorithmES256),
+			},
+			want: AlgorithmES256,
+		},
+		{
+			name: "int32",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: int32(AlgorithmES256),
+			},
+			want: AlgorithmES256,
+		},
+		{
+			name: "int64",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: int64(AlgorithmES256),
+			},
+			want: AlgorithmES256,
+		},
+		{
+			name:    "nil header",
+			h:       nil,
+			wantErr: ErrAlgorithmNotFound,
+		},
+		{
+			name:    "empty header",
+			h:       ProtectedHeader{},
+			wantErr: ErrAlgorithmNotFound,
+		},
+		{
+			name: "missing algorithm header",
+			h: ProtectedHeader{
+				"foo": "bar",
+			},
+			wantErr: ErrAlgorithmNotFound,
+		},
+		{
+			name: "algorithm in string type is not allowed",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: "foo",
+			},
+			wantErr: ErrInvalidAlgorithm,
+		},
+		{
+			name: "invalid algorithm",
+			h: ProtectedHeader{
+				HeaderLabelPayloadHashAlgorithm: 2.5,
+			},
+			wantErr: ErrInvalidAlgorithm,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.h.PayloadHashAlgorithm()
+			if tt.wantErr != nil && err.Error() != tt.wantErr.Error() {
+				t.Errorf("ProtectedHeader.PayloadHashAlgorithm() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ProtectedHeader.PayloadHashAlgorithm() = %v, want %v", got, tt.want)
 			}
 		})
 	}
