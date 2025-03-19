@@ -483,7 +483,7 @@ func ExampleCountersignature() {
 
 // This example demonstrates signing and verifying COSE Hash Envelope.
 //
-// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-03.html
+// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-04.html
 //
 // Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
 // removed in a later release.
