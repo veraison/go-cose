@@ -206,9 +206,99 @@ go-cose has built-in supports the following algorithms:
 
 ### Custom Algorithms
 
-The supported algorithms can be extended at runtime by using [cose.RegisterAlgorithm](https://pkg.go.dev/github.com/veraison/go-cose#RegisterAlgorithm).
+It is possible to use custom algorithms with this library, for example:
 
-[API docs](https://pkg.go.dev/github.com/veraison/go-cose)
+```go
+package cose_test
+
+import (
+	"errors"
+	"io"
+	"testing"
+
+	"github.com/cloudflare/circl/sign"
+	"github.com/cloudflare/circl/sign/schemes"
+	"github.com/veraison/go-cose"
+)
+
+type customKeySigner struct {
+	alg cose.Algorithm
+	key sign.PrivateKey
+}
+
+func (ks *customKeySigner) Algorithm() cose.Algorithm {
+	return ks.alg
+}
+
+func (ks *customKeySigner) Sign(rand io.Reader, content []byte) ([]byte, error) {
+	suite := schemes.ByName("ML-DSA-44")
+	return suite.Sign(ks.key, content, nil), nil
+}
+
+type customKeyVerifier struct {
+	alg cose.Algorithm
+	key sign.PublicKey
+}
+
+func (ks *customKeyVerifier) Algorithm() cose.Algorithm {
+	return ks.alg
+}
+
+func (ks *customKeyVerifier) Verify(content []byte, signature []byte) error {
+	suite := schemes.ByName("ML-DSA-44")
+	valid := suite.Verify(ks.key, content, signature, nil)
+	if !valid {
+		return errors.New("Signature not from public key")
+	}
+	return nil
+}
+
+func TestCustomSigner(t *testing.T) {
+	const (
+		COSE_ALG_ML_DSA_44 = -48
+	)
+	suite := schemes.ByName("ML-DSA-44")
+	var seed [32]byte // zero seed
+	pub, priv := suite.DeriveKey(seed[:])
+	var ks cose.Signer = &customKeySigner{
+		alg: COSE_ALG_ML_DSA_44,
+		key: priv,
+	}
+	var kv = customKeyVerifier{
+		alg: COSE_ALG_ML_DSA_44,
+		key: pub,
+	}
+
+	headers := cose.Headers{
+		Protected: cose.ProtectedHeader{
+			cose.HeaderLabelAlgorithm: COSE_ALG_ML_DSA_44,
+			cose.HeaderLabelKeyID:     []byte("key-42"),
+		},
+	}
+	var payload = []byte("hello post quantum signatures")
+	signature, _ := cose.Sign1(nil, ks, headers, payload, nil)
+	var sign1 cose.Sign1Message
+	_ = sign1.UnmarshalCBOR(signature)
+
+	var verifier cose.Verifier = &kv
+	verifyError := sign1.Verify(nil, verifier)
+
+	if verifyError != nil {
+		t.Fatalf("Verification failed")
+	} else {
+		// fmt.Println(cbor.Diagnose(signature))
+		// 18([
+		// 	<<{
+		//  / alg / 1: -48,
+		//  / kid / 4: h'6B65792D3432'}
+		//  >>,
+		// 	{},
+		// 	h'4974...722e',
+		// 	h'cb5a...293b'
+		// ])
+	}
+}
+```
 
 ### Integer Ranges
 
