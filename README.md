@@ -278,7 +278,7 @@ func TestCustomSigner(t *testing.T) {
 	var payload = []byte("hello post quantum signatures")
 	signature, _ := cose.Sign1(nil, ks, headers, payload, nil)
 	var sign1 cose.Sign1Message
-	sign1.UnmarshalCBOR(signature)
+	_ = sign1.UnmarshalCBOR(signature)
 
 	var verifier cose.Verifier = &kv
 	verifyError := sign1.Verify(nil, verifier)
