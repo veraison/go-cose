@@ -281,9 +281,9 @@ func TestCustomSigner(t *testing.T) {
 	sign1.UnmarshalCBOR(signature)
 
 	var verifier cose.Verifier = &kv
-	verify_error := sign1.Verify(nil, verifier)
+	verifyError := sign1.Verify(nil, verifier)
 
-	if verify_error != nil {
+	if verifyError != nil {
 		t.Fatalf("Verification failed")
 	} else {
 		// fmt.Println(cbor.Diagnose(signature))
