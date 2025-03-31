@@ -127,15 +127,55 @@ func (h ProtectedHeader) SetType(typ any) (any, error) {
 
 // SetCWTClaims sets the CWT Claims value of the protected header.
 func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
-	iss, hasIss := claims[1]
-	if hasIss && !canTstr(iss) {
-		return claims, errors.New("cwt claim: iss: require tstr")
+	for name, _ := range claims {
+		switch name {
+		case 1:
+			iss, hasIss := claims[name]
+			if hasIss && !canTstr(iss) {
+				return claims, errors.New("cwt claim: iss: require tstr")
+			}
+		case 2:
+			sub, hasSub := claims[name]
+			if hasSub && !canTstr(sub) {
+				return claims, errors.New("cwt claim: sub: require tstr")
+			}
+		case 3:
+			aud, hasAud := claims[name]
+			if hasAud && !canTstr(aud) {
+				return claims, errors.New("cwt claim: aud: require tstr")
+			}
+		case 4:
+			exp, hasExp := claims[name]
+			if hasExp && !canInt(exp) && !canFloat(exp) {
+				return claims, errors.New("cwt claim: exp: require int or float")
+			}
+		case 5:
+			nbf, hasNbf := claims[name]
+			if hasNbf && !canInt(nbf) && !canFloat(nbf) {
+				return claims, errors.New("cwt claim: nbf: require int or float")
+			}
+		case 6:
+			iat, hasIat := claims[name]
+			if hasIat && !canInt(iat) && !canFloat(iat) {
+				return claims, errors.New("cwt claim: iat: require int or float")
+			}
+		case 7:
+			cti, hasCti := claims[name]
+			if hasCti && !canBstr(cti) {
+				return claims, errors.New("cwt claim: cti: require tstr")
+			}
+		case 8:
+			cnf, hasCnf := claims[name]
+			if hasCnf && !canMap(cnf) {
+				return claims, errors.New("cwt claim: cnf: require map")
+			}
+		case 9:
+			scope, hasScope := claims[name]
+			if hasScope && !canBstr(scope) && !canTstr(scope) {
+				return claims, errors.New("cwt claim: scope: require bstr or tstr")
+			}
+		}
 	}
-	sub, hasSub := claims[2]
-	if hasSub && !canTstr(sub) {
-		return claims, errors.New("cwt claim: sub: require tstr")
-	}
-	// TODO: validate claims, other claims
 	h[HeaderLabelCWTClaims] = claims
 	return claims, nil
 }
@@ -662,6 +702,15 @@ func canInt(v any) bool {
 	return false
 }
 
+// canFloat reports whether v can be used as a CBOR float type
+func canFloat(v any) bool {
+	switch v.(type) {
+	case float32, float64:
+		return true
+	}
+	return false
+}
+
 // canTstr reports whether v can be used as a CBOR tstr type.
 func canTstr(v any) bool {
 	_, ok := v.(string)
@@ -671,6 +720,12 @@ func canTstr(v any) bool {
 // canBstr reports whether v can be used as a CBOR bstr type.
 func canBstr(v any) bool {
 	_, ok := v.([]byte)
+	return ok
+}
+
+// canMap reports whether v can be used as a CBOR map type.
+func canMap(v any) bool {
+	_, ok := v.(map[any]any)
 	return ok
 }
 
