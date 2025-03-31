@@ -60,7 +60,7 @@ type HashEnvelopePayload struct {
 //
 //	Hash_Envelope = #6.18(Hash_Envelope_as_COSE_Sign1)
 //
-// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-04.html
+// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-05.html
 //
 // # Experimental
 //
@@ -148,7 +148,7 @@ func setHashEnvelopeProtectedHeader(base ProtectedHeader, payload *HashEnvelopeP
 }
 
 // validateHashEnvelopeHeaders validates the headers of a Hash_Envelope object.
-// See https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-04.html
+// See https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-05.html
 // section 4 for more details.
 func validateHashEnvelopeHeaders(headers *Headers) error {
 	var foundPayloadHashAlgorithm bool
@@ -183,7 +183,7 @@ func validateHashEnvelopeHeaders(headers *Headers) error {
 		return errors.New("protected header parameter: payload hash alg: required")
 	}
 
-	for label, value := range headers.Unprotected {
+	for label := range headers.Unprotected {
 		// Validate that all header labels are integers or strings.
 		// Reference: https://datatracker.ietf.org/doc/html/rfc8152#section-1.4
 		label, ok := normalizeLabel(label)
@@ -197,9 +197,7 @@ func validateHashEnvelopeHeaders(headers *Headers) error {
 		case HeaderLabelPayloadHashAlgorithm:
 			return errors.New("unprotected header parameter: payload hash alg: not allowed")
 		case HeaderLabelPayloadPreimageContentType:
-			if !canUint(value) && !canTstr(value) {
-				return errors.New("unprotected header parameter: payload preimage content type: require uint / tstr type")
-			}
+			return errors.New("unprotected header parameter: payload preimage content type: not allowed")
 		case HeaderLabelPayloadLocation:
 			return errors.New("unprotected header parameter: payload location: not allowed")
 		}

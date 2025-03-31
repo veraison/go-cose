@@ -279,7 +279,7 @@ func TestVerifyHashEnvelope(t *testing.T) {
 			wantErr: "protected header parameter: payload preimage content type: require uint / tstr type",
 		},
 		{
-			name: "invalid preimage content type in the unprotected header",
+			name: "preimage content type present in the unprotected header",
 			message: &Sign1Message{
 				Headers: Headers{
 					Protected: ProtectedHeader{
@@ -287,12 +287,12 @@ func TestVerifyHashEnvelope(t *testing.T) {
 						HeaderLabelPayloadHashAlgorithm: payloadAlg,
 					},
 					Unprotected: UnprotectedHeader{
-						HeaderLabelPayloadPreimageContentType: -1,
+						HeaderLabelPayloadPreimageContentType: "text/plain",
 					},
 				},
 				Payload: payloadHash,
 			},
-			wantErr: "unprotected header parameter: payload preimage content type: require uint / tstr type",
+			wantErr: "unprotected header parameter: payload preimage content type: not allowed",
 		},
 		{
 			name: "payload location present in the unprotected header",
