@@ -480,3 +480,66 @@ func ExampleCountersignature() {
 	// signature countersignature verified
 	// verification error as expected
 }
+
+// This example demonstrates signing and verifying COSE Hash Envelope.
+//
+// Reference: https://www.ietf.org/archive/id/draft-ietf-cose-hash-envelope-05.html
+//
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
+func Example_hashEnvelope() {
+	// create message to be signed
+	digested := sha512.Sum512([]byte("hello world"))
+	payload := cose.HashEnvelopePayload{
+		HashAlgorithm:       cose.AlgorithmSHA512,
+		HashValue:           digested[:],
+		PreimageContentType: "text/plain",
+		Location:            "urn:example:location",
+	}
+
+	// create a signer
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES512, privateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// sign message
+	sig, err := cose.SignHashEnvelope(rand.Reader, signer, cose.Headers{
+		Protected: cose.ProtectedHeader{
+			cose.HeaderLabelAlgorithm: cose.AlgorithmES512,
+		},
+	}, payload)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("message signed")
+
+	// create a verifier from a trusted public key
+	publicKey := privateKey.Public()
+	verifier, err := cose.NewVerifier(cose.AlgorithmES512, publicKey)
+	if err != nil {
+		panic(err)
+	}
+
+	// verify message
+	msg, err := cose.VerifyHashEnvelope(verifier, sig)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("message verified")
+
+	// check payload
+	fmt.Printf("payload hash: %v: %x\n", msg.Headers.Protected[cose.HeaderLabelPayloadHashAlgorithm], msg.Payload)
+	fmt.Println("payload content type:", msg.Headers.Protected[cose.HeaderLabelPayloadPreimageContentType])
+	fmt.Println("payload location:", msg.Headers.Protected[cose.HeaderLabelPayloadLocation])
+	// Output:
+	// message signed
+	// message verified
+	// payload hash: SHA-512: 309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f
+	// payload content type: text/plain
+	// payload location: urn:example:location
+}

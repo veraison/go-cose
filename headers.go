@@ -31,6 +31,18 @@ const (
 	HeaderLabelX5U                 int64 = 35
 )
 
+// Temporary COSE Header labels registered in the IANA "COSE Header Parameters"
+// registry.
+// These labels are not intended to be used in production code and are subject
+// to change without notice.
+//
+// Reference: https://www.iana.org/assignments/cose/cose.xhtml#header-parameters
+const (
+	HeaderLabelPayloadHashAlgorithm       int64 = 258 // registered 2025-03-05, expires 2026-03-05
+	HeaderLabelPayloadPreimageContentType int64 = 259 // registered 2025-03-05, expires 2026-03-05
+	HeaderLabelPayloadLocation            int64 = 260 // registered 2025-03-05, expires 2026-03-05
+)
+
 // ProtectedHeader contains parameters that are to be cryptographically
 // protected.
 type ProtectedHeader map[any]any
@@ -132,7 +144,7 @@ func (h ProtectedHeader) SetCWTClaims(claims CWTClaims) (CWTClaims, error) {
 func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	value, ok := h[HeaderLabelAlgorithm]
 	if !ok {
-		return 0, ErrAlgorithmNotFound
+		return AlgorithmReserved, ErrAlgorithmNotFound
 	}
 	switch alg := value.(type) {
 	case Algorithm:
@@ -148,7 +160,37 @@ func (h ProtectedHeader) Algorithm() (Algorithm, error) {
 	case int64:
 		return Algorithm(alg), nil
 	case string:
-		return AlgorithmReserved, fmt.Errorf("Algorithm(%q)", alg)
+		return AlgorithmReserved, fmt.Errorf("Algorithm(%q): %w", alg, ErrAlgorithmNotSupported)
+	default:
+		return AlgorithmReserved, ErrInvalidAlgorithm
+	}
+}
+
+// PayloadHashAlgorithm gets the payload hash algorithm value from the protected
+// header.
+//
+// # Experimental
+//
+// Notice: The COSE Hash Envelope API is EXPERIMENTAL and may be changed or
+// removed in a later release.
+func (h ProtectedHeader) PayloadHashAlgorithm() (Algorithm, error) {
+	value, ok := h[HeaderLabelPayloadHashAlgorithm]
+	if !ok {
+		return AlgorithmReserved, ErrAlgorithmNotFound
+	}
+	switch alg := value.(type) {
+	case Algorithm:
+		return alg, nil
+	case int:
+		return Algorithm(alg), nil
+	case int8:
+		return Algorithm(alg), nil
+	case int16:
+		return Algorithm(alg), nil
+	case int32:
+		return Algorithm(alg), nil
+	case int64:
+		return Algorithm(alg), nil
 	default:
 		return AlgorithmReserved, ErrInvalidAlgorithm
 	}

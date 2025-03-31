@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-// Algorithms supported by this library.
+// Signature algorithms supported by this library.
 //
 // When using an algorithm which requires hashing,
 // make sure the associated hash function is linked to the binary.
@@ -42,12 +42,9 @@ const (
 
 	// PureEdDSA by RFC 8152.
 	AlgorithmEdDSA Algorithm = -8
-
-	// Reserved value.
-	AlgorithmReserved Algorithm = 0
 )
 
-// Algorithms known, but not supported by this library.
+// Signature algorithms known, but not supported by this library.
 //
 // Signers and Verifiers requiring the algorithms below are not
 // directly supported by this library. They need to be provided
@@ -65,6 +62,21 @@ const (
 	// RSASSA-PKCS1-v1_5 using SHA-512 by RFC 8812.
 	AlgorithmRS512 Algorithm = -259
 )
+
+// Hash algorithms by RFC 9054.
+const (
+	// SHA-256 by RFC 9054.
+	AlgorithmSHA256 Algorithm = -16
+
+	// SHA-384 by RFC 9054.
+	AlgorithmSHA384 Algorithm = -43
+
+	// SHA-512 by RFC 9054.
+	AlgorithmSHA512 Algorithm = -44
+)
+
+// AlgorithmReserved represents a reserved algorithm value by RFC 9053.
+const AlgorithmReserved Algorithm = 0
 
 // Algorithm represents an IANA algorithm entry in the COSE Algorithms registry.
 //
@@ -102,6 +114,12 @@ func (a Algorithm) String() string {
 		return "EdDSA"
 	case AlgorithmReserved:
 		return "Reserved"
+	case AlgorithmSHA256:
+		return "SHA-256"
+	case AlgorithmSHA384:
+		return "SHA-384"
+	case AlgorithmSHA512:
+		return "SHA-512"
 	default:
 		return "Algorithm(" + strconv.FormatInt(int64(a), 10) + ")"
 	}
@@ -111,11 +129,11 @@ func (a Algorithm) String() string {
 // library.
 func (a Algorithm) hashFunc() crypto.Hash {
 	switch a {
-	case AlgorithmPS256, AlgorithmES256:
+	case AlgorithmPS256, AlgorithmES256, AlgorithmSHA256:
 		return crypto.SHA256
-	case AlgorithmPS384, AlgorithmES384:
+	case AlgorithmPS384, AlgorithmES384, AlgorithmSHA384:
 		return crypto.SHA384
-	case AlgorithmPS512, AlgorithmES512:
+	case AlgorithmPS512, AlgorithmES512, AlgorithmSHA512:
 		return crypto.SHA512
 	default:
 		return 0
