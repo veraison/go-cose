@@ -158,7 +158,6 @@ func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Test case: %s, Key type: %s", tc.Title, tc.Key["kty"])
 	sig := tc.Sign1
 	sigMsg := cose.NewSign1Message()
 	sigMsg.Payload = mustHexToBytes(sig.Payload)
@@ -176,9 +175,6 @@ func testSign1(t *testing.T, tc *TestCase, deterministic bool) {
 	if tc.Alg == "EdDSA" {
 		rand = nil
 	}
-	t.Logf("Algorithm: %s, using rand: %v", tc.Alg, rand)
-	t.Logf("Payload: %x", sigMsg.Payload)
-	t.Logf("Protected: %+v", sigMsg.Headers.Protected)
 	err = sigMsg.Sign(rand, external, signer)
 	if err != nil {
 		t.Fatal(err)
@@ -208,31 +204,18 @@ func getSigner(tc *TestCase, private bool) (cose.Signer, cose.Verifier, error) {
 	if tc.Key["kty"] == "OKP" {
 		switch tc.Key["crv"] {
 		case "Ed25519":
-			publicKey := mustBase64ToBytes(tc.Key["x"])
-			if len(publicKey) != ed25519.PublicKeySize {
-				return nil, nil, errors.New("invalid Ed25519 public key size")
-			}
 			// Note: Ed448 would require different key size validation (57 bytes)
+			verifierKey, privateKeySigner, err := createEd25519Key(tc.Key, private)
+			if err != nil {
+				return nil, nil, err
+			}
 			
 			var signer cose.Signer
-			var verifierKey ed25519.PublicKey
-			
 			if private {
-				privateKey := mustBase64ToBytes(tc.Key["d"])
-				if len(privateKey) != ed25519.SeedSize {
-					return nil, nil, errors.New("invalid Ed25519 private key size")
-				}
-				fullPrivateKey := ed25519.NewKeyFromSeed(privateKey)
-				var err error
-				signer, err = cose.NewSigner(alg, fullPrivateKey)
+				signer, err = cose.NewSigner(alg, privateKeySigner)
 				if err != nil {
 					return nil, nil, err
 				}
-				// Use the public key from the private key for verification
-				verifierKey = fullPrivateKey.Public().(ed25519.PublicKey)
-			} else {
-				// For verify-only, use the public key from the test case
-				verifierKey = ed25519.PublicKey(publicKey)
 			}
 			
 			verifier, err := cose.NewVerifier(alg, verifierKey)
@@ -313,22 +296,16 @@ func getKey(key Key, private bool) (crypto.Signer, error) {
 		// Only Ed25519 is supported for now
 		switch key["crv"] {
 		case "Ed25519":
-			publicKey := mustBase64ToBytes(key["x"])
-			if len(publicKey) != ed25519.PublicKeySize {
-				return nil, errors.New("invalid Ed25519 public key size")
+			_, privateKeySigner, err := createEd25519Key(key, private)
+			if err != nil {
+				return nil, err
 			}
-			if private {
-				privateKey := mustBase64ToBytes(key["d"])
-				if len(privateKey) != ed25519.SeedSize {
-					return nil, errors.New("invalid Ed25519 private key size")
-				}
-				// Ed25519 private key is 64 bytes: 32-byte seed + 32-byte public key
-				fullPrivateKey := ed25519.NewKeyFromSeed(privateKey)
-				return fullPrivateKey, nil
+			if !private {
+				// For public key only operations, we need to return a type that satisfies crypto.Signer
+				// but this won't work for verify-only operations. We'll handle this in getSigner.
+				return nil, errors.New("OKP public-only key not supported in this context")
 			}
-			// For public key only operations, we need to return a type that satisfies crypto.Signer
-			// but this won't work for verify-only operations. We'll handle this in getSigner.
-			return nil, errors.New("OKP public-only key not supported in this context")
+			return privateKeySigner, nil
 		case "Ed448":
 			// Ed448 support would require golang.org/x/crypto/ed448
 			return nil, errors.New("Ed448 not yet implemented")
@@ -390,6 +367,27 @@ func mustBase64ToBytes(s string) []byte {
 		panic(err)
 	}
 	return val
+}
+
+// createEd25519Key creates an Ed25519 key from test case data
+func createEd25519Key(key Key, private bool) (ed25519.PublicKey, crypto.Signer, error) {
+	publicKey := mustBase64ToBytes(key["x"])
+	if len(publicKey) != ed25519.PublicKeySize {
+		return nil, nil, errors.New("invalid Ed25519 public key size")
+	}
+	
+	if !private {
+		return ed25519.PublicKey(publicKey), nil, nil
+	}
+	
+	privateKey := mustBase64ToBytes(key["d"])
+	if len(privateKey) != ed25519.SeedSize {
+		return nil, nil, errors.New("invalid Ed25519 private key size")
+	}
+	
+	fullPrivateKey := ed25519.NewKeyFromSeed(privateKey)
+	publicKeyFromPrivate := fullPrivateKey.Public().(ed25519.PublicKey)
+	return publicKeyFromPrivate, fullPrivateKey, nil
 }
 
 // mustNameToAlg returns the algorithm associated to name.
