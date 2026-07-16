@@ -5,9 +5,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha512"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/veraison/go-cose"
+	x509testdata "github.com/veraison/go-cose/testdata/x509"
 )
 
 // This example demonstrates signing and verifying COSE_Sign signatures.
@@ -272,6 +275,79 @@ func ExampleSign1Message_detachedPayload() {
 	// message signed
 	// message verified
 	// verification error as expected
+}
+
+// This example demonstrates signing and verifying COSE_Sign1 with a protected
+// X.509 certificate chain. VerifyWithX5Chain returns the selected validated
+// path so the application can apply its own certificate authorization policy.
+func ExampleSign1Message_VerifyWithX5Chain() {
+	leaf, err := x509.ParseCertificate(x509testdata.EndEntityDer)
+	if err != nil {
+		panic(err)
+	}
+	intermediate, err := x509.ParseCertificate(x509testdata.IntermediateCA)
+	if err != nil {
+		panic(err)
+	}
+	root, err := x509.ParseCertificate(x509testdata.RootCA)
+	if err != nil {
+		panic(err)
+	}
+
+	keyBlock, _ := pem.Decode(x509testdata.EndEntityKey)
+	if keyBlock == nil {
+		panic("invalid test signing key")
+	}
+	key, err := x509.ParseECPrivateKey(keyBlock.Bytes)
+	if err != nil {
+		panic(err)
+	}
+	signer, err := cose.NewSigner(cose.AlgorithmES256, key)
+	if err != nil {
+		panic(err)
+	}
+
+	msg := cose.NewSign1Message()
+	msg.Payload = []byte("hello world")
+	msg.Headers.Protected.SetAlgorithm(cose.AlgorithmES256)
+	if err := cose.SetX5Chain(msg.Headers.Protected, cose.X5Chain{
+		Leaf:          leaf,
+		Intermediates: []*x509.Certificate{intermediate},
+	}); err != nil {
+		panic(err)
+	}
+	if err := msg.Sign(rand.Reader, nil, signer); err != nil {
+		panic(err)
+	}
+	wire, err := msg.MarshalCBOR()
+	if err != nil {
+		panic(err)
+	}
+
+	// A receiver verifies the decoded message, including its RawProtected header.
+	var received cose.Sign1Message
+	if err := received.UnmarshalCBOR(wire); err != nil {
+		panic(err)
+	}
+
+	roots := x509.NewCertPool()
+	roots.AddCert(root)
+	verifiedChain, err := received.VerifyWithX5Chain(nil, cose.TrustAnchors{
+		Pool:           roots,
+		RevocationMode: cose.RevocationDisabled, // This example supplies no CRLs.
+	}, nil)
+	if err != nil {
+		panic(err)
+	}
+	if verifiedChain[0].Subject.CommonName != "Acme Gizmo CoRIM signer" {
+		panic("unexpected signing certificate")
+	}
+
+	fmt.Printf("verified path length: %d\n", len(verifiedChain))
+	fmt.Printf("authorized signer: %s\n", verifiedChain[0].Subject.CommonName)
+	// Output:
+	// verified path length: 3
+	// authorized signer: Acme Gizmo CoRIM signer
 }
 
 // This example demonstrates signing COSE_Sign1_Tagged signatures using Sign1().

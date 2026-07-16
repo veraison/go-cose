@@ -59,6 +59,9 @@ func (h ProtectedHeader) MarshalCBOR() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("protected header: %w", err)
 		}
+		if err := validateX5ChainHeaderEncoding(h); err != nil {
+			return nil, fmt.Errorf("protected header: %w", err)
+		}
 		encoded, err = encMode.Marshal(map[any]any(h))
 		if err != nil {
 			return nil, err
@@ -627,6 +630,10 @@ func validateHeaderParameters(h map[any]any, protected bool) error {
 			}
 			if !canBstr(value) {
 				return errors.New("header parameter: Countersignature0 version 2: require bstr type")
+			}
+		case HeaderLabelX5Chain:
+			if err := validateX5ChainHeaderValue(value); err != nil {
+				return fmt.Errorf("header parameter: x5chain: %w", err)
 			}
 		}
 	}
