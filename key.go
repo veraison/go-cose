@@ -744,6 +744,58 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 	}
 }
 
+func (k *Key) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	if !hash.Available() {
+		return nil, ErrUnavailableHashFunc
+	}
+
+	type thumbprintHandler func() ([]byte, error)
+	handlers := map[KeyType]thumbprintHandler{
+		KeyTypeOKP: k.calcOKPThumbprint,
+		KeyTypeEC2: k.calcEC2Thumbprint,
+	}
+	handler, ok := handlers[k.Type]
+	if !ok {
+		return nil, ErrOpNotSupported
+	}
+
+	toBeHashedData, err := handler()
+	if err != nil {
+		return nil, err
+	}
+
+	h := hash.New()
+	h.Write(toBeHashedData)
+	return h.Sum(nil), nil
+}
+
+func (k *Key) calcOKPThumbprint() ([]byte, error) {
+	err := k.validate(KeyOpReserved)
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[int]interface{})
+	m[int(keyLabelKeyType)] = k.Type
+	m[int(KeyLabelOKPCurve)] = k.Params[KeyLabelOKPCurve]
+	m[int(KeyLabelOKPX)] = k.Params[KeyLabelOKPX]
+	return encMode.Marshal(m)
+}
+
+func (k *Key) calcEC2Thumbprint() ([]byte, error) {
+	err := k.validate(KeyOpReserved)
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[int]interface{})
+	m[int(keyLabelKeyType)] = k.Type
+	m[int(KeyLabelEC2Curve)] = k.Params[KeyLabelEC2Curve]
+	m[int(KeyLabelEC2X)] = k.Params[KeyLabelEC2X]
+	m[int(KeyLabelEC2Y)] = k.Params[KeyLabelEC2Y]
+	return encMode.Marshal(m)
+}
+
 // AlgorithmOrDefault returns the Algorithm associated with Key. If
 // Key.Algorithm is set, that is what is returned. Otherwise, the algorithm is
 // inferred using Key.Curve. This method does NOT validate that Key.Algorithm,

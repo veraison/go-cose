@@ -1892,3 +1892,338 @@ func newEC2(t *testing.T, crv elliptic.Curve) (x, y, d []byte) {
 	}
 	return priv.X.Bytes(), priv.Y.Bytes(), priv.D.Bytes()
 }
+
+func TestKey_Thumbprint(t *testing.T) {
+	// from section 6 of RFC 9679
+	ec256x := []byte{
+		0x65, 0xed, 0xa5, 0xa1, 0x25, 0x77, 0xc2, 0xba, 0xe8, 0x29, 0x43, 0x7f, 0xe3, 0x38, 0x70, 0x1a,
+		0x10, 0xaa, 0xa3, 0x75, 0xe1, 0xbb, 0x5b, 0x5d, 0xe1, 0x08, 0xde, 0x43, 0x9c, 0x08, 0x55, 0x1d,
+	}
+	ec256y := []byte{
+		0x1e, 0x52, 0xed, 0x75, 0x70, 0x11, 0x63, 0xf7, 0xf9, 0xe4, 0x0d, 0xdf, 0x9f, 0x34, 0x1b, 0x3d,
+		0xc9, 0xba, 0x86, 0x0a, 0xf7, 0xe0, 0xca, 0x7c, 0xa7, 0xe9, 0xee, 0xcd, 0x00, 0x84, 0xd1, 0x9c,
+	}
+	ec256thumbprint := []byte{
+		0x49, 0x6b, 0xd8, 0xaf, 0xad, 0xf3, 0x07, 0xe5, 0xb0, 0x8c, 0x64, 0xb0, 0x42, 0x1b, 0xf9, 0xdc,
+		0x01, 0x52, 0x8a, 0x34, 0x4a, 0x43, 0xbd, 0xa8, 0x8f, 0xad, 0xd1, 0x66, 0x9d, 0xa2, 0x53, 0xec,
+	}
+
+	okpx := []byte{
+		0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xed, 0x3c, 0x96, 0x41, 0xce,
+		0x83, 0xb8, 0x5c, 0xbc, 0xf6, 0xa6, 0x23, 0x25, 0xaf, 0x02, 0x1a, 0x68, 0xf7, 0x07, 0x51, 0x1a,
+	}
+	okpthumbprint := []byte{
+		0x28, 0xd9, 0xcc, 0x75, 0x8c, 0xce, 0x11, 0x80, 0x13, 0x61, 0x59, 0x1a, 0x6a, 0x38, 0x5b, 0xc8,
+		0x43, 0x58, 0xeb, 0xbb, 0x4b, 0xf4, 0x24, 0x47, 0x9b, 0xb9, 0x5e, 0x9c, 0x8c, 0x3c, 0xdb, 0x74,
+	}
+
+	tests := []struct {
+		name    string
+		h       crypto.Hash
+		k       *Key
+		want    []byte
+		wantErr string
+	}{
+		{
+			"CurveP256",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			ec256thumbprint,
+			"",
+		}, {
+			"CurveEd25519",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     okpx,
+				},
+			},
+			okpthumbprint,
+			"",
+		}, {
+			"invalid hash",
+			0,
+			nil,
+			nil,
+			ErrUnavailableHashFunc.Error(),
+		}, {
+			"missing type",
+			crypto.SHA256,
+			&Key{
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrOpNotSupported.Error(),
+		}, {
+			"unknown key type",
+			crypto.SHA256,
+			&Key{
+				Type: KeyType(7),
+			},
+			nil,
+			ErrOpNotSupported.Error(),
+		},
+		{
+			"EC2 with missing x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrEC2NoPub.Error(),
+		},
+		{
+			"EC2 with invalid type x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     0,
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 P256 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x[:31],
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 P384 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP384,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     make([]byte, 48),
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 P521 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP521,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     make([]byte, 66),
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 with missing y",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+				},
+			},
+			nil,
+			ErrEC2NoPub.Error(),
+		}, {
+			"EC2 with invalid type y",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     0,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 P256 with short y",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y[:31],
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 P384 with short y",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP384,
+					KeyLabelEC2X:     make([]byte, 48),
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 P521 with short y",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     make([]byte, 66),
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"EC2 with invalid crv",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveEd25519,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+				},
+			},
+			nil,
+			ErrOpNotSupported.Error(),
+		}, {
+			"OKP with missing X",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd25519,
+				},
+			},
+			nil,
+			ErrOKPNoPub.Error(),
+		}, {
+			"OKP with invalid type x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     0,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"OKP Ed25519 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     okpx[:31],
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"OKP Ed448 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd448,
+					KeyLabelOKPX:     okpx,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"OKP X25519 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveX25519,
+					KeyLabelOKPX:     okpx[:31],
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"OKP X448 with short x",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveX448,
+					KeyLabelOKPX:     okpx,
+				},
+			},
+			nil,
+			ErrInvalidPubKey.Error(),
+		}, {
+			"OKP with missing crv",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPX: okpx,
+				},
+			},
+			nil,
+			ErrOpNotSupported.Error(),
+		}, {
+			"OKP with invalid crv",
+			crypto.SHA256,
+			&Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveP256,
+					KeyLabelOKPX:     okpx,
+				},
+			},
+			nil,
+			ErrOpNotSupported.Error(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.k.Thumbprint(tt.h)
+			if (err != nil && err.Error() != tt.wantErr) || (err == nil && tt.wantErr != "") {
+				t.Errorf("Key.Thumbprint(%v) error = %v, wantErr %v", tt.h, err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Key.Thumbprint(%v) = %v, want %v", tt.h, got, tt.want)
+			}
+		})
+	}
+}
