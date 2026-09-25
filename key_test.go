@@ -866,6 +866,14 @@ func TestNewKeyOKP(t *testing.T) {
 			name: "x and d missing", args: args{AlgorithmEdDSA, nil, nil},
 			want:    nil,
 			wantErr: "invalid key: required parameters missing",
+		}, {
+			name: "invalid x", args: args{AlgorithmEdDSA, x[:31], d},
+			want:    nil,
+			wantErr: errCoordSizeMismatch.Error(),
+		}, {
+			name: "invalid d", args: args{AlgorithmEdDSA, x, d[:31]},
+			want:    nil,
+			wantErr: errCoordSizeMismatch.Error(),
 		},
 	}
 	for _, tt := range tests {
@@ -883,6 +891,7 @@ func TestNewKeyOKP(t *testing.T) {
 }
 
 func TestNewNewKeyEC2(t *testing.T) {
+	// newEC2 always return the full size []byte
 	ec256x, ec256y, ec256d := newEC2(t, elliptic.P256())
 	ec384x, ec384y, ec384d := newEC2(t, elliptic.P384())
 	ec521x, ec521y, ec521d := newEC2(t, elliptic.P521())
@@ -911,6 +920,31 @@ func TestNewNewKeyEC2(t *testing.T) {
 				},
 			},
 			wantErr: "",
+		}, {
+			name: "short x, y and d but valid", args: args{AlgorithmES256, ec256x[:31], ec256y[:31], ec256d[:31]},
+			want: &Key{
+				Type:      KeyTypeEC2,
+				Algorithm: AlgorithmES256,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     append([]byte{0x00}, ec256x[:31]...),
+					KeyLabelEC2Y:     append([]byte{0x00}, ec256y[:31]...),
+					KeyLabelEC2D:     append([]byte{0x00}, ec256d[:31]...),
+				},
+			},
+			wantErr: "",
+		}, {
+			name: "long x", args: args{AlgorithmES256, ec384x, ec256y, ec256d},
+			want:    nil,
+			wantErr: "invalid key: x coordinate too long for curve P-256",
+		}, {
+			name: "long y", args: args{AlgorithmES256, ec256x, ec384y, ec256d},
+			want:    nil,
+			wantErr: "invalid key: y coordinate too long for curve P-256",
+		}, {
+			name: "long d", args: args{AlgorithmES256, ec256x, ec256y, ec384d},
+			want:    nil,
+			wantErr: "invalid key: d coordinate too long for curve P-256",
 		}, {
 			name: "valid ES384", args: args{AlgorithmES384, ec384x, ec384y, ec384d},
 			want: &Key{
@@ -1480,6 +1514,17 @@ func TestKey_PrivateKey(t *testing.T) {
 			},
 			"",
 		}, {
+			"CurveP256 compressed x", &Key{
+				Type: KeyTypeEC2,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     append([]byte{0x02}, ec256x...),
+					KeyLabelEC2D:     ec256d,
+				},
+			},
+			nil,
+			"invalid public key: compressed point not supported",
+		}, {
 			"CurveP256 missing x and y", &Key{
 				Type: KeyTypeEC2,
 				Params: map[any]any{
@@ -1488,7 +1533,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid private key: compressed point not supported",
+			"invalid private key: EC2 public coordinates x and y are required",
 		}, {
 			"CurveP384", &Key{
 				Type: KeyTypeEC2,
@@ -1564,7 +1609,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid key: overflowing coordinate",
+			errCoordSizeMismatch.Error(),
 		}, {
 			"OKP incorrect d size", &Key{
 				Type: KeyTypeOKP,
@@ -1575,7 +1620,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid key: overflowing coordinate",
+			errCoordSizeMismatch.Error(),
 		}, {
 			"EC2 missing D", &Key{
 				Type: KeyTypeEC2,
@@ -1610,7 +1655,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid key: overflowing coordinate",
+			errCoordSizeMismatch.Error(),
 		}, {
 			"EC2 incorrect y size", &Key{
 				Type: KeyTypeEC2,
@@ -1622,7 +1667,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid key: overflowing coordinate",
+			errCoordSizeMismatch.Error(),
 		}, {
 			"EC2 incorrect d size", &Key{
 				Type: KeyTypeEC2,
@@ -1634,7 +1679,7 @@ func TestKey_PrivateKey(t *testing.T) {
 				},
 			},
 			nil,
-			"invalid key: overflowing coordinate",
+			errCoordSizeMismatch.Error(),
 		},
 	}
 	for _, tt := range tests {
@@ -1890,5 +1935,13 @@ func newEC2(t *testing.T, crv elliptic.Curve) (x, y, d []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return priv.X.Bytes(), priv.Y.Bytes(), priv.D.Bytes()
+
+	size := (crv.Params().BitSize + 7) / 8
+	x = make([]byte, size)
+	copy(x[size-len(priv.X.Bytes()):], priv.X.Bytes())
+	y = make([]byte, size)
+	copy(y[size-len(priv.Y.Bytes()):], priv.Y.Bytes())
+	d = make([]byte, size)
+	copy(d[size-len(priv.D.Bytes()):], priv.D.Bytes())
+	return x, y, d
 }

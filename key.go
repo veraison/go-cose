@@ -243,6 +243,8 @@ type Key struct {
 }
 
 // NewKeyOKP returns a Key created using the provided Octet Key Pair data.
+// Ed25519 public keys and seeds are fixed-length byte strings,
+// not variable-length integers. Reject incorrect lengths rather than padding.
 func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
 	if alg != AlgorithmEdDSA {
 		return nil, fmt.Errorf("unsupported algorithm %q", alg)
@@ -314,7 +316,9 @@ func (k *Key) OKP() (crv Curve, x []byte, d []byte) {
 }
 
 // NewKeyEC2 returns a Key created using the provided elliptic curve key
-// data.
+// data. Non-nil x, y, and d are left-padded with zeroes to the size
+// required by the curve, as specified in RFC 9053, Section 7.1.1.
+// An error is returned if any of these parameters exceeds that size.
 func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 	var curve Curve
 
@@ -336,14 +340,28 @@ func NewKeyEC2(alg Algorithm, x, y, d []byte) (*Key, error) {
 			KeyLabelEC2Curve: curve,
 		},
 	}
+
+	// RFC 9053 Section 7.1.1 says that x and y leading zero octets
+	// MUST be preserved, but the Go crypto/elliptic package trims them.
+	// Since x, y might be used before marshaling, we add 0x00 padding here.
+	size := keySizeEC2(curve)
 	if x != nil {
-		key.Params[KeyLabelEC2X] = x
+		if len(x) > size {
+			return nil, fmt.Errorf("%w: x coordinate too long for curve %v", ErrInvalidKey, curve)
+		}
+		key.Params[KeyLabelEC2X] = append(make([]byte, size-len(x), size), x...)
 	}
 	if y != nil {
-		key.Params[KeyLabelEC2Y] = y
+		if len(y) > size {
+			return nil, fmt.Errorf("%w: y coordinate too long for curve %v", ErrInvalidKey, curve)
+		}
+		key.Params[KeyLabelEC2Y] = append(make([]byte, size-len(y), size), y...)
 	}
 	if d != nil {
-		key.Params[KeyLabelEC2D] = d
+		if len(d) > size {
+			return nil, fmt.Errorf("%w: d coordinate too long for curve %v", ErrInvalidKey, curve)
+		}
+		key.Params[KeyLabelEC2D] = append(make([]byte, size-len(d), size), d...)
 	}
 	if err := key.validate(KeyOpReserved); err != nil {
 		return nil, err
@@ -422,9 +440,9 @@ var (
 	// The following errors are used multiple times
 	// in Key.validate. We declare them here to avoid
 	// duplication. They are not considered public errors.
-	errCoordOverflow    = fmt.Errorf("%w: overflowing coordinate", ErrInvalidKey)
-	errReqParamsMissing = fmt.Errorf("%w: required parameters missing", ErrInvalidKey)
-	errInvalidCurve     = fmt.Errorf("%w: curve not supported for the given key type", ErrInvalidKey)
+	errCoordSizeMismatch = fmt.Errorf("%w: coordinate size mismatch", ErrInvalidKey)
+	errReqParamsMissing  = fmt.Errorf("%w: required parameters missing", ErrInvalidKey)
+	errInvalidCurve      = fmt.Errorf("%w: curve not supported for the given key type", ErrInvalidKey)
 )
 
 // Validate ensures that the parameters set inside the Key are internally
@@ -434,26 +452,51 @@ func (k Key) validate(op KeyOp) error {
 	switch k.Type {
 	case KeyTypeEC2:
 		crv, x, y, d := k.EC2()
+		// Check that required parameters are present based on the key operation.
 		switch op {
 		case KeyOpVerify:
-			if len(x) == 0 || len(y) == 0 {
+			if x == nil || y == nil {
 				return ErrEC2NoPub
 			}
 		case KeyOpSign:
-			if len(d) == 0 {
+			if d == nil {
 				return ErrNotPrivKey
 			}
 		}
-		if crv == CurveReserved || (len(x) == 0 && len(y) == 0 && len(d) == 0) {
+		if crv == CurveReserved || (x == nil && y == nil && d == nil) {
 			return errReqParamsMissing
 		}
-		if size := curveSize(crv); size > 0 {
-			// RFC 8152 Section 13.1.1 says that x and y leading zero octets
-			// MUST be preserved, but the Go crypto/elliptic package trims them.
-			// So we relax the check here to allow for omitted leading zero
-			// octets, we will add them back when marshaling.
-			if len(x) > size || len(y) > size || len(d) > size {
-				return errCoordOverflow
+
+		// If the curve size is known, validate the length of each parameter if present.
+		if size := keySizeEC2(crv); size > 0 {
+			if len(y) == 0 && len(x) == size+1 {
+				// NOTE: RFC 9053 Section 7.1.1 describes compressed points in COSE_Key
+				// using a boolean y-coordinate value (false/true). However, this code
+				// currently assumes SEC1-style compression, where 0x02 or 0x03 is prepended
+				// to the x-coordinate.
+				//
+				// This behavior may change in the future, for example, we might compute the
+				// y-coordinate during UnmarshalCBOR, and MarshalCBOR would avoid emitting
+				// compressed points entirely.
+				//
+				// In that case, this conditional may become unnecessary, since the general
+				// length check below (`len(x) > 0 && len(x) != size`) would already catch
+				// invalid compressed input.
+				//
+				// See discussion in https://github.com/veraison/go-cose/pull/223 .
+				// Consider revisiting this logic in a future update.
+				return fmt.Errorf("%w: compressed point not supported", ErrInvalidPubKey)
+			}
+
+			// If present, x, y, and d must match the expected size.
+			if x != nil && len(x) != size {
+				return errCoordSizeMismatch
+			}
+			if y != nil && len(y) != size {
+				return errCoordSizeMismatch
+			}
+			if d != nil && len(d) != size {
+				return errCoordSizeMismatch
 			}
 		}
 		switch crv {
@@ -465,21 +508,30 @@ func (k Key) validate(op KeyOp) error {
 		}
 	case KeyTypeOKP:
 		crv, x, d := k.OKP()
+		// Check that required parameters are present based on the key operation.
 		switch op {
 		case KeyOpVerify:
-			if len(x) == 0 {
+			if x == nil {
 				return ErrOKPNoPub
 			}
 		case KeyOpSign:
-			if len(d) == 0 {
+			if d == nil {
 				return ErrNotPrivKey
 			}
 		}
-		if crv == CurveReserved || (len(x) == 0 && len(d) == 0) {
+		if crv == CurveReserved || (x == nil && d == nil) {
 			return errReqParamsMissing
 		}
-		if (len(x) > 0 && len(x) != ed25519.PublicKeySize) || (len(d) > 0 && len(d) != ed25519.SeedSize) {
-			return errCoordOverflow
+
+		// If the curve size is known, validate the length of each parameter if present.
+		if size := keySizeOKP(crv); size > 0 {
+			// If present, x and d must match the expected size.
+			if x != nil && len(x) != size {
+				return errCoordSizeMismatch
+			}
+			if d != nil && len(d) != size {
+				return errCoordSizeMismatch
+			}
 		}
 		switch crv {
 		case CurveP256, CurveP384, CurveP521:
@@ -562,7 +614,7 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 	if k.Type == KeyTypeEC2 {
 		// If EC2 key, ensure that x and y are padded to the correct size.
 		crv, x, y, _ := k.EC2()
-		if size := curveSize(crv); size > 0 {
+		if size := keySizeEC2(crv); size > 0 {
 			if 0 < len(x) && len(x) < size {
 				tmp[KeyLabelEC2X] = append(make([]byte, size-len(x), size), x...)
 			}
@@ -575,6 +627,9 @@ func (k *Key) MarshalCBOR() ([]byte, error) {
 }
 
 // UnmarshalCBOR decodes a COSE_Key object into Key.
+// Key parameters must have the lengths required for the key type and curve.
+// Parameters with unexpected lengths are rejected, including those shortened
+// by encoders that omit leading-zero octets in violation of RFC 9053.
 func (k *Key) UnmarshalCBOR(data []byte) error {
 	var tmp map[any]any
 	if err := decMode.Unmarshal(data, &tmp); err != nil {
@@ -705,8 +760,11 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
 		_, x, y, d := k.EC2()
+		// RFC 9053 permits an EC2 private key to omit x and y, so
+		// validate(KeyOpSign) does not require them. A Go ecdsa.PrivateKey
+		// includes its public key, and we do not derive it from d here.
 		if len(x) == 0 || len(y) == 0 {
-			return nil, fmt.Errorf("%w: compressed point not supported", ErrInvalidPrivKey)
+			return nil, fmt.Errorf("%w: EC2 public coordinates x and y are required", ErrInvalidPrivKey)
 		}
 
 		var curve elliptic.Curve
@@ -844,9 +902,10 @@ func algorithmFromEllipticCurve(c elliptic.Curve) Algorithm {
 	}
 }
 
-func curveSize(crv Curve) int {
+func keySizeEC2(crv Curve) int {
 	var bitSize int
 	switch crv {
+	// SEC 1: Standards for Efficient Cryptography
 	case CurveP256:
 		bitSize = elliptic.P256().Params().BitSize
 	case CurveP384:
@@ -855,6 +914,25 @@ func curveSize(crv Curve) int {
 		bitSize = elliptic.P521().Params().BitSize
 	}
 	return (bitSize + 7) / 8
+}
+
+func keySizeOKP(crv Curve) int {
+	switch crv {
+	// RFC 8032: Edwards-Curve Digital Signature Algorithm (EdDSA)
+	case CurveEd25519:
+		return ed25519.PublicKeySize // 32
+	case CurveEd448:
+		return 57
+
+	// RFC 7748: Elliptic Curves for Security
+	case CurveX25519:
+		return 32
+	case CurveX448:
+		return 56
+
+	default:
+		return 0
+	}
 }
 
 func decodeBytes(dic map[any]any, lbl any) (b []byte, ok bool, err error) {
