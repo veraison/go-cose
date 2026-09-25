@@ -26,9 +26,9 @@ const (
 	// ECDSA w/ SHA-256 by RFC 8152.
 	// Requires an available crypto.SHA256.
 	//
-	// Note: use [AlgorithmESP256] only if you are certain that the recipient
-	// supports it. For maximum interoperability and backward compatibility,
-	// [AlgorithmES256] should remain the default choice.
+	// Note: RFC 9864 deprecates this polymorphic identifier in favor of
+	// [AlgorithmESP256]. It may still be needed when interoperating with
+	// implementations that do not support [AlgorithmESP256].
 	AlgorithmES256 Algorithm = -7
 
 	// ECDSA using P-256 curve and SHA-256 by RFC 9864.
@@ -38,9 +38,9 @@ const (
 	// ECDSA w/ SHA-384 by RFC 8152.
 	// Requires an available crypto.SHA384.
 	//
-	// Note: use [AlgorithmESP384] only if you are certain that the recipient
-	// supports it. For maximum interoperability and backward compatibility,
-	// [AlgorithmES384] should remain the default choice.
+	// Note: RFC 9864 deprecates this polymorphic identifier in favor of
+	// [AlgorithmESP384]. It may still be needed when interoperating with
+	// implementations that do not support [AlgorithmESP384].
 	AlgorithmES384 Algorithm = -35
 
 	// ECDSA using P-384 curve and SHA-384 by RFC 9864.
@@ -50,9 +50,9 @@ const (
 	// ECDSA w/ SHA-512 by RFC 8152.
 	// Requires an available crypto.SHA512.
 	//
-	// Note: use [AlgorithmESP512] only if you are certain that the recipient
-	// supports it. For maximum interoperability and backward compatibility,
-	// [AlgorithmES512] should remain the default choice.
+	// Note: RFC 9864 deprecates this polymorphic identifier in favor of
+	// [AlgorithmESP512]. It may still be needed when interoperating with
+	// implementations that do not support [AlgorithmESP512].
 	AlgorithmES512 Algorithm = -36
 
 	// ECDSA using P-521 curve and SHA-512 by RFC 9864.
@@ -61,15 +61,16 @@ const (
 
 	// PureEdDSA by RFC 8152.
 	//
-	// Deprecated: use [AlgorithmEdDSA] instead, which has
-	// the same value but with a more accurate name.
+	// Deprecated: use [AlgorithmEd25519EdDSA] for new deployments, or
+	// [AlgorithmEdDSA] when interoperating with implementations that do not
+	// support RFC 9864. AlgorithmEd25519 has the same value as AlgorithmEdDSA.
 	AlgorithmEd25519 Algorithm = -8
 
 	// PureEdDSA by RFC 8152.
 	//
-	// Note: use [AlgorithmEd25519EdDSA] only if you are certain that the recipient
-	// supports it. For maximum interoperability and backward compatibility,
-	// AlgorithmEdDSA should remain the default choice.
+	// Note: RFC 9864 deprecates this polymorphic identifier in favor of
+	// [AlgorithmEd25519EdDSA]. It may still be needed when interoperating with
+	// implementations that do not support [AlgorithmEd25519EdDSA].
 	AlgorithmEdDSA Algorithm = -8
 
 	// EdDSA restricted to the Ed25519 curve, as defined in RFC 9864.
