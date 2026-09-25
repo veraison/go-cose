@@ -165,7 +165,11 @@ func TestOS2IP(t *testing.T) {
 }
 
 func generateTestECDSAKey(t *testing.T) *ecdsa.PrivateKey {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return generateTestECDSAKeyForCurve(t, elliptic.P256())
+}
+
+func generateTestECDSAKeyForCurve(t *testing.T, curve elliptic.Curve) *ecdsa.PrivateKey {
+	key, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
 		t.Fatalf("ecdsa.GenerateKey() error = %v", err)
 	}
