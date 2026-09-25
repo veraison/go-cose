@@ -8,12 +8,13 @@ import (
 
 // ed25519Signer is a Pure EdDSA based signer with a generic crypto.Signer.
 type ed25519Signer struct {
+	alg Algorithm
 	key crypto.Signer
 }
 
 // Algorithm returns the signing algorithm associated with the private key.
 func (es *ed25519Signer) Algorithm() Algorithm {
-	return AlgorithmEdDSA
+	return es.alg
 }
 
 // Sign signs message content with the private key, possibly using entropy from
@@ -29,12 +30,13 @@ func (es *ed25519Signer) Sign(rand io.Reader, content []byte) ([]byte, error) {
 
 // ed25519Verifier is a Pure EdDSA based verifier with golang built-in keys.
 type ed25519Verifier struct {
+	alg Algorithm
 	key ed25519.PublicKey
 }
 
 // Algorithm returns the signing algorithm associated with the public key.
 func (ev *ed25519Verifier) Algorithm() Algorithm {
-	return AlgorithmEdDSA
+	return ev.alg
 }
 
 // Verify verifies message content with the public key, returning nil for
