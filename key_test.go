@@ -937,7 +937,7 @@ func TestNewNewKeyEC2(t *testing.T) {
 			},
 			wantErr: "",
 		}, {
-			name: "valid ES521", args: args{AlgorithmES512, ec521x, ec521y, ec521d},
+			name: "valid ES512", args: args{AlgorithmES512, ec521x, ec521y, ec521d},
 			want: &Key{
 				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmES512,
@@ -976,7 +976,7 @@ func TestNewNewKeyEC2(t *testing.T) {
 			},
 			wantErr: "",
 		}, {
-			name: "valid ESP521", args: args{AlgorithmESP512, ec521x, ec521y, ec521d},
+			name: "valid ESP512", args: args{AlgorithmESP512, ec521x, ec521y, ec521d},
 			want: &Key{
 				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmESP512,
