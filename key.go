@@ -760,6 +760,12 @@ func (k *Key) PrivateKey() (crypto.PrivateKey, error) {
 	switch alg {
 	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
 		_, x, y, d := k.EC2()
+		// RFC 9053 permits an EC2 private key to omit x and y, so
+		// validate(KeyOpSign) does not require them. A Go ecdsa.PrivateKey
+		// includes its public key, and we do not derive it from d here.
+		if len(x) == 0 || len(y) == 0 {
+			return nil, fmt.Errorf("%w: EC2 public coordinates x and y are required", ErrInvalidPrivKey)
+		}
 
 		var curve elliptic.Curve
 		switch alg {

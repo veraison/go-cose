@@ -1532,15 +1532,8 @@ func TestKey_PrivateKey(t *testing.T) {
 					KeyLabelEC2D:     ec256d,
 				},
 			},
-			&ecdsa.PrivateKey{
-				PublicKey: ecdsa.PublicKey{
-					Curve: elliptic.P256(),
-					X:     new(big.Int).SetBytes([]byte{}),
-					Y:     new(big.Int).SetBytes([]byte{}),
-				},
-				D: new(big.Int).SetBytes(ec256d),
-			},
-			"",
+			nil,
+			"invalid private key: EC2 public coordinates x and y are required",
 		}, {
 			"CurveP384", &Key{
 				Type: KeyTypeEC2,
