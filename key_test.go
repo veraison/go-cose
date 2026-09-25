@@ -422,7 +422,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want:    nil,
-			wantErr: `found algorithm "ES256" (expected one of {"EdDSA,Ed25519"})`,
+			wantErr: `found algorithm "ES256" (expected one of {"EdDSA", "Ed25519"})`,
 		}, {
 			name: "custom key",
 			data: []byte{
@@ -851,6 +851,18 @@ func TestNewKeyOKP(t *testing.T) {
 			want: &Key{
 				Type:      KeyTypeOKP,
 				Algorithm: AlgorithmEdDSA,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     x,
+					KeyLabelOKPD:     d,
+				},
+			},
+			wantErr: "",
+		}, {
+			name: "valid Ed25519", args: args{AlgorithmEd25519EdDSA, x, d},
+			want: &Key{
+				Type:      KeyTypeOKP,
+				Algorithm: AlgorithmEd25519EdDSA,
 				Params: map[any]any{
 					KeyLabelOKPCurve: CurveEd25519,
 					KeyLabelOKPX:     x,

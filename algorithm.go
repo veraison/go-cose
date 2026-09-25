@@ -151,8 +151,6 @@ func (a Algorithm) String() string {
 		// used for COSE.
 		return "EdDSA"
 	case AlgorithmEd25519EdDSA:
-		// As stated in RFC 8152 section 8.2, only the pure EdDSA version is
-		// used for COSE.
 		return "Ed25519"
 	case AlgorithmReserved:
 		return "Reserved"

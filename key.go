@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -245,7 +246,7 @@ type Key struct {
 
 // NewKeyOKP returns a Key created using the provided Octet Key Pair data.
 func NewKeyOKP(alg Algorithm, x, d []byte) (*Key, error) {
-	if alg != AlgorithmEdDSA {
+	if alg != AlgorithmEdDSA && alg != AlgorithmEd25519EdDSA {
 		return nil, fmt.Errorf("unsupported algorithm %q", alg)
 	}
 
@@ -507,29 +508,20 @@ func (k Key) validate(op KeyOp) error {
 			return err
 		}
 
-		if !containsAlg(candidateAlgs, k.Algorithm) {
+		if !slices.Contains(candidateAlgs, k.Algorithm) {
 			strs := make([]string, len(candidateAlgs))
 			for i, a := range candidateAlgs {
-				strs[i] = a.String()
+				strs[i] = fmt.Sprintf("%q", a.String())
 			}
 			return fmt.Errorf(
-				"found algorithm %q (expected one of {%q})",
+				"found algorithm %q (expected one of {%s})",
 				k.Algorithm.String(),
-				strings.Join(strs, ","),
+				strings.Join(strs, ", "),
 			)
 		}
 	}
 
 	return nil
-}
-
-func containsAlg(algs []Algorithm, target Algorithm) bool {
-	for _, a := range algs {
-		if a == target {
-			return true
-		}
-	}
-	return false
 }
 
 func (k Key) canOp(op KeyOp) bool {
