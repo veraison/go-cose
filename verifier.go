@@ -65,6 +65,9 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
 		}
+		if expectedCurve := alg.fullySpecifiedECDSACurve(); expectedCurve != nil && vk.Curve != expectedCurve {
+			return nil, fmt.Errorf("%v: %w: expected curve %s", alg, ErrInvalidPubKey, expectedCurve.Params().Name)
+		}
 		if _, err := vk.ECDH(); err != nil {
 			if err.Error() == "ecdsa: invalid public key" {
 				return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)

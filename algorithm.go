@@ -2,6 +2,7 @@ package cose
 
 import (
 	"crypto"
+	"crypto/elliptic"
 	"strconv"
 )
 
@@ -177,6 +178,21 @@ func (a Algorithm) hashFunc() crypto.Hash {
 		return crypto.SHA512
 	default:
 		return 0
+	}
+}
+
+// fullySpecifiedECDSACurve returns the curve required by a fully specified
+// ECDSA algorithm, or nil if a is not a fully specified ECDSA algorithm.
+func (a Algorithm) fullySpecifiedECDSACurve() elliptic.Curve {
+	switch a {
+	case AlgorithmESP256:
+		return elliptic.P256()
+	case AlgorithmESP384:
+		return elliptic.P384()
+	case AlgorithmESP512:
+		return elliptic.P521()
+	default:
+		return nil
 	}
 }
 

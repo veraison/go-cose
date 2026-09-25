@@ -74,6 +74,9 @@ func NewSigner(alg Algorithm, key crypto.Signer) (Signer, error) {
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
 		}
+		if expectedCurve := alg.fullySpecifiedECDSACurve(); expectedCurve != nil && vk.Curve != expectedCurve {
+			return nil, fmt.Errorf("%v: %w: expected curve %s", alg, ErrInvalidPubKey, expectedCurve.Params().Name)
+		}
 		if sk, ok := key.(*ecdsa.PrivateKey); ok {
 			return &ecdsaKeySigner{
 				alg: alg,

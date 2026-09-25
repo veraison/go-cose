@@ -2,9 +2,11 @@ package cose
 
 import (
 	"crypto"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/hex"
+	"errors"
 	"io"
 	"reflect"
 	"testing"
@@ -141,6 +143,34 @@ func TestNewSigner(t *testing.T) {
 				t.Errorf("NewSigner() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestNewSigner_FullySpecifiedECDSACurveMismatch(t *testing.T) {
+	tests := []struct {
+		alg         Algorithm
+		wrongCurves []elliptic.Curve
+	}{
+		{AlgorithmESP256, []elliptic.Curve{elliptic.P384(), elliptic.P521()}},
+		{AlgorithmESP384, []elliptic.Curve{elliptic.P256(), elliptic.P521()}},
+		{AlgorithmESP512, []elliptic.Curve{elliptic.P256(), elliptic.P384()}},
+	}
+	for _, tt := range tests {
+		for _, curve := range tt.wrongCurves {
+			name := tt.alg.String() + "/" + curve.Params().Name
+			t.Run(name+"/private key", func(t *testing.T) {
+				key := generateTestECDSAKeyForCurve(t, curve)
+				if _, err := NewSigner(tt.alg, key); !errors.Is(err, ErrInvalidPubKey) {
+					t.Fatalf("NewSigner() error = %v, want %v", err, ErrInvalidPubKey)
+				}
+			})
+			t.Run(name+"/crypto signer", func(t *testing.T) {
+				key := struct{ crypto.Signer }{generateTestECDSAKeyForCurve(t, curve)}
+				if _, err := NewSigner(tt.alg, key); !errors.Is(err, ErrInvalidPubKey) {
+					t.Fatalf("NewSigner() error = %v, want %v", err, ErrInvalidPubKey)
+				}
+			})
+		}
 	}
 }
 
