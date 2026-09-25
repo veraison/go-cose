@@ -177,19 +177,40 @@ func generateTestECDSAKeyForCurve(t *testing.T, curve elliptic.Curve) *ecdsa.Pri
 }
 
 func Test_ecdsaKeySigner(t *testing.T) {
-	key := generateTestECDSAKey(t)
-	testSignVerify(t, AlgorithmES256, key, false)
-	testSignVerify(t, AlgorithmESP256, key, false)
+	tests := []struct {
+		alg   Algorithm
+		curve elliptic.Curve
+	}{
+		{AlgorithmES256, elliptic.P256()},
+		{AlgorithmESP256, elliptic.P256()},
+		{AlgorithmESP384, elliptic.P384()},
+		{AlgorithmESP512, elliptic.P521()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.alg.String(), func(t *testing.T) {
+			testSignVerify(t, tt.alg, generateTestECDSAKeyForCurve(t, tt.curve), false)
+		})
+	}
 }
 
 func Test_ecdsaCryptoSigner(t *testing.T) {
-	wrappedKey := struct {
-		crypto.Signer
+	tests := []struct {
+		alg   Algorithm
+		curve elliptic.Curve
 	}{
-		Signer: generateTestECDSAKey(t),
+		{AlgorithmES256, elliptic.P256()},
+		{AlgorithmESP256, elliptic.P256()},
+		{AlgorithmESP384, elliptic.P384()},
+		{AlgorithmESP512, elliptic.P521()},
 	}
-	testSignVerify(t, AlgorithmES256, wrappedKey, true)
-	testSignVerify(t, AlgorithmESP256, wrappedKey, true)
+	for _, tt := range tests {
+		t.Run(tt.alg.String(), func(t *testing.T) {
+			wrappedKey := struct {
+				crypto.Signer
+			}{Signer: generateTestECDSAKeyForCurve(t, tt.curve)}
+			testSignVerify(t, tt.alg, wrappedKey, true)
+		})
+	}
 }
 
 func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSigner bool) {
@@ -232,8 +253,11 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 	if !ok {
 		t.Fatalf("signer is not a DigestSigner")
 	}
-	digest := sha256.Sum256(content)
-	dsig, err := dsigner.SignDigest(rand.Reader, digest[:])
+	digest, err := alg.computeHash(content)
+	if err != nil {
+		t.Fatalf("Algorithm.computeHash() error = %v", err)
+	}
+	dsig, err := dsigner.SignDigest(rand.Reader, digest)
 	if err != nil {
 		t.Fatalf("SignDigest() error = %v", err)
 	}
@@ -241,7 +265,7 @@ func testSignVerify(t *testing.T, alg Algorithm, key crypto.Signer, isCryptoSign
 	if !ok {
 		t.Fatalf("verifier is not a DigestVerifier")
 	}
-	if err := dverifier.VerifyDigest(digest[:], dsig); err != nil {
+	if err := dverifier.VerifyDigest(digest, dsig); err != nil {
 		t.Fatalf("VerifyDigest() error = %v", err)
 	}
 }

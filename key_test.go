@@ -1092,6 +1092,69 @@ func TestKey_SignRoundtrip(t *testing.T) {
 	}
 }
 
+func TestKey_FullySpecifiedAlgorithmRoundtrip(t *testing.T) {
+	tests := []struct {
+		alg    Algorithm
+		newKey func() (crypto.PrivateKey, error)
+	}{
+		{AlgorithmESP256, func() (crypto.PrivateKey, error) {
+			return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		}},
+		{AlgorithmESP384, func() (crypto.PrivateKey, error) {
+			return ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		}},
+		{AlgorithmESP512, func() (crypto.PrivateKey, error) {
+			return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		}},
+		{AlgorithmEd25519EdDSA, func() (crypto.PrivateKey, error) {
+			_, priv, err := ed25519.GenerateKey(rand.Reader)
+			return priv, err
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.alg.String(), func(t *testing.T) {
+			priv, err := tt.newKey()
+			if err != nil {
+				t.Fatal(err)
+			}
+			key, err := NewKeyFromPrivate(priv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			key.Algorithm = tt.alg
+
+			encoded, err := key.MarshalCBOR()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded Key
+			if err := decoded.UnmarshalCBOR(encoded); err != nil {
+				t.Fatal(err)
+			}
+			if decoded.Algorithm != tt.alg {
+				t.Fatalf("decoded Algorithm = %v, want %v", decoded.Algorithm, tt.alg)
+			}
+
+			signer, err := decoded.Signer()
+			if err != nil {
+				t.Fatal(err)
+			}
+			verifier, err := decoded.Verifier()
+			if err != nil {
+				t.Fatal(err)
+			}
+			message := []byte("fully specified algorithm")
+			sig, err := signer.Sign(rand.Reader, message)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := verifier.Verify(message, sig); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestKey_AlgorithmOrDefault(t *testing.T) {
 	tests := []struct {
 		name    string
