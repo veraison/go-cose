@@ -770,7 +770,9 @@ func (k *Key) Thumbprint(hash crypto.Hash) ([]byte, error) {
 }
 
 func (k *Key) calcOKPThumbprint() ([]byte, error) {
-	err := k.validate(KeyOpReserved)
+	// For OKP keys, we require type, curve, x to be present for the thumbprint, even if the key is private, which are validated with KeyOpVerify.
+	// This is because the thumbprint is used to identify the key, and the public key parameters are required for that.
+	err := k.validate(KeyOpVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -783,7 +785,9 @@ func (k *Key) calcOKPThumbprint() ([]byte, error) {
 }
 
 func (k *Key) calcEC2Thumbprint() ([]byte, error) {
-	err := k.validate(KeyOpReserved)
+	// For EC2 keys, we require type, curve, x and y to be present for the thumbprint, even if the key is private, which are validated with KeyOpVerify.
+	// This is because the thumbprint is used to identify the key, and the public key parameters are required for that.
+	err := k.validate(KeyOpVerify)
 	if err != nil {
 		return nil, err
 	}
