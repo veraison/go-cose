@@ -340,7 +340,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x18, 0x66, 0x18, 0x47, // 66: 47
 			},
 			want:    nil,
-			wantErr: `cbor: found duplicate map key "102" at map element index 2`,
+			wantErr: `cbor: found duplicate map key 102 at map element index 2`,
 		}, {
 			name: "duplicated kty",
 			data: []byte{
@@ -350,7 +350,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x01, 0x01, // kty: OKP (duplicated)
 			},
 			want:    nil,
-			wantErr: `cbor: found duplicate map key "1" at map element index 2`,
+			wantErr: `cbor: found duplicate map key 1 at map element index 2`,
 		}, {
 			name: "OKP missing curve",
 			data: []byte{

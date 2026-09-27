@@ -133,6 +133,61 @@ func VerifyP256(publicKey crypto.PublicKey, sig []byte) error {
 
 See [example_test.go](./example_test.go) for more examples.
 
+#### Verify with a protected X.509 certificate chain
+
+Use `SetX5Chain` to add an ordered certificate chain to the protected header.
+`VerifyWithX5Chain` does not support an unprotected-only `x5chain`. Omitted
+issuers may be supplied through `AdditionalIntermediates`, which never become
+trust anchors.
+
+```go
+var msg cose.Sign1Message
+if err := msg.UnmarshalCBOR(encoded); err != nil {
+    return err
+}
+
+anchors, err := cose.LoadTrustAnchors(
+    os.ReadFile,
+    []string{"root.pem"},
+    []string{"intermediate.crl.pem", "root.crl.pem"},
+)
+if err != nil {
+    return err
+}
+
+verifiedChain, err := msg.VerifyWithX5Chain(nil, anchors, nil)
+if err != nil {
+    return err
+}
+// Apply application-specific Subject, SAN, or EKU authorization here.
+_ = verifiedChain
+return nil
+```
+
+System roots require explicit opt-in. Full-chain CRL checking is enabled by
+default, so provide an applicable CRL for every non-root certificate issuer.
+Set `anchors.RevocationMode` to `cose.RevocationDisabled` to skip CRL checks,
+or use `RevocationLeafOnly` to check only the signing certificate. Certificate identity
+authorization remains the caller's responsibility. See the `TrustAnchors` and
+`X5ChainVerifyOptions` GoDoc for configuration details.
+
+Trust sources can be combined: enable `UseSystemRoots` for the
+OS defaults, add custom trust anchors in `TrustAnchors.Anchors`, and verify once
+against the combined store. If the OS trust store cannot be loaded, verification
+can still succeed when the explicitly configured anchors establish a valid path.
+
+CRL selection honors `CurrentTime` and does not fall back from an expired newer
+CRL to an older CRL. Permissive CRL policy tolerates missing CRLs, but a path
+with missing CRLs cannot bypass an explicit revocation on another path. A path
+with complete CRL coverage is preferred when available.
+
+See [ExampleSign1Message_VerifyWithX5Chain](./example_test.go#examplesign1message_verifywithx5chain)
+for a runnable end-to-end example, including CBOR decoding and a simple signer
+identity check. See
+[ExampleSign1Message_VerifyWithX5Chain_fromFiles](./example_test.go#examplesign1message_verifywithx5chain_fromfiles)
+for loading the root via `LoadTrustAnchors` and an omitted intermediate from
+files on disk.
+
 #### Untagged Signing and Verification
 
 Untagged COSE_Sign1 messages can be signed and verified as above, using

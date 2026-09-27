@@ -20,4 +20,10 @@ var (
 	ErrOpNotSupported        = errors.New("key_op not supported by key")
 	ErrEC2NoPub              = errors.New("cannot create PrivateKey from EC2 key: missing x or y")
 	ErrOKPNoPub              = errors.New("cannot create PrivateKey from OKP key: missing x")
+
+	// x5chain verification errors. Callers may use errors.Is to branch on policy.
+	ErrX5ChainNoTrust    = errors.New("x5chain: no trust anchors")
+	ErrX5ChainCRLMissing = errors.New("x5chain: certificate CRL missing")
+	ErrX5ChainRevoked    = errors.New("x5chain: certificate revoked")
+	ErrX5ChainSignature  = errors.New("x5chain: COSE signature verification failed")
 )

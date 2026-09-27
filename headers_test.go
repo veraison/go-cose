@@ -372,7 +372,7 @@ func TestProtectedHeader_UnmarshalCBOR(t *testing.T) {
 			data: []byte{
 				0x45, 0xa2, 0x01, 0x00, 0x01, 0x00,
 			},
-			wantErr: "cbor: found duplicate map key \"1\" at map element index 1",
+			wantErr: "cbor: found duplicate map key cose.headerLabelValidator{value:1} at map element index 1",
 		},
 		{
 			name: "incomplete CBOR data",
@@ -1078,7 +1078,7 @@ func TestUnprotectedHeader_UnmarshalCBOR(t *testing.T) {
 			data: []byte{
 				0xa2, 0x01, 0x00, 0x01, 0x00,
 			},
-			wantErr: "cbor: found duplicate map key \"1\" at map element index 1",
+			wantErr: "cbor: found duplicate map key cose.headerLabelValidator{value:1} at map element index 1",
 		},
 		{
 			name: "incomplete CBOR data",
