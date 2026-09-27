@@ -809,6 +809,7 @@ func (k *Key) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 	type thumbprintHandler func() ([]byte, error)
 	handlers := map[KeyType]thumbprintHandler{
+		// Currently, only OKP and EC2 keys are supported for thumbprint calculation.
 		KeyTypeOKP: k.calcOKPThumbprint,
 		KeyTypeEC2: k.calcEC2Thumbprint,
 	}

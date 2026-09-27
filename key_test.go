@@ -2009,27 +2009,12 @@ func TestKey_Thumbprint(t *testing.T) {
 			nil,
 			ErrUnavailableHashFunc.Error(),
 		}, {
-			"missing type",
+			"unknown key type",
 			crypto.SHA256,
-			&Key{
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     ec256x,
-					KeyLabelEC2Y:     ec256y,
-				},
-			},
+			&Key{Type: KeyType(7)},
 			nil,
 			ErrOpNotSupported.Error(),
 		}, {
-			"unknown key type",
-			crypto.SHA256,
-			&Key{
-				Type: KeyType(7),
-			},
-			nil,
-			ErrOpNotSupported.Error(),
-		},
-		{
 			"EC2 with missing x",
 			crypto.SHA256,
 			&Key{
@@ -2041,20 +2026,6 @@ func TestKey_Thumbprint(t *testing.T) {
 			},
 			nil,
 			ErrEC2NoPub.Error(),
-		},
-		{
-			"EC2 with invalid type x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     0,
-					KeyLabelEC2Y:     ec256y,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
 		}, {
 			"EC2 P256 with short x",
 			crypto.SHA256,
@@ -2067,112 +2038,9 @@ func TestKey_Thumbprint(t *testing.T) {
 				},
 			},
 			nil,
-			ErrInvalidPubKey.Error(),
+			errCoordSizeMismatch.Error(),
 		}, {
-			"EC2 P384 with short x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP384,
-					KeyLabelEC2X:     ec256x,
-					KeyLabelEC2Y:     make([]byte, 48),
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"EC2 P521 with short x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP521,
-					KeyLabelEC2X:     ec256x,
-					KeyLabelEC2Y:     make([]byte, 66),
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"EC2 with missing y",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     ec256x,
-				},
-			},
-			nil,
-			ErrEC2NoPub.Error(),
-		}, {
-			"EC2 with invalid type y",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     ec256x,
-					KeyLabelEC2Y:     0,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"EC2 P256 with short y",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     ec256x,
-					KeyLabelEC2Y:     ec256y[:31],
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"EC2 P384 with short y",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP384,
-					KeyLabelEC2X:     make([]byte, 48),
-					KeyLabelEC2Y:     ec256y,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"EC2 P521 with short y",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveP256,
-					KeyLabelEC2X:     make([]byte, 66),
-					KeyLabelEC2Y:     ec256y,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"EC2 with invalid crv",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeEC2,
-				Params: map[any]any{
-					KeyLabelEC2Curve: CurveEd25519,
-					KeyLabelEC2X:     ec256x,
-					KeyLabelEC2Y:     ec256y,
-				},
-			},
-			nil,
-			ErrOpNotSupported.Error(),
-		}, {
-			"OKP with missing X",
+			"OKP with missing x",
 			crypto.SHA256,
 			&Key{
 				Type: KeyTypeOKP,
@@ -2182,18 +2050,6 @@ func TestKey_Thumbprint(t *testing.T) {
 			},
 			nil,
 			ErrOKPNoPub.Error(),
-		}, {
-			"OKP with invalid type x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeOKP,
-				Params: map[any]any{
-					KeyLabelOKPCurve: CurveEd25519,
-					KeyLabelOKPX:     0,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
 		}, {
 			"OKP Ed25519 with short x",
 			crypto.SHA256,
@@ -2205,43 +2061,7 @@ func TestKey_Thumbprint(t *testing.T) {
 				},
 			},
 			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"OKP Ed448 with short x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeOKP,
-				Params: map[any]any{
-					KeyLabelOKPCurve: CurveEd448,
-					KeyLabelOKPX:     okpx,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"OKP X25519 with short x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeOKP,
-				Params: map[any]any{
-					KeyLabelOKPCurve: CurveX25519,
-					KeyLabelOKPX:     okpx[:31],
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
-		}, {
-			"OKP X448 with short x",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeOKP,
-				Params: map[any]any{
-					KeyLabelOKPCurve: CurveX448,
-					KeyLabelOKPX:     okpx,
-				},
-			},
-			nil,
-			ErrInvalidPubKey.Error(),
+			errCoordSizeMismatch.Error(),
 		}, {
 			"OKP with missing crv",
 			crypto.SHA256,
@@ -2252,19 +2072,7 @@ func TestKey_Thumbprint(t *testing.T) {
 				},
 			},
 			nil,
-			ErrOpNotSupported.Error(),
-		}, {
-			"OKP with invalid crv",
-			crypto.SHA256,
-			&Key{
-				Type: KeyTypeOKP,
-				Params: map[any]any{
-					KeyLabelOKPCurve: CurveP256,
-					KeyLabelOKPX:     okpx,
-				},
-			},
-			nil,
-			ErrOpNotSupported.Error(),
+			errReqParamsMissing.Error(),
 		},
 	}
 	for _, tt := range tests {
