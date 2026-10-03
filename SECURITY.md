@@ -86,4 +86,4 @@ Disclosures will be published on the same day as a release fixing the vulnerabil
 [go-cose]:                https://github.com/veraison/go-cose
 [security-advisories]:    https://github.com/veraison/go-cose/security/advisories
 [v1.0.0-release]:  https://github.com/veraison/go-cose/releases/tag/v1.0.0
-[go-cose-maintainers]:    https://github.com/veraison/community/blob/main/OWNERS
+[go-cose-maintainers]:    https://github.com/orgs/veraison/teams/go-cose-maintainers
