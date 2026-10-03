@@ -1,4 +1,5 @@
-# To be kept in sync with: [community/OWNERS](https://github.com/veraison/community/blob/main/OWNERS) 
-# and the GitHub Team: [go-cose-maintainers](https://github.com/orgs/veraison/teams/go-cose-maintainers)
+# Details:     https://github.com/veraison/community
+# Maintainers: https://github.com/orgs/veraison/teams/go-cose-maintainers
+#              https://github.com/orgs/veraison/teams/veraison-org-maintainers
 
-* @henkbirkholz @OR13 @qmuntal @roywill @setrofim @shizhMSFT @simonfrost-arm @SteveLasker @thomas-fossati @yogeshbdeshpande
+* @veraison/go-cose-maintainers @veraison/veraison-org-maintainers
