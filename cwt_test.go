@@ -21,7 +21,11 @@ func ExampleCWTClaims() {
 		cose.CWTClaimIssuer:  "issuer.example",
 		cose.CWTClaimSubject: "subject.example",
 	}
-	msgToSign.Headers.Protected.SetCWTClaims(claims)
+
+	claims, err := msgToSign.Headers.Protected.SetCWTClaims(claims)
+	if err != nil {
+		panic(err)
+	}
 
 	msgToSign.Headers.Unprotected[cose.HeaderLabelKeyID] = []byte("1")
 
