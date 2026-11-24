@@ -422,7 +422,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want:    nil,
-			wantErr: `found algorithm "ES256" (expected "EdDSA")`,
+			wantErr: `found algorithm "ES256" (expected one of {"EdDSA", "Ed25519"})`,
 		}, {
 			name: "custom key",
 			data: []byte{
@@ -859,6 +859,18 @@ func TestNewKeyOKP(t *testing.T) {
 			},
 			wantErr: "",
 		}, {
+			name: "valid Ed25519", args: args{AlgorithmEd25519EdDSA, x, d},
+			want: &Key{
+				Type:      KeyTypeOKP,
+				Algorithm: AlgorithmEd25519EdDSA,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveEd25519,
+					KeyLabelOKPX:     x,
+					KeyLabelOKPD:     d,
+				},
+			},
+			wantErr: "",
+		}, {
 			name: "invalid alg", args: args{Algorithm(-100), x, d},
 			want:    nil,
 			wantErr: `unsupported algorithm "Algorithm(-100)"`,
@@ -959,10 +971,49 @@ func TestNewNewKeyEC2(t *testing.T) {
 			},
 			wantErr: "",
 		}, {
-			name: "valid ES521", args: args{AlgorithmES512, ec521x, ec521y, ec521d},
+			name: "valid ES512", args: args{AlgorithmES512, ec521x, ec521y, ec521d},
 			want: &Key{
 				Type:      KeyTypeEC2,
 				Algorithm: AlgorithmES512,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP521,
+					KeyLabelEC2X:     ec521x,
+					KeyLabelEC2Y:     ec521y,
+					KeyLabelEC2D:     ec521d,
+				},
+			},
+			wantErr: "",
+		}, {
+			name: "valid ESP256", args: args{AlgorithmESP256, ec256x, ec256y, ec256d},
+			want: &Key{
+				Type:      KeyTypeEC2,
+				Algorithm: AlgorithmESP256,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     ec256x,
+					KeyLabelEC2Y:     ec256y,
+					KeyLabelEC2D:     ec256d,
+				},
+			},
+			wantErr: "",
+		}, {
+			name: "valid ESP384", args: args{AlgorithmESP384, ec384x, ec384y, ec384d},
+			want: &Key{
+				Type:      KeyTypeEC2,
+				Algorithm: AlgorithmESP384,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP384,
+					KeyLabelEC2X:     ec384x,
+					KeyLabelEC2Y:     ec384y,
+					KeyLabelEC2D:     ec384d,
+				},
+			},
+			wantErr: "",
+		}, {
+			name: "valid ESP512", args: args{AlgorithmESP512, ec521x, ec521y, ec521d},
+			want: &Key{
+				Type:      KeyTypeEC2,
+				Algorithm: AlgorithmESP512,
 				Params: map[any]any{
 					KeyLabelEC2Curve: CurveP521,
 					KeyLabelEC2X:     ec521x,
@@ -1069,6 +1120,69 @@ func TestKey_SignRoundtrip(t *testing.T) {
 			}
 			err = verifier.Verify(message, sig)
 			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestKey_FullySpecifiedAlgorithmRoundtrip(t *testing.T) {
+	tests := []struct {
+		alg    Algorithm
+		newKey func() (crypto.PrivateKey, error)
+	}{
+		{AlgorithmESP256, func() (crypto.PrivateKey, error) {
+			return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		}},
+		{AlgorithmESP384, func() (crypto.PrivateKey, error) {
+			return ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		}},
+		{AlgorithmESP512, func() (crypto.PrivateKey, error) {
+			return ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		}},
+		{AlgorithmEd25519EdDSA, func() (crypto.PrivateKey, error) {
+			_, priv, err := ed25519.GenerateKey(rand.Reader)
+			return priv, err
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.alg.String(), func(t *testing.T) {
+			priv, err := tt.newKey()
+			if err != nil {
+				t.Fatal(err)
+			}
+			key, err := NewKeyFromPrivate(priv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			key.Algorithm = tt.alg
+
+			encoded, err := key.MarshalCBOR()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded Key
+			if err := decoded.UnmarshalCBOR(encoded); err != nil {
+				t.Fatal(err)
+			}
+			if decoded.Algorithm != tt.alg {
+				t.Fatalf("decoded Algorithm = %v, want %v", decoded.Algorithm, tt.alg)
+			}
+
+			signer, err := decoded.Signer()
+			if err != nil {
+				t.Fatal(err)
+			}
+			verifier, err := decoded.Verifier()
+			if err != nil {
+				t.Fatal(err)
+			}
+			message := []byte("fully specified algorithm")
+			sig, err := signer.Sign(rand.Reader, message)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := verifier.Verify(message, sig); err != nil {
 				t.Fatal(err)
 			}
 		})

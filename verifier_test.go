@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"math/big"
 	"reflect"
 	"testing"
@@ -83,6 +84,7 @@ func TestNewVerifier(t *testing.T) {
 			alg:  AlgorithmEdDSA,
 			key:  ed25519Key,
 			want: &ed25519Verifier{
+				alg: AlgorithmEdDSA,
 				key: ed25519Key,
 			},
 		},
@@ -155,5 +157,26 @@ func TestNewVerifier(t *testing.T) {
 				t.Errorf("NewVerifier() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestNewVerifier_FullySpecifiedECDSACurveMismatch(t *testing.T) {
+	tests := []struct {
+		alg         Algorithm
+		wrongCurves []elliptic.Curve
+	}{
+		{AlgorithmESP256, []elliptic.Curve{elliptic.P384(), elliptic.P521()}},
+		{AlgorithmESP384, []elliptic.Curve{elliptic.P256(), elliptic.P521()}},
+		{AlgorithmESP512, []elliptic.Curve{elliptic.P256(), elliptic.P384()}},
+	}
+	for _, tt := range tests {
+		for _, curve := range tt.wrongCurves {
+			t.Run(tt.alg.String()+"/"+curve.Params().Name, func(t *testing.T) {
+				key := generateTestECDSAKeyForCurve(t, curve).Public()
+				if _, err := NewVerifier(tt.alg, key); !errors.Is(err, ErrInvalidPubKey) {
+					t.Fatalf("NewVerifier() error = %v, want %v", err, ErrInvalidPubKey)
+				}
+			})
+		}
 	}
 }

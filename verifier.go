@@ -60,10 +60,13 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 			alg: alg,
 			key: vk,
 		}, nil
-	case AlgorithmES256, AlgorithmES384, AlgorithmES512:
+	case AlgorithmES256, AlgorithmES384, AlgorithmES512, AlgorithmESP256, AlgorithmESP384, AlgorithmESP512:
 		vk, ok := key.(*ecdsa.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
+		}
+		if expectedCurve := alg.fullySpecifiedECDSACurve(); expectedCurve != nil && vk.Curve != expectedCurve {
+			return nil, fmt.Errorf("%v: %w: expected curve %s", alg, ErrInvalidPubKey, expectedCurve.Params().Name)
 		}
 		if _, err := vk.ECDH(); err != nil {
 			if err.Error() == "ecdsa: invalid public key" {
@@ -75,12 +78,13 @@ func NewVerifier(alg Algorithm, key crypto.PublicKey) (Verifier, error) {
 			alg: alg,
 			key: vk,
 		}, nil
-	case AlgorithmEdDSA:
+	case AlgorithmEdDSA, AlgorithmEd25519EdDSA:
 		vk, ok := key.(ed25519.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("%v: %w", alg, ErrInvalidPubKey)
 		}
 		return &ed25519Verifier{
+			alg: alg,
 			key: vk,
 		}, nil
 	case AlgorithmReserved:

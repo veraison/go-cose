@@ -16,91 +16,121 @@ func generateTestEd25519Key(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey
 }
 
 func Test_ed25519Signer(t *testing.T) {
-	// generate key
-	alg := AlgorithmEdDSA
-	_, key := generateTestEd25519Key(t)
+	tests := []struct {
+		name string
+		alg  Algorithm
+	}{
+		{"EdDSA", AlgorithmEdDSA},
+		{"Ed25519EdDSA", AlgorithmEd25519EdDSA},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// generate key
+			_, key := generateTestEd25519Key(t)
 
-	// set up signer
-	signer, err := NewSigner(alg, key)
-	if err != nil {
-		t.Fatalf("NewSigner() error = %v", err)
-	}
-	if _, ok := signer.(*ed25519Signer); !ok {
-		t.Fatalf("NewSigner() type = %v, want *ed25519Signer", reflect.TypeOf(signer))
-	}
-	if got := signer.Algorithm(); got != alg {
-		t.Fatalf("Algorithm() = %v, want %v", got, alg)
-	}
+			// set up signer
+			signer, err := NewSigner(tt.alg, key)
+			if err != nil {
+				t.Fatalf("NewSigner() error = %v", err)
+			}
+			if _, ok := signer.(*ed25519Signer); !ok {
+				t.Fatalf("NewSigner() type = %v, want *ed25519Signer", reflect.TypeOf(signer))
+			}
+			if got := signer.Algorithm(); got != tt.alg {
+				t.Fatalf("Algorithm() = %v, want %v", got, tt.alg)
+			}
 
-	// sign / verify round trip
-	// see also conformance_test.go for strict tests.
-	content := []byte("hello world")
-	sig, err := signer.Sign(rand.Reader, content)
-	if err != nil {
-		t.Fatalf("Sign() error = %v", err)
-	}
+			// sign / verify round trip
+			// see also conformance_test.go for strict tests.
+			content := []byte("hello world")
+			sig, err := signer.Sign(rand.Reader, content)
+			if err != nil {
+				t.Fatalf("Sign() error = %v", err)
+			}
 
-	verifier, err := NewVerifier(alg, key.Public())
-	if err != nil {
-		t.Fatalf("NewVerifier() error = %v", err)
-	}
-	if err := verifier.Verify(content, sig); err != nil {
-		t.Fatalf("Verifier.Verify() error = %v", err)
-	}
+			verifier, err := NewVerifier(tt.alg, key.Public())
+			if err != nil {
+				t.Fatalf("NewVerifier() error = %v", err)
+			}
+			if err := verifier.Verify(content, sig); err != nil {
+				t.Fatalf("Verifier.Verify() error = %v", err)
+			}
 
-	_, ok := signer.(DigestSigner)
-	if ok {
-		t.Fatalf("signer shouldn't be a DigestSigner")
-	}
-	_, ok = verifier.(DigestVerifier)
-	if ok {
-		t.Fatalf("verifier shouldn't be a DigestVerifier")
+			_, ok := signer.(DigestSigner)
+			if ok {
+				t.Fatalf("signer shouldn't be a DigestSigner")
+			}
+			_, ok = verifier.(DigestVerifier)
+			if ok {
+				t.Fatalf("verifier shouldn't be a DigestVerifier")
+			}
+		})
 	}
 }
 
 func Test_ed25519Verifier_Verify_Success(t *testing.T) {
-	// generate key
-	alg := AlgorithmEdDSA
-	_, key := generateTestEd25519Key(t)
-
-	// generate a valid signature
-	content, sig := signTestData(t, alg, key)
-
-	// set up verifier
-	verifier, err := NewVerifier(alg, key.Public())
-	if err != nil {
-		t.Fatalf("NewVerifier() error = %v", err)
+	tests := []struct {
+		name string
+		alg  Algorithm
+	}{
+		{"EdDSA", AlgorithmEdDSA},
+		{"Ed25519EdDSA", AlgorithmEd25519EdDSA},
 	}
-	if _, ok := verifier.(*ed25519Verifier); !ok {
-		t.Fatalf("NewVerifier() type = %v, want *ed25519Verifier", reflect.TypeOf(verifier))
-	}
-	if got := verifier.Algorithm(); got != alg {
-		t.Fatalf("Algorithm() = %v, want %v", got, alg)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// generate key
+			_, key := generateTestEd25519Key(t)
 
-	// verify round trip
-	if err := verifier.Verify(content, sig); err != nil {
-		t.Fatalf("ed25519Verifier.Verify() error = %v", err)
+			// generate a valid signature
+			content, sig := signTestData(t, tt.alg, key)
+
+			// set up verifier
+			verifier, err := NewVerifier(tt.alg, key.Public())
+			if err != nil {
+				t.Fatalf("NewVerifier() error = %v", err)
+			}
+			if _, ok := verifier.(*ed25519Verifier); !ok {
+				t.Fatalf("NewVerifier() type = %v, want *ed25519Verifier", reflect.TypeOf(verifier))
+			}
+			if got := verifier.Algorithm(); got != tt.alg {
+				t.Fatalf("Algorithm() = %v, want %v", got, tt.alg)
+			}
+
+			// verify round trip
+			if err := verifier.Verify(content, sig); err != nil {
+				t.Fatalf("ed25519Verifier.Verify() error = %v", err)
+			}
+		})
 	}
 }
 
 func Test_ed25519Verifier_Verify_KeyMismatch(t *testing.T) {
-	// generate key
-	alg := AlgorithmEdDSA
-	_, key := generateTestEd25519Key(t)
-
-	// generate a valid signature
-	content, sig := signTestData(t, alg, key)
-
-	// set up verifier with a different key / new key
-	vk, _ := generateTestEd25519Key(t)
-	verifier := &ed25519Verifier{
-		key: vk,
+	tests := []struct {
+		name string
+		alg  Algorithm
+	}{
+		{"EdDSA", AlgorithmEdDSA},
+		{"Ed25519EdDSA", AlgorithmEd25519EdDSA},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// generate key
+			_, key := generateTestEd25519Key(t)
 
-	// verification should fail on key mismatch
-	if err := verifier.Verify(content, sig); err != ErrVerification {
-		t.Fatalf("ed25519Verifier.Verify() error = %v, wantErr %v", err, ErrVerification)
+			// generate a valid signature
+			content, sig := signTestData(t, tt.alg, key)
+
+			// set up verifier with a different key / new key
+			vk, _ := generateTestEd25519Key(t)
+			verifier := &ed25519Verifier{
+				key: vk,
+			}
+
+			// verification should fail on key mismatch
+			if err := verifier.Verify(content, sig); err != ErrVerification {
+				t.Fatalf("ed25519Verifier.Verify() error = %v, wantErr %v", err, ErrVerification)
+			}
+		})
 	}
 }
 
