@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"slices"
 	"strconv"
 )
 
@@ -551,19 +552,10 @@ func (k Key) validate(op KeyOp) error {
 		// Unknown key type, we can't validate custom parameters.
 	}
 
-	// If Algorithm is set, it must match the specified key parameters.
+	// If Algorithm is set, it must be valid for the curve of the key.
 	if k.Algorithm != AlgorithmReserved {
-		expectedAlg, err := k.deriveAlgorithm()
-		if err != nil {
+		if err := k.validateAlgorithm(); err != nil {
 			return err
-		}
-
-		if k.Algorithm != expectedAlg {
-			return fmt.Errorf(
-				"found algorithm %q (expected %q)",
-				k.Algorithm.String(),
-				expectedAlg.String(),
-			)
 		}
 	}
 
@@ -819,6 +811,9 @@ func (k *Key) Signer() (Signer, error) {
 	if !k.canOp(KeyOpSign) {
 		return nil, ErrOpNotSupported
 	}
+	if err := k.ensureSigningKey(); err != nil {
+		return nil, err
+	}
 	priv, err := k.PrivateKey()
 	if err != nil {
 		return nil, err
@@ -842,6 +837,9 @@ func (k *Key) Verifier() (Verifier, error) {
 	if !k.canOp(KeyOpVerify) {
 		return nil, ErrOpNotSupported
 	}
+	if err := k.ensureSigningKey(); err != nil {
+		return nil, err
+	}
 	pub, err := k.PublicKey()
 	if err != nil {
 		return nil, err
@@ -853,6 +851,61 @@ func (k *Key) Verifier() (Verifier, error) {
 	}
 
 	return NewVerifier(alg, pub)
+}
+
+// ecdhAlgorithms are the ECDH algorithms by RFC 9053, valid for the curves
+// P-256, P-384, P-521, X25519 and X448.
+var ecdhAlgorithms = []Algorithm{
+	AlgorithmECDHESHKDF256, AlgorithmECDHESHKDF512,
+	AlgorithmECDHSSHKDF256, AlgorithmECDHSSHKDF512,
+	AlgorithmECDHESA128KW, AlgorithmECDHESA192KW, AlgorithmECDHESA256KW,
+	AlgorithmECDHSSA128KW, AlgorithmECDHSSA192KW, AlgorithmECDHSSA256KW,
+}
+
+// curveAlgorithms maps each curve to the algorithms a key on that curve may
+// be used with.
+var curveAlgorithms = map[Curve][]Algorithm{
+	CurveP256:    append([]Algorithm{AlgorithmES256}, ecdhAlgorithms...),
+	CurveP384:    append([]Algorithm{AlgorithmES384}, ecdhAlgorithms...),
+	CurveP521:    append([]Algorithm{AlgorithmES512}, ecdhAlgorithms...),
+	CurveX25519:  ecdhAlgorithms,
+	CurveX448:    ecdhAlgorithms,
+	CurveEd25519: {AlgorithmEdDSA},
+	CurveEd448:   {AlgorithmEdDSA},
+}
+
+// validateAlgorithm checks that Key.Algorithm is valid for the curve of the
+// key.
+func (k *Key) validateAlgorithm() error {
+	var crv Curve
+	switch k.Type {
+	case KeyTypeEC2:
+		crv, _, _, _ = k.EC2()
+	case KeyTypeOKP:
+		crv, _, _ = k.OKP()
+	default:
+		return fmt.Errorf("algorithm %q not supported for key type %q",
+			k.Algorithm.String(), k.Type.String())
+	}
+	if !slices.Contains(curveAlgorithms[crv], k.Algorithm) {
+		return fmt.Errorf("algorithm %q not supported for curve %q",
+			k.Algorithm.String(), crv.String())
+	}
+	return nil
+}
+
+// ensureSigningKey returns ErrNotSigningKey if Key is a key agreement key,
+// i.e. Key.Algorithm is an ECDH algorithm or the curve is ECDH only.
+func (k *Key) ensureSigningKey() error {
+	if slices.Contains(ecdhAlgorithms, k.Algorithm) {
+		return fmt.Errorf("%w: algorithm %q", ErrNotSigningKey, k.Algorithm.String())
+	}
+	if k.Type == KeyTypeOKP {
+		if crv, _, _ := k.OKP(); crv == CurveX25519 || crv == CurveX448 {
+			return fmt.Errorf("%w: curve %q", ErrNotSigningKey, crv.String())
+		}
+	}
+	return nil
 }
 
 // deriveAlgorithm derives the intended algorithm for the key from its curve.

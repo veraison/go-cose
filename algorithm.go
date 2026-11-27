@@ -75,6 +75,42 @@ const (
 	AlgorithmSHA512 Algorithm = -44
 )
 
+// ECDH key agreement algorithms by RFC 9053.
+//
+// These algorithms are not used by this library. They are defined to
+// validate and describe COSE_Key objects for key agreement.
+const (
+	// ECDH ES w/ HKDF - generate key directly by RFC 9053.
+	AlgorithmECDHESHKDF256 Algorithm = -25
+
+	// ECDH ES w/ HKDF - generate key directly by RFC 9053.
+	AlgorithmECDHESHKDF512 Algorithm = -26
+
+	// ECDH SS w/ HKDF - generate key directly by RFC 9053.
+	AlgorithmECDHSSHKDF256 Algorithm = -27
+
+	// ECDH SS w/ HKDF - generate key directly by RFC 9053.
+	AlgorithmECDHSSHKDF512 Algorithm = -28
+
+	// ECDH ES w/ Concat KDF and AES Key Wrap w/ 128-bit key by RFC 9053.
+	AlgorithmECDHESA128KW Algorithm = -29
+
+	// ECDH ES w/ Concat KDF and AES Key Wrap w/ 192-bit key by RFC 9053.
+	AlgorithmECDHESA192KW Algorithm = -30
+
+	// ECDH ES w/ Concat KDF and AES Key Wrap w/ 256-bit key by RFC 9053.
+	AlgorithmECDHESA256KW Algorithm = -31
+
+	// ECDH SS w/ Concat KDF and AES Key Wrap w/ 128-bit key by RFC 9053.
+	AlgorithmECDHSSA128KW Algorithm = -32
+
+	// ECDH SS w/ Concat KDF and AES Key Wrap w/ 192-bit key by RFC 9053.
+	AlgorithmECDHSSA192KW Algorithm = -33
+
+	// ECDH SS w/ Concat KDF and AES Key Wrap w/ 256-bit key by RFC 9053.
+	AlgorithmECDHSSA256KW Algorithm = -34
+)
+
 // AlgorithmReserved represents a reserved algorithm value by RFC 9053.
 const AlgorithmReserved Algorithm = 0
 
@@ -112,6 +148,26 @@ func (a Algorithm) String() string {
 		// As stated in RFC 8152 section 8.2, only the pure EdDSA version is
 		// used for COSE.
 		return "EdDSA"
+	case AlgorithmECDHESHKDF256:
+		return "ECDH-ES + HKDF-256"
+	case AlgorithmECDHESHKDF512:
+		return "ECDH-ES + HKDF-512"
+	case AlgorithmECDHSSHKDF256:
+		return "ECDH-SS + HKDF-256"
+	case AlgorithmECDHSSHKDF512:
+		return "ECDH-SS + HKDF-512"
+	case AlgorithmECDHESA128KW:
+		return "ECDH-ES + A128KW"
+	case AlgorithmECDHESA192KW:
+		return "ECDH-ES + A192KW"
+	case AlgorithmECDHESA256KW:
+		return "ECDH-ES + A256KW"
+	case AlgorithmECDHSSA128KW:
+		return "ECDH-SS + A128KW"
+	case AlgorithmECDHSSA192KW:
+		return "ECDH-SS + A192KW"
+	case AlgorithmECDHSSA256KW:
+		return "ECDH-SS + A256KW"
 	case AlgorithmReserved:
 		return "Reserved"
 	case AlgorithmSHA256:

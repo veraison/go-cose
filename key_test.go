@@ -1,12 +1,14 @@
 package cose
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -422,7 +424,7 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 				0x28, 0x14, 0x87, 0xef, 0x4a, 0xe6, 0x7b, 0x46,
 			},
 			want:    nil,
-			wantErr: `found algorithm "ES256" (expected "EdDSA")`,
+			wantErr: `algorithm "ES256" not supported for curve "Ed25519"`,
 		}, {
 			name: "custom key",
 			data: []byte{
@@ -598,6 +600,152 @@ func TestKey_UnmarshalCBOR(t *testing.T) {
 			}
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Key.UnmarshalCBOR() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestKey_validateAlgorithm(t *testing.T) {
+	ec2 := func(crv Curve, alg Algorithm) *Key {
+		return &Key{Type: KeyTypeEC2, Algorithm: alg, Params: map[any]any{KeyLabelEC2Curve: crv}}
+	}
+	okp := func(crv Curve, alg Algorithm) *Key {
+		return &Key{Type: KeyTypeOKP, Algorithm: alg, Params: map[any]any{KeyLabelOKPCurve: crv}}
+	}
+	tests := []struct {
+		name    string
+		k       *Key
+		wantErr string
+	}{
+		{"P-256 ES256", ec2(CurveP256, AlgorithmES256), ""},
+		{"P-384 ES384", ec2(CurveP384, AlgorithmES384), ""},
+		{"P-521 ES512", ec2(CurveP521, AlgorithmES512), ""},
+		{"P-256 ECDH-ES + HKDF-256", ec2(CurveP256, AlgorithmECDHESHKDF256), ""},
+		{"P-384 ECDH-SS + A128KW", ec2(CurveP384, AlgorithmECDHSSA128KW), ""},
+		{"P-521 ECDH-ES + A256KW", ec2(CurveP521, AlgorithmECDHESA256KW), ""},
+		{"X25519 ECDH-SS + HKDF-512", okp(CurveX25519, AlgorithmECDHSSHKDF512), ""},
+		{"X448 ECDH-ES + A192KW", okp(CurveX448, AlgorithmECDHESA192KW), ""},
+		{"Ed25519 EdDSA", okp(CurveEd25519, AlgorithmEdDSA), ""},
+		{"Ed448 EdDSA", okp(CurveEd448, AlgorithmEdDSA), ""},
+		{
+			"P-256 ES384", ec2(CurveP256, AlgorithmES384),
+			`algorithm "ES384" not supported for curve "P-256"`,
+		}, {
+			"P-256 PS256", ec2(CurveP256, AlgorithmPS256),
+			`algorithm "PS256" not supported for curve "P-256"`,
+		}, {
+			"P-256 unknown algorithm", ec2(CurveP256, Algorithm(-65535)),
+			`algorithm "Algorithm(-65535)" not supported for curve "P-256"`,
+		}, {
+			"EC2 unknown curve", ec2(Curve(100), AlgorithmES256),
+			`algorithm "ES256" not supported for curve "unknown curve value 100"`,
+		}, {
+			"X25519 EdDSA", okp(CurveX25519, AlgorithmEdDSA),
+			`algorithm "EdDSA" not supported for curve "X25519"`,
+		}, {
+			"Ed25519 ECDH-ES + A256KW", okp(CurveEd25519, AlgorithmECDHESA256KW),
+			`algorithm "ECDH-ES + A256KW" not supported for curve "Ed25519"`,
+		}, {
+			"Symmetric", &Key{Type: KeyTypeSymmetric, Algorithm: AlgorithmECDHESA256KW},
+			`algorithm "ECDH-ES + A256KW" not supported for key type "Symmetric"`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.k.validateAlgorithm()
+			if (err != nil && err.Error() != tt.wantErr) || (err == nil && tt.wantErr != "") {
+				t.Errorf("Key.validateAlgorithm() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestKey_ECDHAlgorithm(t *testing.T) {
+	x25519 := mustHexToBytes("8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a")
+	tests := []struct {
+		name    string
+		data    []byte
+		want    *Key
+		wantErr string
+	}{
+		{
+			name: "EC2 P-256 with ECDH-ES+A256KW",
+			data: mustHexToBytes("a6" +
+				"0102" + // kty: EC2
+				"02457772617031" + // kid: "wrap1"
+				"03381e" + // alg: ECDH-ES+A256KW
+				"2001" + // crv: P-256
+				"21582030a0424cd21c2944838a2d75c92b37e76ea20d9f00893a3b4eee8a3c0aafec3e" + // x
+				"225820e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723"), // y
+			want: &Key{
+				Type:      KeyTypeEC2,
+				ID:        []byte("wrap1"),
+				Algorithm: AlgorithmECDHESA256KW,
+				Params: map[any]any{
+					KeyLabelEC2Curve: CurveP256,
+					KeyLabelEC2X:     mustHexToBytes("30a0424cd21c2944838a2d75c92b37e76ea20d9f00893a3b4eee8a3c0aafec3e"),
+					KeyLabelEC2Y:     mustHexToBytes("e04b65e92456d9888b52b379bdfbd51ee869ef1f0fc65b6659695b6cce081723"),
+				},
+			},
+			wantErr: `key is not for signing: algorithm "ECDH-ES + A256KW"`,
+		}, {
+			name: "OKP X25519 with ECDH-ES + HKDF-256",
+			data: mustHexToBytes("a4" +
+				"0101" + // kty: OKP
+				"033818" + // alg: ECDH-ES + HKDF-256
+				"2004" + // crv: X25519
+				"215820" + hex.EncodeToString(x25519)), // x
+			want: &Key{
+				Type:      KeyTypeOKP,
+				Algorithm: AlgorithmECDHESHKDF256,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveX25519,
+					KeyLabelOKPX:     x25519,
+				},
+			},
+			wantErr: `key is not for signing: algorithm "ECDH-ES + HKDF-256"`,
+		}, {
+			name: "OKP X25519 without alg",
+			data: mustHexToBytes("a3" +
+				"0101" + // kty: OKP
+				"2004" + // crv: X25519
+				"215820" + hex.EncodeToString(x25519)), // x
+			want: &Key{
+				Type: KeyTypeOKP,
+				Params: map[any]any{
+					KeyLabelOKPCurve: CurveX25519,
+					KeyLabelOKPX:     x25519,
+				},
+			},
+			wantErr: `key is not for signing: curve "X25519"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := new(Key)
+			if err := got.UnmarshalCBOR(tt.data); err != nil {
+				t.Fatalf("Key.UnmarshalCBOR() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Key.UnmarshalCBOR() = %v, want %v", got, tt.want)
+			}
+
+			data, err := got.MarshalCBOR()
+			if err != nil {
+				t.Fatalf("Key.MarshalCBOR() error = %v", err)
+			}
+			if !bytes.Equal(data, tt.data) {
+				t.Errorf("Key.MarshalCBOR() = %x, want %x", data, tt.data)
+			}
+
+			_, err = got.Signer()
+			if !errors.Is(err, ErrNotSigningKey) || err.Error() != tt.wantErr {
+				t.Errorf("Key.Signer() error = %v, want %v", err, tt.wantErr)
+			}
+			_, err = got.Verifier()
+			if !errors.Is(err, ErrNotSigningKey) || err.Error() != tt.wantErr {
+				t.Errorf("Key.Verifier() error = %v, want %v", err, tt.wantErr)
 			}
 		})
 	}
