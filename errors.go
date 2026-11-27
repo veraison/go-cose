@@ -17,6 +17,7 @@ var (
 	ErrInvalidPubKey         = errors.New("invalid public key")
 	ErrInvalidPrivKey        = errors.New("invalid private key")
 	ErrNotPrivKey            = errors.New("not a private key")
+	ErrNotSigningKey         = errors.New("key is not for signing")
 	ErrOpNotSupported        = errors.New("key_op not supported by key")
 	ErrEC2NoPub              = errors.New("cannot create PublicKey from EC2 key: missing x or y")
 	ErrOKPNoPub              = errors.New("cannot create PublicKey from OKP key: missing x")

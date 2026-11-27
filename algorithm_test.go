@@ -29,6 +29,16 @@ func TestAlgorithm_String(t *testing.T) {
 		{AlgorithmSHA256, "SHA-256"},
 		{AlgorithmSHA384, "SHA-384"},
 		{AlgorithmSHA512, "SHA-512"},
+		{AlgorithmECDHESHKDF256, "ECDH-ES + HKDF-256"},
+		{AlgorithmECDHESHKDF512, "ECDH-ES + HKDF-512"},
+		{AlgorithmECDHSSHKDF256, "ECDH-SS + HKDF-256"},
+		{AlgorithmECDHSSHKDF512, "ECDH-SS + HKDF-512"},
+		{AlgorithmECDHESA128KW, "ECDH-ES + A128KW"},
+		{AlgorithmECDHESA192KW, "ECDH-ES + A192KW"},
+		{AlgorithmECDHESA256KW, "ECDH-ES + A256KW"},
+		{AlgorithmECDHSSA128KW, "ECDH-SS + A128KW"},
+		{AlgorithmECDHSSA192KW, "ECDH-SS + A192KW"},
+		{AlgorithmECDHSSA256KW, "ECDH-SS + A256KW"},
 		{7, "Algorithm(7)"},
 	}
 	for _, tt := range tests {
