@@ -37,7 +37,7 @@ func TestProtectedHeader_MarshalCBOR(t *testing.T) {
 		{
 			name: "header with MinInt64 alg",
 			h: ProtectedHeader{
-				HeaderLabelAlgorithm: math.MinInt64,
+				HeaderLabelAlgorithm: int64(math.MinInt64),
 			},
 			want: []byte{
 				0x4b,                                                       // bstr
